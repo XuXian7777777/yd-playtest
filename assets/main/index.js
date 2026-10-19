@@ -1,142 +1,9910 @@
-System.register("chunks:///_virtual/App.ts",["cc","./Arena.ts","./DebugInputSource.ts","./FxDriver.ts","./FixedLoop.ts","./Modules.ts","./Rng.ts","./Session.ts","./SessionWatch.ts","./ServiceRegistry.ts","./StepProbe.ts","./SystemOrder.ts","./Tunables.ts","./TypedEventBus.ts"],(function(e){var n,t,s,r,i,o,u,a,c,d,f,p,h,l,g,m,S;return{setters:[function(e){n=e.cclegacy},function(e){t=e.ARENA_WIDTH,s=e.ARENA_HEIGHT,r=e.arenaContains,i=e.arenaClamp},function(e){o=e.DebugInputSource},function(e){u=e.FxDriver},function(e){a=e.FixedLoop},function(e){c=e.installModules},function(e){d=e.createSessionRng},function(e){f=e.Session},function(e){p=e.createSessionWatch},function(e){h=e.ServiceRegistry},function(e){l=e.StepProbe},function(e){g=e.SystemOrder},function(e){m=e.Tunables},function(e){S=e.TypedEventBus}],execute:function(){e("createApp",(function(e){var n=new S,v=new m((function(e,t,s){n.emit("tuning:changed",{key:e,from:t,to:s})})),x=new h,y=new a,w=new o,b=new u,R=d(1),T=new l,k=new f({resolveSeed:function(){return v.has("session.seed")?v.get("session.seed"):0},paramsHash:function(){return v.hash()},simTime:function(){return y.simTime},prepare:function(){y.resetClock(),b.reset(),T.reset()},onStart:function(e){var t=d(e.seed);R.spawn=t.spawn,R.loot=t.loot,R.fx=t.fx,w.beginSession(),n.emit("session:start",e)},onEnd:function(e){n.emit("session:end",e)}}),I={get sid(){return k.sid},get seed(){return k.seed},restart:function(){return k.restart()},end:function(e){return k.end(e)}},A={events:n,services:{provide:function(e,n){return x.provide(e,n)},get:function(e){return x.get(e)},has:function(e){return x.has(e)}},tunables:v,loop:{addSystem:function(e){return y.addSystem(e)},get simTime(){return y.simTime},hitstop:function(e){return y.hitstop(e)}},rng:R,arena:{width:t,height:s,contains:r,clamp:i},layers:e.layers,toPx:function(n){return e.toPx(n)},session:I};x.provide("input",w),c(A);var C=x.get("input")===w;y.addSystem(T),C&&y.addSystem({id:"core.debugInput",order:g.Input,fixedUpdate:function(){var n=v.has("input.joyRadius")?v.get("input.joyRadius"):1.2,t=v.has("input.deadZone")?v.get("input.deadZone"):.08,s=!v.has("input.followCenter")||v.getBool("input.followCenter");w.setConfig({radiusPx:Math.max(0,n)*Math.max(0,e.pxPerUnit()),deadZone:t,followCenter:s}),w.fixedUpdate(y.simTime)}});y.addSystem(p({session:k,hasDirector:function(){return x.has("director")},elapsed:function(){return x.get("director").elapsed},length:function(){return v.has("session.length")?v.get("session.length"):180},endless:function(){return v.has("session.endless")&&v.getBool("session.endless")}}));var D=[],E=!1;return{ctx:A,debugInput:w,usingDebugInput:C,tick:function(n){var t=y.tick(n);return null==e.setShake||e.setShake(b.update(n,R.fx)),t},start:function(){return k.start()},attach:function(){E||(E=!0,D.push(n.on("player:died",(function(){return k.end("died")}))),D.push(n.on("debug:command",(function(e){"restart"===e.cmd&&k.restart()}))),D.push(n.on("fx:hitstop",(function(e){return y.hitstop(e.frames)}))),D.push(n.on("fx:shake",(function(e){return b.requestShake(e.amp,e.dur)}))))},detach:function(){if(E){E=!1;for(var e=0,n=D;e<n.length;e++){(0,n[e])()}D.length=0}}}})),n._RF.push({},"2c78cqejZpI4rsvRUCsx0LE","App",void 0);n._RF.pop()}}}));
+System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputSource.ts', './FxDriver.ts', './FixedLoop.ts', './Modules.ts', './Rng.ts', './Session.ts', './SessionWatch.ts', './ServiceRegistry.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts'], function (exports) {
+  var cclegacy, ARENA_WIDTH, ARENA_HEIGHT, arenaContains, arenaClamp, DebugInputSource, FxDriver, FixedLoop, installModules, createSessionRng, Session, createSessionWatch, ServiceRegistry, StepProbe, SystemOrder, Tunables, TypedEventBus;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      ARENA_WIDTH = module.ARENA_WIDTH;
+      ARENA_HEIGHT = module.ARENA_HEIGHT;
+      arenaContains = module.arenaContains;
+      arenaClamp = module.arenaClamp;
+    }, function (module) {
+      DebugInputSource = module.DebugInputSource;
+    }, function (module) {
+      FxDriver = module.FxDriver;
+    }, function (module) {
+      FixedLoop = module.FixedLoop;
+    }, function (module) {
+      installModules = module.installModules;
+    }, function (module) {
+      createSessionRng = module.createSessionRng;
+    }, function (module) {
+      Session = module.Session;
+    }, function (module) {
+      createSessionWatch = module.createSessionWatch;
+    }, function (module) {
+      ServiceRegistry = module.ServiceRegistry;
+    }, function (module) {
+      StepProbe = module.StepProbe;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      Tunables = module.Tunables;
+    }, function (module) {
+      TypedEventBus = module.TypedEventBus;
+    }],
+    execute: function () {
+      exports('createApp', createApp);
+      cclegacy._RF.push({}, "2c78cqejZpI4rsvRUCsx0LE", "App", undefined);
+      var DEFAULT_SESSION_LENGTH = 180;
+      /**
+       * Wires the pure core objects into a GameContext.
+       * Cocos nodes stay in the view; this file does not import `cc` at runtime.
+       */
+      function createApp(ports) {
+        var events = new TypedEventBus();
+        var tunables = new Tunables(function (key, from, to) {
+          events.emit('tuning:changed', {
+            key: key,
+            from: from,
+            to: to
+          });
+        });
+        var services = new ServiceRegistry();
+        var loop = new FixedLoop();
+        var debugInput = new DebugInputSource();
+        var fx = new FxDriver();
+        var rng = createSessionRng(1);
+        var probe = new StepProbe();
+        var session = new Session({
+          resolveSeed: function resolveSeed() {
+            return tunables.has('session.seed') ? tunables.get('session.seed') : 0;
+          },
+          paramsHash: function paramsHash() {
+            return tunables.hash();
+          },
+          simTime: function simTime() {
+            return loop.simTime;
+          },
+          prepare: function prepare() {
+            loop.resetClock();
+            fx.reset();
+            probe.reset();
+          },
+          onStart: function onStart(info) {
+            var next = createSessionRng(info.seed);
+            rng.spawn = next.spawn;
+            rng.loot = next.loot;
+            rng.fx = next.fx;
+            debugInput.beginSession();
+            events.emit('session:start', info);
+          },
+          onEnd: function onEnd(info) {
+            events.emit('session:end', info);
+          }
+        });
+        var loopFacade = {
+          addSystem: function addSystem(system) {
+            return loop.addSystem(system);
+          },
+          get simTime() {
+            return loop.simTime;
+          },
+          get paused() {
+            return loop.paused;
+          },
+          pause: function pause() {
+            return loop.pause();
+          },
+          resume: function resume() {
+            return loop.resume();
+          },
+          hitstop: function hitstop(frames) {
+            return loop.hitstop(frames);
+          }
+        };
+        var servicesFacade = {
+          provide: function provide(key, value) {
+            return services.provide(key, value);
+          },
+          get: function get(key) {
+            return services.get(key);
+          },
+          has: function has(key) {
+            return services.has(key);
+          }
+        };
+        var sessionFacade = {
+          get sid() {
+            return session.sid;
+          },
+          get seed() {
+            return session.seed;
+          },
+          restart: function restart() {
+            return session.restart();
+          },
+          end: function end(reason) {
+            return session.end(reason);
+          }
+        };
+        var arena = {
+          width: ARENA_WIDTH,
+          height: ARENA_HEIGHT,
+          contains: arenaContains,
+          clamp: arenaClamp
+        };
+        var ctx = {
+          events: events,
+          services: servicesFacade,
+          tunables: tunables,
+          loop: loopFacade,
+          rng: rng,
+          arena: arena,
+          layers: ports.layers,
+          toPx: function toPx(p) {
+            return ports.toPx(p);
+          },
+          session: sessionFacade
+        };
+        services.provide('input', debugInput);
+        installModules(ctx);
+        var usingDebugInput = services.get('input') === debugInput;
+        loop.addSystem(probe);
+        if (usingDebugInput) {
+          loop.addSystem({
+            id: 'core.debugInput',
+            order: SystemOrder.Input,
+            fixedUpdate: function fixedUpdate() {
+              var radiusU = tunables.has('input.joyRadius') ? tunables.get('input.joyRadius') : 1.2;
+              var deadZone = tunables.has('input.deadZone') ? tunables.get('input.deadZone') : 0.08;
+              var followCenter = !tunables.has('input.followCenter') || tunables.getBool('input.followCenter');
+              debugInput.setConfig({
+                radiusPx: Math.max(0, radiusU) * Math.max(0, ports.pxPerUnit()),
+                deadZone: deadZone,
+                followCenter: followCenter
+              });
+              debugInput.fixedUpdate(loop.simTime);
+            }
+          });
+        }
+        loop.addSystem(createSessionWatch({
+          session: session,
+          hasDirector: function hasDirector() {
+            return services.has('director');
+          },
+          elapsed: function elapsed() {
+            return services.get('director').elapsed;
+          },
+          length: function length() {
+            return tunables.has('session.length') ? tunables.get('session.length') : DEFAULT_SESSION_LENGTH;
+          },
+          endless: function endless() {
+            return tunables.has('session.endless') && tunables.getBool('session.endless');
+          }
+        }));
+        var unsubs = [];
+        var attached = false;
+        var attach = function attach() {
+          if (attached) return;
+          attached = true;
+          unsubs.push(events.on('player:died', function () {
+            return session.end('died');
+          }));
+          unsubs.push(events.on('debug:command', function (payload) {
+            if (payload.cmd === 'restart') session.restart();
+          }));
+          unsubs.push(events.on('fx:hitstop', function (payload) {
+            return loop.hitstop(payload.frames);
+          }));
+          unsubs.push(events.on('fx:shake', function (payload) {
+            return fx.requestShake(payload.amp, payload.dur);
+          }));
+        };
+        var detach = function detach() {
+          if (!attached) return;
+          attached = false;
+          for (var _i = 0, _unsubs = unsubs; _i < _unsubs.length; _i++) {
+            var unsub = _unsubs[_i];
+            unsub();
+          }
+          unsubs.length = 0;
+        };
+        return {
+          ctx: ctx,
+          debugInput: debugInput,
+          usingDebugInput: usingDebugInput,
+          tick: function tick(frameDt) {
+            var result = loop.tick(frameDt);
+            ports.setShake == null || ports.setShake(fx.update(frameDt, rng.fx));
+            return result;
+          },
+          start: function start() {
+            return session.start();
+          },
+          attach: attach,
+          detach: detach
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Arena.ts",["cc","./Vec2.ts"],(function(n){var a,t;return{setters:[function(n){a=n.cclegacy},function(n){t=n.vec2}],execute:function(){n({arenaClamp:function(n,a){var c=.5*Math.min(e,r),i=Math.max(0,Math.min(a,c));return t(Math.min(e-i,Math.max(i,n.x)),Math.min(r-i,Math.max(i,n.y)))},arenaContains:function(n,a){return n.x-a>=0&&n.y-a>=0&&n.x+a<=e&&n.y+a<=r}}),a._RF.push({},"6a0a1H9DTpIFboXNABVVNWX","Arena",void 0);var e=n("ARENA_WIDTH",10),r=n("ARENA_HEIGHT",15);a._RF.pop()}}}));
+System.register("chunks:///_virtual/Arena.ts", ['cc', './Vec2.ts'], function (exports) {
+  var cclegacy, vec2;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      vec2 = module.vec2;
+    }],
+    execute: function () {
+      exports({
+        arenaClamp: arenaClamp,
+        arenaContains: arenaContains
+      });
+      cclegacy._RF.push({}, "6a0a1H9DTpIFboXNABVVNWX", "Arena", undefined);
 
-System.register("chunks:///_virtual/contracts.ts",["cc"],(function(){var t;return{setters:[function(c){t=c.cclegacy}],execute:function(){t._RF.push({},"dc49fV1Q5tLWZbMmU0pXRY3","contracts",void 0),t._RF.pop()}}}));
+      /** Arena width in u. Origin is the bottom-left corner. */
+      var ARENA_WIDTH = exports('ARENA_WIDTH', 10);
+      /** Arena height in u. */
+      var ARENA_HEIGHT = exports('ARENA_HEIGHT', 15);
 
-System.register("chunks:///_virtual/CoreArenaView.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var r,n,o,i,t,s,a;return{setters:[function(e){r=e.inheritsLoose},function(e){n=e.cclegacy,o=e._decorator,i=e.Color,t=e.UITransform,s=e.Graphics,a=e.Component}],execute:function(){var l;n._RF.push({},"7ab89q8c/ZAH4LGqMci4lbI","CoreArenaView",void 0);var c=o.ccclass,p=new i(36,36,42,255),u=new i(196,196,204,255),C=new i(196,196,204,64);e("CoreArenaView",c("CoreArenaView")(l=function(e){function n(){return e.apply(this,arguments)||this}return r(n,e),n.prototype.redraw=function(e){var r,n,o=10*e,i=15*e,a=null!=(r=this.getComponent(t))?r:this.addComponent(t);if(a){a.setAnchorPoint(0,0),a.setContentSize(o,i);var l=null!=(n=this.getComponent(s))?n:this.addComponent(s);if(l){l.clear(),l.fillColor=p,l.rect(0,0,o,i),l.fill(),l.strokeColor=u,l.lineWidth=2,l.rect(0,0,o,i),l.stroke();var c=2*e;l.strokeColor=C,l.lineWidth=2,l.moveTo(0,c),l.lineTo(o,c),l.stroke()}else console.warn("[CoreArenaView] missing Graphics; skipping redraw")}else console.warn("[CoreArenaView] missing UITransform; skipping redraw")},n}(a))||l);n._RF.pop()}}}));
+      /** True when the circle of radius `r` lies entirely inside the arena. */
+      function arenaContains(p, r) {
+        return p.x - r >= 0 && p.y - r >= 0 && p.x + r <= ARENA_WIDTH && p.y + r <= ARENA_HEIGHT;
+      }
 
-System.register("chunks:///_virtual/CoreBootstrap.ts",["./rollupPluginModLoBabelHelpers.js","cc","./App.ts","./Layers.ts","./ScreenLayout.ts","./CoreArenaView.ts","./CoreDebugInput.ts"],(function(t){var e,i,n,r,a,s,o,h,u,l,d,p,c,f,g,w,v,y;return{setters:[function(t){e=t.inheritsLoose,i=t.createForOfIteratorHelperLoose},function(t){n=t.cclegacy,r=t._decorator,a=t.Color,s=t.Vec3,o=t.view,h=t.Graphics,u=t.Node,l=t.UITransform,d=t.sys,p=t.screen,c=t.Component},function(t){f=t.createApp},function(t){g=t.LAYER_NAMES},function(t){w=t.layoutScreen},function(t){v=t.CoreArenaView},function(t){y=t.CoreDebugInput}],execute:function(){var b;n._RF.push({},"da87c0RRPFDUI5WRfmR19hv","CoreBootstrap",void 0);var C=r.ccclass,m=new a(90,140,200,48),x=new a(200,170,90,36);t("CoreBootstrap",C("CoreBootstrap")(b=function(t){function n(){for(var e,i=arguments.length,n=new Array(i),r=0;r<i;r++)n[r]=arguments[r];return(e=t.call.apply(t,[this].concat(n))||this).app=null,e.started=!1,e.world=null,e.arenaView=null,e.hudGuide=null,e.thumbGuide=null,e.layerNodes=new Map,e.baseX=0,e.baseY=0,e.pixelsPerUnit=72,e}e(n,t);var r=n.prototype;return r.onLoad=function(){var t=this;this.buildTree(),this.app=f({layers:{get:function(e){var i=t.layerNodes.get(e);if(!i)throw new Error("Missing layer: "+e);return i}},toPx:function(e){return new s(e.x*t.pixelsPerUnit,e.y*t.pixelsPerUnit,0)},pxPerUnit:function(){return t.pixelsPerUnit},setShake:function(e){return t.applyShake(e)}}),this.app.usingDebugInput&&this.mountDebugInput(this.app)},r.onEnable=function(){var t,e;(o.on("canvas-resize",this.onResize,this),this.onResize(),null==(t=this.app)||t.attach(),this.started)||(null==(e=this.app)||e.start(),this.started=!0)},r.onDisable=function(){var t;o.off("canvas-resize",this.onResize,this),null==(t=this.app)||t.detach()},r.onDestroy=function(){var t;o.off("canvas-resize",this.onResize,this),null==(t=this.app)||t.detach(),this.app=null},r.update=function(t){var e;null==(e=this.app)||e.tick(t)},r.onResize=function(){var t,e,i=o.getVisibleSize(),n=w(i.width,i.height,function(t,e){var i=d.getSafeAreaRect(),n=p.windowSize,r=n.width>0?t/n.width:1,a=n.height>0?e/n.height:1,s={x:i.x*r,y:i.y*a,width:i.width*r,height:i.height*a};if(s.width<=0||s.height<=0)return{x:0,y:0,width:t,height:e};return s}(i.width,i.height));this.pixelsPerUnit=n.pxPerUnit;var r=this.toParent(n.arenaOriginX,n.arenaOriginY,i.width,i.height);this.baseX=r.x,this.baseY=r.y,null==(t=this.world)||t.setPosition(this.baseX,this.baseY,0),null==(e=this.arenaView)||e.redraw(n.pxPerUnit),R(this.hudGuide,n.hud,m,i.width,i.height),R(this.thumbGuide,n.thumb,x,i.width,i.height)},r.applyShake=function(t){var e;null==(e=this.world)||e.setPosition(this.baseX+t.x*this.pixelsPerUnit,this.baseY+t.y*this.pixelsPerUnit,0)},r.buildTree=function(){var t=this.makeChild(this.node,"World");this.world=t;for(var e,n=i(g);!(e=n()).done;){var r=e.value,a="hud"===r||"debug"===r?this.node:t,s=this.makeChild(a,r);this.layerNodes.set(r,s)}var o=this.layerNodes.get("arena");o&&(this.arenaView=o.addComponent(v));var h=this.layerNodes.get("hud"),u=this.layerNodes.get("debug");h&&(this.hudGuide=P(h,"HudGuide")),u&&(this.thumbGuide=P(u,"ThumbGuide"))},r.mountDebugInput=function(t){this.makeChild(this.node,"DebugInput").addComponent(y).source=t.debugInput},r.makeChild=function(t,e){var i=new u(e);return i.layer=t.layer,i.addComponent(l).setAnchorPoint(0,0),t.addChild(i),i},r.toParent=function(t,e,i,n){return{x:t-i/2,y:e-n/2}},n}(c))||b);function P(t,e){var i=new u(e);return i.layer=t.layer,i.addComponent(l).setAnchorPoint(0,0),t.addChild(i),i.addComponent(h)}function R(t,e,i,n,r){if(t){var a=t.node;a.setPosition(e.x-n/2,e.y-r/2,0);var s=a.getComponent(l);null==s||s.setContentSize(Math.max(0,e.width),Math.max(0,e.height)),t.clear(),e.width<=0||e.height<=0||(t.fillColor=i,t.rect(0,0,e.width,e.height),t.fill())}}n._RF.pop()}}}));
+      /**
+       * Push a circle back inside the arena. Returns a new vector.
+       * A radius larger than half the shorter side is shrunk so a center still exists.
+       */
+      function arenaClamp(p, r) {
+        var limit = Math.min(ARENA_WIDTH, ARENA_HEIGHT) * 0.5;
+        var radius = Math.max(0, Math.min(r, limit));
+        return vec2(Math.min(ARENA_WIDTH - radius, Math.max(radius, p.x)), Math.min(ARENA_HEIGHT - radius, Math.max(radius, p.y)));
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/CoreDebugInput.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(o){var n,t,e,s,u,i,h;return{setters:[function(o){n=o.inheritsLoose},function(o){t=o.cclegacy,e=o._decorator,s=o.input,u=o.Input,i=o.EventMouse,h=o.Component}],execute:function(){var c;t._RF.push({},"e3850/ICLRMmaCsl9G0LUvv","CoreDebugInput",void 0);var r=e.ccclass;o("CoreDebugInput",r("CoreDebugInput")(c=function(o){function t(){for(var n,t=arguments.length,e=new Array(t),s=0;s<t;s++)e[s]=arguments[s];return(n=o.call.apply(o,[this].concat(e))||this).source=null,n.sawTouch=!1,n.mouseDown=!1,n}n(t,o);var e=t.prototype;return e.onEnable=function(){s.on(u.EventType.TOUCH_START,this.onTouchStart,this),s.on(u.EventType.TOUCH_MOVE,this.onTouchMove,this),s.on(u.EventType.TOUCH_END,this.onTouchEnd,this),s.on(u.EventType.TOUCH_CANCEL,this.onTouchEnd,this),s.on(u.EventType.MOUSE_DOWN,this.onMouseDown,this),s.on(u.EventType.MOUSE_MOVE,this.onMouseMove,this),s.on(u.EventType.MOUSE_UP,this.onMouseUp,this)},e.onDisable=function(){s.off(u.EventType.TOUCH_START,this.onTouchStart,this),s.off(u.EventType.TOUCH_MOVE,this.onTouchMove,this),s.off(u.EventType.TOUCH_END,this.onTouchEnd,this),s.off(u.EventType.TOUCH_CANCEL,this.onTouchEnd,this),s.off(u.EventType.MOUSE_DOWN,this.onMouseDown,this),s.off(u.EventType.MOUSE_MOVE,this.onMouseMove,this),s.off(u.EventType.MOUSE_UP,this.onMouseUp,this),this.mouseDown=!1},e.onDestroy=function(){this.source=null},e.onTouchStart=function(o){var n;this.sawTouch=!0;var t=o.getUILocation();null==(n=this.source)||n.pointerDown(T(o),t.x,t.y)},e.onTouchMove=function(o){var n,t=o.getUILocation();null==(n=this.source)||n.pointerMove(T(o),t.x,t.y)},e.onTouchEnd=function(o){var n;null==(n=this.source)||n.pointerUp(T(o))},e.onMouseDown=function(o){var n;if(!this.sawTouch&&o.getButton()===i.BUTTON_LEFT){this.mouseDown=!0;var t=o.getUILocation();null==(n=this.source)||n.pointerDown(-1,t.x,t.y)}},e.onMouseMove=function(o){var n;if(!this.sawTouch&&this.mouseDown){var t=o.getUILocation();null==(n=this.source)||n.pointerMove(-1,t.x,t.y)}},e.onMouseUp=function(o){var n;this.mouseDown&&o.getButton()===i.BUTTON_LEFT&&(this.mouseDown=!1,null==(n=this.source)||n.pointerUp(-1))},t}(h))||c);function T(o){return o.touch?o.touch.getID():0}t._RF.pop()}}}));
+System.register("chunks:///_virtual/contracts.ts", ['cc'], function () {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "dc49fV1Q5tLWZbMmU0pXRY3", "contracts", undefined);
+      /**
+       * A boar that is currently in its charge phase.
+       * Windup and stun do not qualify. Declared here so sword/loop can ask
+       * without importing the enemy module (issue #3 correction).
+       * The enemy module implements this; core does not.
+       */
+      /** Read-only rig snapshot for the HUD, telemetry, and the enemy module. */
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Damage.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var t,n;return{setters:[function(e){t=e.createForOfIteratorHelperLoose},function(e){n=e.cclegacy}],execute:function(){function r(e){return e.get("sword.baseDmg")*Math.pow(e.get("sword.levelGrowth"),e.get("sword.level"))}function a(e,t){return t<e.get("drag.vDead")?0:Math.max(0,Math.min(e.get("drag.qCap"),t/e.get("drag.vRef")))}function g(e,t){return r(e)*Math.pow(e.get("sword.W"),e.get("drag.weightExp"))*Math.pow(t,e.get("drag.speedExp"))}function o(e,t,n){return e.get("chain.baseDmg")*Math.pow(1.12,t+e.get("chain.mainLevelShare")*e.get("sword.level"))*(1+e.get("chain.resonPer")*Math.min(n,e.get("chain.resonCount")))}e({baseDamage:r,contactDamage:function(e,t,n){return t*e.get("chain.contactMul")*n/e.get("drag.vRef")},dragAtTier:g,dragDamage:function(e,t){return g(e,a(e,t))},linkDamage:o,ropeLength:function(e,t){return Math.min(e.get("rope.baseLen")+e.get("rope.lenPerLg")*e.get("sword.Lg")+e.get("rope.lenPerSlot")*t,e.get("rope.lenCap"))},slotDamage:function(e,n,r){if(0===n.length)return 0;for(var a,g=0,u=t(n);!(a=u()).done;){var c=a.value;g=Math.max(g,o(e,c,r))}return g*(1+e.get("chain.stackBonus")*(n.length-1))},speedTier:a}),n._RF.push({},"6164fPZnh5CTK9HTsnfdBZe","Damage",void 0),n._RF.pop()}}}));
+System.register("chunks:///_virtual/CoreArenaView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _inheritsLoose, cclegacy, _decorator, Color, UITransform, Graphics, Component;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      UITransform = module.UITransform;
+      Graphics = module.Graphics;
+      Component = module.Component;
+    }],
+    execute: function () {
+      var _dec, _class;
+      cclegacy._RF.push({}, "7ab89q8c/ZAH4LGqMci4lbI", "CoreArenaView", undefined);
+      var ccclass = _decorator.ccclass;
+      var FILL = new Color(36, 36, 42, 255);
+      var BORDER = new Color(196, 196, 204, 255);
+      var NO_SPAWN = new Color(196, 196, 204, 64);
 
-System.register("chunks:///_virtual/DebugInputSource.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Vec2.ts"],(function(t){var e,i,s,n,r;return{setters:[function(t){e=t.extends,i=t.createForOfIteratorHelperLoose,s=t.createClass},function(t){n=t.cclegacy},function(t){r=t.vec2}],execute:function(){n._RF.push({},"98b339MoJdGr7b/qGihYL9O","DebugInputSource",void 0);var a=t("INPUT_HISTORY_SECONDS",.5),h={radiusPx:72*1.2,deadZone:.08,followCenter:!0};function o(t){return void 0===t&&(t=0),{touching:!1,dir:r(),mag:0,pressedThisTick:!1,releasedThisTick:!1,time:t}}t("DebugInputSource",function(){function t(){this.samples=[],this.config=e({},h),this.frameValue=o(),this.lastRelease=-1,this.down=!1,this.pointerId=0,this.centerX=0,this.centerY=0,this.pointerX=0,this.pointerY=0}var n=t.prototype;return n.setConfig=function(t){this.config=t},n.pointerDown=function(t,e,i){this.down||(this.down=!0,this.pointerId=t,this.centerX=e,this.centerY=i,this.pointerX=e,this.pointerY=i)},n.pointerMove=function(t,e,i){if(this.down&&t===this.pointerId&&(this.pointerX=e,this.pointerY=i,this.config.followCenter&&!(this.config.radiusPx<=0))){var s=e-this.centerX,n=i-this.centerY,r=Math.hypot(s,n);if(r>this.config.radiusPx){var a=(r-this.config.radiusPx)/r;this.centerX+=s*a,this.centerY+=n*a}}},n.pointerUp=function(t){this.down&&t===this.pointerId&&(this.down=!1)},n.fixedUpdate=function(t){var e=this.frameValue.touching,i=this.readStick(),s=this.down,n=s&&!e,h=!s&&e;h&&(this.lastRelease=t),this.frameValue={touching:s,dir:0===i.mag?r():r(i.x,i.y),mag:s?i.mag:0,pressedThisTick:n,releasedThisTick:h,time:t};var o={time:t,x:this.frameValue.dir.x,y:this.frameValue.dir.y,mag:this.frameValue.mag,touching:s},u=this.samples[this.samples.length-1];u&&u.time===t?this.samples[this.samples.length-1]=o:this.samples.push(o);for(var l=t-a;this.samples.length>0;){var c=this.samples[0];if(!c||c.time>=l)break;this.samples.shift()}},n.beginSession=function(){this.samples.length=0,this.lastRelease=-1,this.frameValue=o(),this.frameValue=e({},this.frameValue,{touching:this.down})},n.avgDir=function(t,e){for(var s,n=this.windowRows(t,null!=e?e:this.frameValue.time),a=0,h=0,o=i(n);!(s=o()).done;){var u=s.value;a+=u.x,h+=u.y}var l=Math.hypot(a,h);return l<=1e-8?r():r(a/l,h/l)},n.minMag=function(t,e){var s=this.windowRows(t,null!=e?e:this.frameValue.time),n=s[0];if(!n)return 0;for(var r,a=n.mag,h=i(s);!(r=h()).done;){var o=r.value;a=Math.min(a,o.mag)}return a},n.magDrop=function(t,e){var s=null!=e?e:this.frameValue.time,n=this.windowRows(t,s);if(0===n.length)return 0;for(var r,a=0,h=i(n);!(r=h()).done;){var o=r.value;a=Math.max(a,o.mag)}return a-this.magAt(s)},n.reset=function(){this.samples.length=0,this.frameValue=o(),this.lastRelease=-1,this.down=!1},n.readStick=function(){if(!this.down||this.config.radiusPx<=0)return{x:0,y:0,mag:0};var t=this.pointerX-this.centerX,e=this.pointerY-this.centerY,i=Math.hypot(t,e),s=Math.max(0,Math.min(1,this.config.deadZone))*this.config.radiusPx;if(i<=s)return{x:0,y:0,mag:0};var n=Math.max(1e-6,this.config.radiusPx-s);return{x:t/i,y:e/i,mag:Math.min(1,(i-s)/n)}},n.windowRows=function(t,e){for(var s,n=e-t,r=[],a=i(this.samples);!(s=a()).done;){var h=s.value;h.time>=n&&h.time<e&&h.touching&&r.push(h)}return r},n.magAt=function(t){for(var e=this.samples.length-1;e>=0;e--){var i=this.samples[e];if(i&&i.time<=t)return i.mag}return 0},s(t,[{key:"frame",get:function(){return this.frameValue}},{key:"lastReleaseTime",get:function(){return this.lastRelease}}]),t}());n._RF.pop()}}}));
+      /**
+       * Greybox arena: 10×15 u rectangle, light border, and a faint line 2 u up
+       * marking the bottom strip where enemies do not spawn.
+       */
+      var CoreArenaView = exports('CoreArenaView', (_dec = ccclass('CoreArenaView'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(CoreArenaView, _Component);
+        function CoreArenaView() {
+          return _Component.apply(this, arguments) || this;
+        }
+        var _proto = CoreArenaView.prototype;
+        _proto.redraw = function redraw(pxPerUnit) {
+          var _this$getComponent, _this$getComponent2;
+          var width = 10 * pxPerUnit;
+          var height = 15 * pxPerUnit;
+          // addComponent returns null when the node cannot take the component (e.g. a conflicting one is present).
+          var transform = (_this$getComponent = this.getComponent(UITransform)) != null ? _this$getComponent : this.addComponent(UITransform);
+          if (!transform) {
+            console.warn('[CoreArenaView] missing UITransform; skipping redraw');
+            return;
+          }
+          transform.setAnchorPoint(0, 0);
+          transform.setContentSize(width, height);
+          var graphics = (_this$getComponent2 = this.getComponent(Graphics)) != null ? _this$getComponent2 : this.addComponent(Graphics);
+          if (!graphics) {
+            console.warn('[CoreArenaView] missing Graphics; skipping redraw');
+            return;
+          }
+          graphics.clear();
+          graphics.fillColor = FILL;
+          graphics.rect(0, 0, width, height);
+          graphics.fill();
+          graphics.strokeColor = BORDER;
+          graphics.lineWidth = 2;
+          graphics.rect(0, 0, width, height);
+          graphics.stroke();
+          var lineY = 2 * pxPerUnit;
+          graphics.strokeColor = NO_SPAWN;
+          graphics.lineWidth = 2;
+          graphics.moveTo(0, lineY);
+          graphics.lineTo(width, lineY);
+          graphics.stroke();
+        };
+        return CoreArenaView;
+      }(Component)) || _class));
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/DirectorParams.ts",["./rollupPluginModLoBabelHelpers.js","cc","./EnemyParams.ts"],(function(e){var s,t,n;return{setters:[function(e){s=e.extends},function(e){t=e.cclegacy},function(e){n=e.numberParam}],execute:function(){t._RF.push({},"1fddaXc3FtEVJVg1ZVLPdJs","DirectorParams",void 0);e("DIRECTOR_PARAMS",[n("diff.tA","难度","时间一次系数",.1,0,1),n("diff.tB","难度","时间二次系数",.012,0,.1,.001),n("diff.dmgK","难度","伤害随难度系数",.5,0,2),n("diff.budgetBase","难度","基础刷怪点数(点/s)",1.5,0,10),n("diff.budgetExp","难度","预算指数",.6,0,2),n("spawn.edgeInset","刷怪","边缘内缩(u)",.3,0,2),n("spawn.bottomExclude","刷怪","底部禁刷高度(u)",2,0,5),n("spawn.minDistFromPet","刷怪","距宠物最小距离(u)",3,0,8),n("session.length","局","时长(s)",180,30,900,1),{key:"session.endless",group:"局",label:"无尽模式",kind:"bool",default:0},s({},n("session.seed","局","种子(0=随机)",0,0,999999,1),{restart:!0}),n("spawn.purchaseInterval","刷怪","预算购买间隔(s)",.5,.1,2),n("sheep.groupSpawnRadius","群聚羊","整群出生半径(u)",1,0,3)]);t._RF.pop()}}}));
+System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './App.ts', './Layers.ts', './ScreenLayout.ts', './CoreArenaView.ts', './CoreDebugInput.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Color, Vec3, view, Graphics, Node, UITransform, sys, screen, Component, createApp, LAYER_NAMES, layoutScreen, CoreArenaView, CoreDebugInput;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      Vec3 = module.Vec3;
+      view = module.view;
+      Graphics = module.Graphics;
+      Node = module.Node;
+      UITransform = module.UITransform;
+      sys = module.sys;
+      screen = module.screen;
+      Component = module.Component;
+    }, function (module) {
+      createApp = module.createApp;
+    }, function (module) {
+      LAYER_NAMES = module.LAYER_NAMES;
+    }, function (module) {
+      layoutScreen = module.layoutScreen;
+    }, function (module) {
+      CoreArenaView = module.CoreArenaView;
+    }, function (module) {
+      CoreDebugInput = module.CoreDebugInput;
+    }],
+    execute: function () {
+      var _dec, _class;
+      cclegacy._RF.push({}, "da87c0RRPFDUI5WRfmR19hv", "CoreBootstrap", undefined);
+      var ccclass = _decorator.ccclass;
+      var HUD_TINT = new Color(90, 140, 200, 48);
+      var THUMB_TINT = new Color(200, 170, 90, 36);
 
-System.register("chunks:///_virtual/EnemyModule.ts",["./rollupPluginModLoBabelHelpers.js","cc","./SystemOrder.ts","./DirectorParams.ts","./EnemyParams.ts","./EnemyWorld.ts","./SpawnDirector.ts"],(function(t){var e,n,i,s,r,o,a;return{setters:[function(t){e=t.createForOfIteratorHelperLoose},function(t){n=t.cclegacy},function(t){i=t.SystemOrder},function(t){s=t.DIRECTOR_PARAMS},function(t){r=t.ENEMY_PARAMS},function(t){o=t.EnemyWorld},function(t){a=t.SpawnDirector}],execute:function(){n._RF.push({},"a10aeR7f3dIrJT9K4AmmhrY","EnemyModule",void 0);t("EnemyModule",function(){function t(t){this.world=void 0,this.director=void 0,this.timing={steps:0,lastMs:0,maxMs:0,totalMs:0},this.unsubs=[],this.attached=!1,this.running=!1,this.aiMs=0,this.ctx=void 0,this.ctx=t,this.world=new o(t),this.director=new a(t,this.world)}var n=t.prototype;return n.install=function(){var t=this;this.ctx.tunables.define([].concat(r,s).filter((function(e){return!t.ctx.tunables.has(e.key)}))),this.ctx.services.provide("enemies",this.world),this.ctx.services.provide("director",this.director),this.ctx.loop.addSystem({id:"enemy.ai",order:i.Enemy,fixedUpdate:function(e){if(t.attached&&t.running){var n=c();t.world.update(e),t.aiMs=c()-n}}}),this.ctx.loop.addSystem({id:"enemy.resolve",order:i.EnemyResolve,fixedUpdate:function(e){if(t.attached&&t.running){var n=c();t.world.resolveDeaths(),t.running&&t.director.update(e);var i=t.aiMs+c()-n;t.timing.steps+=1,t.timing.lastMs=i,t.timing.totalMs+=i,t.timing.maxMs=Math.max(t.timing.maxMs,i)}}}),this.attach()},n.attach=function(){var t=this;this.attached||(this.attached=!0,this.world.setEnabled(this.running),this.unsubs.push(this.ctx.events.on("session:start",(function(){t.world.clear(),t.director.reset(),t.running=!0,t.world.setEnabled(!0),t.timing.steps=0,t.timing.lastMs=0,t.timing.maxMs=0,t.timing.totalMs=0}))),this.unsubs.push(this.ctx.events.on("session:end",(function(){t.running=!1,t.world.setEnabled(!1),t.director.stop()}))),this.unsubs.push(this.ctx.events.on("debug:command",(function(e){var n=e.cmd,i=e.arg;t.running&&("spawn"===n?t.director.debugSpawn(i):"clearEnemies"===n&&t.world.clear())}))))},n.detach=function(){if(this.attached){this.attached=!1,this.world.setEnabled(!1),this.director.stop();for(var t,n=e(this.unsubs);!(t=n()).done;){(0,t.value)()}this.unsubs.length=0}},t}());function c(){return"undefined"==typeof performance?Date.now():performance.now()}n._RF.pop()}}}));
+      /**
+       * Builds the layer tree, draws the 10×15 u arena, and runs the fixed step.
+       * Attach this to the Canvas of Main.scene. It does not load another scene.
+       * Unsubscribe happens in onDisable and onDestroy.
+       */
+      var CoreBootstrap = exports('CoreBootstrap', (_dec = ccclass('CoreBootstrap'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(CoreBootstrap, _Component);
+        function CoreBootstrap() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.app = null;
+          _this.started = false;
+          _this.world = null;
+          _this.arenaView = null;
+          _this.hudGuide = null;
+          _this.thumbGuide = null;
+          _this.layerNodes = new Map();
+          _this.baseX = 0;
+          _this.baseY = 0;
+          _this.pixelsPerUnit = 72;
+          return _this;
+        }
+        var _proto = CoreBootstrap.prototype;
+        _proto.onLoad = function onLoad() {
+          var _this2 = this;
+          this.buildTree();
+          this.app = createApp({
+            layers: {
+              get: function get(name) {
+                var node = _this2.layerNodes.get(name);
+                if (!node) throw new Error("Missing layer: " + name);
+                return node;
+              }
+            },
+            toPx: function toPx(p) {
+              return new Vec3(p.x * _this2.pixelsPerUnit, p.y * _this2.pixelsPerUnit, 0);
+            },
+            pxPerUnit: function pxPerUnit() {
+              return _this2.pixelsPerUnit;
+            },
+            setShake: function setShake(offset) {
+              return _this2.applyShake(offset);
+            }
+          });
+          if (this.app.usingDebugInput) this.mountDebugInput(this.app);
+        };
+        _proto.onEnable = function onEnable() {
+          var _this$app;
+          view.on('canvas-resize', this.onResize, this);
+          this.onResize();
+          (_this$app = this.app) == null || _this$app.attach();
+          if (!this.started) {
+            var _this$app2;
+            (_this$app2 = this.app) == null || _this$app2.start();
+            this.started = true;
+          }
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$app3;
+          view.off('canvas-resize', this.onResize, this);
+          (_this$app3 = this.app) == null || _this$app3.detach();
+        };
+        _proto.onDestroy = function onDestroy() {
+          var _this$app4;
+          view.off('canvas-resize', this.onResize, this);
+          (_this$app4 = this.app) == null || _this$app4.detach();
+          this.app = null;
+        };
+        _proto.update = function update(dt) {
+          var _this$app5;
+          (_this$app5 = this.app) == null || _this$app5.tick(dt);
+        };
+        _proto.onResize = function onResize() {
+          var _this$world, _this$arenaView;
+          var visible = view.getVisibleSize();
+          var layout = layoutScreen(visible.width, visible.height, readSafeArea(visible.width, visible.height));
+          this.pixelsPerUnit = layout.pxPerUnit;
+          var origin = this.toParent(layout.arenaOriginX, layout.arenaOriginY, visible.width, visible.height);
+          this.baseX = origin.x;
+          this.baseY = origin.y;
+          (_this$world = this.world) == null || _this$world.setPosition(this.baseX, this.baseY, 0);
+          (_this$arenaView = this.arenaView) == null || _this$arenaView.redraw(layout.pxPerUnit);
+          paintGuide(this.hudGuide, layout.hud, HUD_TINT, visible.width, visible.height);
+          paintGuide(this.thumbGuide, layout.thumb, THUMB_TINT, visible.width, visible.height);
+        };
+        _proto.applyShake = function applyShake(offset) {
+          var _this$world2;
+          (_this$world2 = this.world) == null || _this$world2.setPosition(this.baseX + offset.x * this.pixelsPerUnit, this.baseY + offset.y * this.pixelsPerUnit, 0);
+        };
+        _proto.buildTree = function buildTree() {
+          var world = this.makeChild(this.node, 'World');
+          this.world = world;
+          for (var _iterator = _createForOfIteratorHelperLoose(LAYER_NAMES), _step; !(_step = _iterator()).done;) {
+            var name = _step.value;
+            var parent = name === 'hud' || name === 'debug' ? this.node : world;
+            var node = this.makeChild(parent, name);
+            this.layerNodes.set(name, node);
+          }
+          var arena = this.layerNodes.get('arena');
+          if (arena) this.arenaView = arena.addComponent(CoreArenaView);
+          var hud = this.layerNodes.get('hud');
+          var debug = this.layerNodes.get('debug');
+          if (hud) this.hudGuide = addGuide(hud, 'HudGuide');
+          if (debug) this.thumbGuide = addGuide(debug, 'ThumbGuide');
+        };
+        _proto.mountDebugInput = function mountDebugInput(app) {
+          var node = this.makeChild(this.node, 'DebugInput');
+          var component = node.addComponent(CoreDebugInput);
+          component.source = app.debugInput;
+        };
+        _proto.makeChild = function makeChild(parent, name) {
+          var node = new Node(name);
+          node.layer = parent.layer;
+          var transform = node.addComponent(UITransform);
+          transform.setAnchorPoint(0, 0);
+          parent.addChild(node);
+          return node;
+        };
+        _proto.toParent = function toParent(x, y, visibleWidth, visibleHeight) {
+          return {
+            x: x - visibleWidth / 2,
+            y: y - visibleHeight / 2
+          };
+        };
+        return CoreBootstrap;
+      }(Component)) || _class));
+      function addGuide(parent, name) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        var transform = node.addComponent(UITransform);
+        transform.setAnchorPoint(0, 0);
+        parent.addChild(node);
+        return node.addComponent(Graphics);
+      }
+      function paintGuide(graphics, rect, color, visibleWidth, visibleHeight) {
+        if (!graphics) return;
+        var node = graphics.node;
+        node.setPosition(rect.x - visibleWidth / 2, rect.y - visibleHeight / 2, 0);
+        var transform = node.getComponent(UITransform);
+        transform == null || transform.setContentSize(Math.max(0, rect.width), Math.max(0, rect.height));
+        graphics.clear();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        graphics.fillColor = color;
+        graphics.rect(0, 0, rect.width, rect.height);
+        graphics.fill();
+      }
+      function readSafeArea(visibleWidth, visibleHeight) {
+        var safe = sys.getSafeAreaRect();
+        var windowSize = screen.windowSize;
+        var scaleX = windowSize.width > 0 ? visibleWidth / windowSize.width : 1;
+        var scaleY = windowSize.height > 0 ? visibleHeight / windowSize.height : 1;
+        var rect = {
+          x: safe.x * scaleX,
+          y: safe.y * scaleY,
+          width: safe.width * scaleX,
+          height: safe.height * scaleY
+        };
+        if (rect.width <= 0 || rect.height <= 0) {
+          return {
+            x: 0,
+            y: 0,
+            width: visibleWidth,
+            height: visibleHeight
+          };
+        }
+        return rect;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/EnemyParams.ts",["cc"],(function(e){var s;return{setters:[function(e){s=e.cclegacy}],execute:function(){e("numberParam",a),s._RF.push({},"fab42y1HS5H+ZQSUDjVndko","EnemyParams",void 0);e("ENEMY_PARAMS",[].concat(n("blob","软团子",30,.3,1.2,5,1,0,0,1),n("sheep","群聚羊",20,.28,1.6,3,.6,0,20,.6),n("boar","冲锋猪",80,.45,1,12,4,.7,60,.3),[a("enemy.maxAlive","敌人","同屏上限",80,10,200,1),a("enemy.contactCooldown","敌人","接触伤害间隔(s)",.5,.5,10),a("enemy.knockbackTime","敌人","线性击退时间(s)",.15,.01,.15),a("sheep.groupMin","群聚羊","每群最少只数",6,1,30,1),a("sheep.groupMax","群聚羊","每群最多只数",10,1,30,1),a("sheep.sep","群聚羊","分离权重",1,0,3),a("sheep.coh","群聚羊","聚合权重",.6,0,3),a("sheep.align","群聚羊","对齐权重",.4,0,3),a("sheep.seek","群聚羊","趋向宠物权重",.3,0,3),a("sheep.sepDist","群聚羊","分离距离(u)",.5,.1,2),a("sheep.scareRadius","群聚羊","受惊传播半径(u)",1.5,0,5),a("sheep.scareTime","群聚羊","四散时间(s)",1,0,5),a("sheep.scareSpeedMul","群聚羊","四散速度倍率",1.8,1,4),a("boar.triggerRange","冲锋猪","蓄力距离(u)",5,1,12),a("boar.windup","冲锋猪","蓄力(s)",1,.2,3),a("boar.chargeSpeed","冲锋猪","冲锋速度(u/s)",9,2,20),a("boar.chargeTime","冲锋猪","冲锋时间(s)",.6,.1,2),a("boar.stunTime","冲锋猪","冲锋后愣住(s)",1.2,0,5),a("boar.stunDmgTakenMul","冲锋猪","愣住受伤倍率",1.5,1,5),{key:"boar.cutsTrail",group:"冲锋猪",label:"冲锋切断未闭合剑痕",kind:"bool",default:1,note:"P0 supplement 1. Read by sword/loop; enemy only exposes charging boars."},a("chain.dropChance","剑链","普通怪掉散剑概率",.08,0,1),a("sheep.flockRadius","群聚羊","群集感知半径(u)",3,0,20),a("enemy.separationPasses","敌人","碰撞分离迭代次数",8,1,32,1),a("enemy.damageNumberMax","敌人","同屏伤害数字上限",30,1,30,1),a("enemy.damageMergeTime","敌人","同目标数字合并窗口(s)",.2,0,1),a("enemy.damageNumberTime","敌人","伤害数字寿命(s)",.6,.2,3),a("enemy.damageNumberRise","敌人","伤害数字上浮速度(u/s)",1,0,5),a("enemy.hitFlashTime","敌人","受击闪白(s)",.12,0,1)]));function a(e,s,a,n,r,o,u){return void 0===u&&(u=.05),{key:e,group:s,label:a,kind:"number",default:n,min:r,max:o,step:u}}function n(e,s,n,r,o,u,m,i,t,p){return[a(e+".hp",s,"生命",n,1,2e3,1),a(e+".radius",s,"半径(u)",r,.1,1),a(e+".speed",s,"速度(u/s)",o,0,8),a(e+".dmg",s,"接触伤害",u,0,100,1),a(e+".cost",s,"刷怪点数(每只)",m,.1,20),a(e+".kbResist",s,"击退抗性",i,0,1),a(e+".unlockAt",s,"解锁时间(s)",t,0,600,1),a(e+".weight",s,"选怪权重(羊按群)",p,0,5)]}s._RF.pop()}}}));
+System.register("chunks:///_virtual/CoreDebugInput.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _inheritsLoose, cclegacy, _decorator, input, Input, EventMouse, Component;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      input = module.input;
+      Input = module.Input;
+      EventMouse = module.EventMouse;
+      Component = module.Component;
+    }],
+    execute: function () {
+      var _dec, _class;
+      cclegacy._RF.push({}, "e3850/ICLRMmaCsl9G0LUvv", "CoreDebugInput", undefined);
+      var ccclass = _decorator.ccclass;
+      var MOUSE_ID = -1;
 
-System.register("chunks:///_virtual/EnemyView.ts",["./rollupPluginModLoBabelHelpers.js","cc","./ScreenLayout.ts"],(function(e){var t,i,n,o,s,r,u,a,l,h,d,c,m;return{setters:[function(e){t=e.inheritsLoose,i=e.createForOfIteratorHelperLoose,n=e.extends},function(e){o=e.cclegacy,s=e._decorator,r=e.Color,u=e.Graphics,a=e.Label,l=e.view,h=e.Node,d=e.UITransform,c=e.Component},function(e){m=e.layoutScreen}],execute:function(){e("mountEnemyView",(function(e,t){var i=e.layers.get("enemies");if("function"!=typeof i.addChild)return;var n=w(i,"EnemyGreybox").addComponent(x);n&&n.configure(e,t)})),o._RF.push({},"48a48MOp6JDoKV+sdbh9Zw8","EnemyView",void 0);var b=s.ccclass,f=new r(112,165,126,255),p=new r(220,220,228,255),v=new r(184,121,110,255),y=new r(255,255,255,255),g=new r(255,89,72,255),x=e("EnemyGreyboxView",function(e){function o(){for(var t,i=arguments.length,n=new Array(i),o=0;o<i;o++)n[o]=arguments[o];return(t=e.call.apply(e,[this].concat(n))||this).ctx=null,t.module=null,t.graphics=null,t.hud=null,t.numbers=[],t.pool=[],t.unsubs=[],t.subscribed=!1,t.hudNode=null,t.fxNode=null,t}t(o,e);var s=o.prototype;return s.configure=function(e,t){this.ctx=e,this.module=t,this.graphics=this.node.addComponent(u),this.hudNode=w(e.layers.get("hud"),"EnemyDirectorHUD"),this.hud=this.hudNode.addComponent(a),this.hud&&(this.hud.fontSize=18,this.hud.lineHeight=24,this.hud.color=y),this.fxNode=w(e.layers.get("fx"),"EnemyDamageNumbers"),this.subscribe()},s.onEnable=function(){var e;null==(e=this.module)||e.attach(),this.hudNode&&(this.hudNode.active=!0),this.fxNode&&(this.fxNode.active=!0),this.subscribe()},s.onDisable=function(){var e;this.unsubscribe(),null==(e=this.module)||e.detach(),this.hudNode&&(this.hudNode.active=!1),this.fxNode&&(this.fxNode.active=!1),this.resetNumbers()},s.onDestroy=function(){var e,t,i;this.unsubscribe(),null==(e=this.module)||e.detach(),null==(t=this.hudNode)||t.destroy(),null==(i=this.fxNode)||i.destroy(),this.ctx=null,this.module=null},s.update=function(){var e=this.ctx,t=this.module,n=this.graphics;if(e&&t&&n){n.clear();for(var o,s=e.toPx({x:1,y:0}).x-e.toPx({x:0,y:0}).x,u=i(t.world.enemies.values());!(o=u()).done;){var a=o.value;a.alive&&this.drawEnemy(n,a,s,e)}if(!e.services.has("player")){var h=e.toPx(t.world.player().pos);n.strokeColor=new r(120,180,255,255),n.lineWidth=2,n.circle(h.x,h.y,t.world.player().radius*s),n.stroke()}if(this.hud){this.hud.string="t "+t.director.elapsed.toFixed(3)+"   D "+t.director.danger.toFixed(3)+"   敌 "+t.director.alive;var d=l.getVisibleSize(),c=m(d.width,d.height).hud;this.hud.node.setPosition(c.x+c.width/2-d.width/2,c.y+c.height/2-d.height/2,0)}for(var b=this.numbers.length-1;b>=0;b--){var f=this.numbers[b];if(f){var p=e.loop.simTime-f.born;if(p>e.tunables.get("enemy.damageNumberTime"))f.label.node.active=!1,this.pool.push(f.label),this.numbers.splice(b,1);else{var v=e.toPx({x:f.pos.x,y:f.pos.y+p*e.tunables.get("enemy.damageNumberRise")});f.label.node.setPosition(v)}}}}},s.drawEnemy=function(e,t,i,n){var o=n.toPx(t.pos),s=t.radius*i;if("boar"===t.kind&&"windup"===t.phase){var r=n.toPx({x:t.pos.x+t.chargeDir.x*t.chargeSpeed*n.tunables.get("boar.chargeTime"),y:t.pos.y+t.chargeDir.y*t.chargeSpeed*n.tunables.get("boar.chargeTime")});e.strokeColor=g,e.lineWidth=Math.max(2,.15*s),e.moveTo(o.x,o.y),e.lineTo(r.x,r.y),e.stroke()}e.fillColor=t.flashLeft>0?y:"blob"===t.kind?f:"sheep"===t.kind?p:v,"boar"===t.kind?e.roundRect(o.x-s,o.y-s,2*s,2*s,s/2):e.circle(o.x,o.y,s),e.fill()},s.subscribe=function(){var e=this,t=this.ctx;t&&!this.subscribed&&(this.subscribed=!0,this.unsubs.push(t.events.on("session:start",(function(){return e.resetNumbers()}))),this.unsubs.push(t.events.on("debug:command",(function(t){"clearEnemies"===t.cmd&&e.resetNumbers()}))),this.unsubs.push(t.events.on("enemy:damaged",(function(i){var o,s=i.id,u=i.pos,l=i.amount,h=i.source;if(e.fxNode){var d=e.numbers.find((function(e){return e.id===s&&t.loop.simTime-e.born<=t.tunables.get("enemy.damageMergeTime")}));if(d)return d.label.color="whip"===h?new r(255,220,110,255):"loop"===h?new r(80,230,230,255):y,d.amount+=l,void(d.label.string=String(Math.round(10*d.amount)/10));if(!(e.numbers.length>=Math.floor(t.tunables.get("enemy.damageNumberMax")))){var c=null!=(o=e.pool.pop())?o:w(e.fxNode,"Damage").addComponent(a);c&&(c.node.active=!0,c.fontSize=22,c.lineHeight=26,c.color="whip"===h?new r(255,220,110,255):"loop"===h?new r(80,230,230,255):y,c.string=String(Math.round(10*l)/10),c.node.setPosition(t.toPx(u)),e.numbers.push({label:c,pos:n({},u),born:t.loop.simTime,id:s,amount:l}))}}}))))},s.unsubscribe=function(){for(var e,t=i(this.unsubs);!(e=t()).done;){(0,e.value)()}this.unsubs.length=0,this.subscribed=!1},s.resetNumbers=function(){for(var e,t=i(this.numbers);!(e=t()).done;){var n=e.value;n.label.node.active=!1,this.pool.push(n.label)}this.numbers.length=0},o}(c));function w(e,t){var i=new h(t);return i.layer=e.layer,i.addComponent(d),e.addChild(i),i}b("EnemyGreyboxView")(x),o._RF.pop()}}}));
+      /**
+       * Feeds pointer events into `DebugInputSource`.
+       * The first touch owns the stick. Mouse events are ignored after any touch,
+       * so a phone that also synthesizes mouse events cannot add a second pointer.
+       * Listeners are removed in onDisable.
+       */
+      var CoreDebugInput = exports('CoreDebugInput', (_dec = ccclass('CoreDebugInput'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(CoreDebugInput, _Component);
+        function CoreDebugInput() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.source = null;
+          _this.sawTouch = false;
+          _this.mouseDown = false;
+          return _this;
+        }
+        var _proto = CoreDebugInput.prototype;
+        _proto.onEnable = function onEnable() {
+          input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
+          input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+          input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+          input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+          input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+          input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+          input.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
+        };
+        _proto.onDisable = function onDisable() {
+          input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
+          input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+          input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+          input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+          input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+          input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+          input.off(Input.EventType.MOUSE_UP, this.onMouseUp, this);
+          this.mouseDown = false;
+        };
+        _proto.onDestroy = function onDestroy() {
+          this.source = null;
+        };
+        _proto.onTouchStart = function onTouchStart(event) {
+          var _this$source;
+          this.sawTouch = true;
+          var loc = event.getUILocation();
+          (_this$source = this.source) == null || _this$source.pointerDown(touchId(event), loc.x, loc.y);
+        };
+        _proto.onTouchMove = function onTouchMove(event) {
+          var _this$source2;
+          var loc = event.getUILocation();
+          (_this$source2 = this.source) == null || _this$source2.pointerMove(touchId(event), loc.x, loc.y);
+        };
+        _proto.onTouchEnd = function onTouchEnd(event) {
+          var _this$source3;
+          (_this$source3 = this.source) == null || _this$source3.pointerUp(touchId(event));
+        };
+        _proto.onMouseDown = function onMouseDown(event) {
+          var _this$source4;
+          if (this.sawTouch || event.getButton() !== EventMouse.BUTTON_LEFT) return;
+          this.mouseDown = true;
+          var loc = event.getUILocation();
+          (_this$source4 = this.source) == null || _this$source4.pointerDown(MOUSE_ID, loc.x, loc.y);
+        };
+        _proto.onMouseMove = function onMouseMove(event) {
+          var _this$source5;
+          if (this.sawTouch || !this.mouseDown) return;
+          var loc = event.getUILocation();
+          (_this$source5 = this.source) == null || _this$source5.pointerMove(MOUSE_ID, loc.x, loc.y);
+        };
+        _proto.onMouseUp = function onMouseUp(event) {
+          var _this$source6;
+          if (!this.mouseDown || event.getButton() !== EventMouse.BUTTON_LEFT) return;
+          this.mouseDown = false;
+          (_this$source6 = this.source) == null || _this$source6.pointerUp(MOUSE_ID);
+        };
+        return CoreDebugInput;
+      }(Component)) || _class));
+      function touchId(event) {
+        return event.touch ? event.touch.getID() : 0;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/EnemyWorld.ts",["./rollupPluginModLoBabelHelpers.js","cc","./SpatialHash.ts","./Geom2.ts"],(function(e){var t,a,s,i,n;return{setters:[function(e){t=e.extends,a=e.createForOfIteratorHelperLoose},function(e){s=e.cclegacy},function(e){i=e.SpatialHash},function(e){n=e.pointSegmentDistance}],execute:function(){s._RF.push({},"42a37+zTrVMDp1Sh2wN4eiY","EnemyWorld",void 0);var r={applied:!1,dealt:0,killed:!1},o=e("FIXED_TEST_PLAYER",{pos:{x:5,y:7.5},vel:{x:0,y:0},radius:.35,maxSpeed:0,hp:100,maxHp:100,state:"normal",isInvulnerable:function(){return!1},applyDamage:function(){return!1}});e("EnemyWorld",function(){function e(e){this.enemies=new Map,this.nextId=1,this.alive=0,this.pending=[],this.generation=0,this.enabled=!1,this.ctx=void 0,this.ctx=e}var s=e.prototype;return s.setEnabled=function(e){this.enabled=e},s.player=function(){return this.ctx.services.has("player")?this.ctx.services.get("player"):o},s.clear=function(){this.generation+=1,this.enemies.clear(),this.pending.length=0,this.alive=0},s.spawn=function(e,a,s){var i=this.ctx.tunables;if(!this.enabled||this.alive>=Math.floor(i.get("enemy.maxAlive")))return null;var n={id:this.nextId++,kind:e,pos:this.ctx.arena.clamp(a,i.get(e+".radius")),vel:{x:0,y:0},facing:{x:0,y:-1},radius:i.get(e+".radius"),hp:i.get(e+".hp")*s,alive:!0,speed:i.get(e+".speed"),damage:i.get(e+".dmg")*(1+i.get("diff.dmgK")*(s-1)),resistance:i.get(e+".kbResist"),knockbackLeft:0,knockbackRemaining:{x:0,y:0},phase:"chase",phaseLeft:0,chargeDir:{x:0,y:-1},chargeSpeed:i.get("boar.chargeSpeed"),scatterLeft:0,scatterDir:{x:0,y:0},contactLeft:0,flashLeft:0,fatalSource:"drag",hits:new Map};return this.enemies.set(n.id,n),this.alive+=1,this.ctx.events.emit("enemy:spawned",{id:n.id,kind:e,pos:t({},n.pos)}),n},s.aliveCount=function(){return this.alive},s.queryCircle=function(e,t,a){return t<0?0:this.collect(a,(function(a){return Math.hypot(a.pos.x-e.x,a.pos.y-e.y)<=t+a.radius}))},s.querySegment=function(e,t,a,s){return a<0?0:this.collect(s,(function(s){return n(s.pos,e,t)<=a+s.radius}))},s.queryAABB=function(e,t,a,s,i){return e>a||t>s?0:this.collect(i,(function(i){var n=Math.max(e,Math.min(a,i.pos.x)),r=Math.max(t,Math.min(s,i.pos.y));return Math.hypot(i.pos.x-n,i.pos.y-r)<=i.radius}))},s.nearest=function(e,t){for(var s,i=null,n=t,r=a(this.enemies.values());!(s=r()).done;){var o=s.value;if(o.alive){var h=Math.max(0,Math.hypot(o.pos.x-e.x,o.pos.y-e.y)-o.radius);h<=n&&(null===i||h<n)&&(i=o,n=h)}}return i},s.getChargingBoars=function(){for(var e,s=[],i=a(this.enemies.values());!(e=i()).done;){var n=e.value;n.alive&&"boar"===n.kind&&"charge"===n.phase&&s.push({id:n.id,pos:t({},n.pos),radius:n.radius})}return s},s.hit=function(e,a){var s=this.enemies.get(e);if(!this.enabled||!s||!s.alive||!Number.isFinite(a.amount)||a.amount<=0||!Number.isFinite(a.cooldown)||a.cooldown<0)return t({},r);var i=this.ctx.loop.simTime;this.pruneHits(s,i);var n=s.hits.get(a.hitKey);if(void 0!==n&&i+1e-9<n)return t({},r);var o="boar"===s.kind&&"recover"===s.phase?this.ctx.tunables.get("boar.stunDmgTakenMul"):1,p=Math.min(s.hp,a.amount*o);if(s.hits.set(a.hitKey,i+a.cooldown),s.hp-=p,s.flashLeft=this.ctx.tunables.get("enemy.hitFlashTime"),"sheep"===s.kind&&this.scatter(s),a.dir&&Number.isFinite(a.dir.x)&&Number.isFinite(a.dir.y)&&void 0!==a.knockback&&Number.isFinite(a.knockback)&&a.knockback>0){var c=h(a.dir.x,a.dir.y),u=a.knockback*(1-s.resistance);s.knockbackRemaining.x+=c.x*u,s.knockbackRemaining.y+=c.y*u,s.knockbackLeft=this.ctx.tunables.get("enemy.knockbackTime")}var l=s.hp<=0;return l&&(s.alive=!1,s.vel={x:0,y:0},s.fatalSource=a.source,this.alive-=1,this.pending.push(s)),this.ctx.events.emit("enemy:damaged",{id:e,kind:s.kind,source:a.source,amount:p,killed:l,pos:t({},s.pos)}),{applied:!0,dealt:p,killed:l}},s.update=function(e){if(this.enabled&&!(e<=0)){var s=this.ctx.services.has("swordRig")?this.ctx.services.get("swordRig").enemyTimeScale:1,i=e*(Number.isFinite(s)?Math.max(0,s):1);if(0!==i){for(var r,o=this.player(),h=this.generation,p=new Map,c=new Map,u=this.spatial(),l=a(this.enemies.values());!(r=l()).done;){var d=r.value;d.alive&&(c.set(d.id,t({},d.pos)),"sheep"===d.kind&&p.set(d.id,this.sheepDirection(d,o.pos,u)))}for(var v,x=a(this.enemies.values());!(v=x()).done;){var f=v.value;if(f.alive){this.pruneHits(f,this.ctx.loop.simTime),f.flashLeft=Math.max(0,f.flashLeft-i),f.contactLeft=Math.max(0,f.contactLeft-i);var y=Math.min(i,f.knockbackLeft);if(y>0){var g=y/f.knockbackLeft;f.pos=this.ctx.arena.clamp({x:f.pos.x+f.knockbackRemaining.x*g,y:f.pos.y+f.knockbackRemaining.y*g},f.radius),f.knockbackRemaining.x*=1-g,f.knockbackRemaining.y*=1-g,f.knockbackLeft=Math.max(0,f.knockbackLeft-y)}var m=i-y;if("boar"===f.kind)this.updateBoar(f,o.pos,i,m);else if("sheep"===f.kind){var k,b=null!=(k=p.get(f.id))?k:{x:0,y:0},M=Math.min(m,Math.max(0,f.scatterLeft-y));M>0&&this.move(f,f.scatterDir,f.speed*this.ctx.tunables.get("sheep.scareSpeedMul"),M),f.scatterLeft=Math.max(0,f.scatterLeft-i),m>M&&this.move(f,b,f.speed,m-M)}else m>0&&this.chase(f,o.pos,m)}}this.separate();for(var L,D=a(this.enemies.values());!(L=D()).done;){var w=L.value,S=c.get(w.id);if(w.alive&&S&&(w.vel={x:(w.pos.x-S.x)/e,y:(w.pos.y-S.y)/e},"dead"!==o.state&&w.contactLeft<=1e-9&&n(o.pos,S,w.pos)<=o.radius+w.radius&&(w.contactLeft=this.ctx.tunables.get("enemy.contactCooldown"),o.applyDamage(w.damage,{enemyId:w.id,kind:w.kind}),h!==this.generation||!this.enabled)))return}}else for(var R,T=a(this.enemies.values());!(R=T()).done;){R.value.vel={x:0,y:0}}}},s.resolveDeaths=function(){if(this.enabled){var e=this.pending;this.pending=[];for(var s,i=this.generation,n=a(e);!(s=n()).done;){var r=s.value;this.enemies.delete(r.id);var o=this.ctx.rng.loot.next()<this.ctx.tunables.get("chain.dropChance");if(this.ctx.events.emit("enemy:died",{id:r.id,kind:r.kind,pos:t({},r.pos),source:r.fatalSource}),i!==this.generation||!this.enabled)return;if(o&&this.ctx.events.emit("loot:sword",{pos:t({},r.pos)}),i!==this.generation||!this.enabled)return}}},s.collect=function(e,t){for(var s,i=e.length,n=a(this.enemies.values());!(s=n()).done;){var r=s.value;r.alive&&t(r)&&e.push(r)}return e.length-i},s.pruneHits=function(e,t){for(var s,i=a(e.hits);!(s=i()).done;){var n=s.value,r=n[0];t+1e-9>=n[1]&&e.hits.delete(r)}},s.scatter=function(e){for(var t,s=this.ctx.tunables,i=this.player().pos,n=a(this.enemies.values());!(t=n()).done;){var r=t.value;if(r.alive&&"sheep"===r.kind&&!(Math.hypot(r.pos.x-e.pos.x,r.pos.y-e.pos.y)>s.get("sheep.scareRadius"))){r.scatterLeft=s.get("sheep.scareTime");var o=h(r.pos.x-i.x,r.pos.y-i.y);r.scatterDir=Math.hypot(o.x,o.y)>0?o:{x:r.id%2==0?1:-1,y:0}}}},s.sheepDirection=function(e,t,a){var s=this.ctx.tunables,i=[];a.queryCircle(e.pos.x,e.pos.y,s.get("sheep.flockRadius"),i);for(var n=0,r=0,o=0,p=0,c=0,u=0,l=0,d=0,v=i;d<v.length;d++){var x=v[d];if("sheep"===x.kind&&x.id!==e.id){var f=x.pos.x-e.pos.x,y=x.pos.y-e.pos.y,g=Math.hypot(f,y);g>s.get("sheep.flockRadius")||(n+=f,r+=y,o+=x.vel.x,p+=x.vel.y,g>1e-8&&g<s.get("sheep.sepDist")&&(c-=f/g,u-=y/g),l+=1)}}var m=h(c,u),k=h(l?n/l:0,l?r/l:0),b=h(l?o/l:0,l?p/l:0),M=h(t.x-e.pos.x,t.y-e.pos.y);return h(m.x*s.get("sheep.sep")+k.x*s.get("sheep.coh")+b.x*s.get("sheep.align")+M.x*s.get("sheep.seek"),m.y*s.get("sheep.sep")+k.y*s.get("sheep.coh")+b.y*s.get("sheep.align")+M.y*s.get("sheep.seek"))},s.spatial=function(){for(var e,t=0,s=a(this.enemies.values());!(e=s()).done;){var n=e.value;n.alive&&(t=Math.max(t,n.radius))}for(var r,o=new i(t>0?2*t:2*this.ctx.tunables.get("blob.radius")),h=a(this.enemies.values());!(r=h()).done;){var p=r.value;p.alive&&o.insert(p.id,p.pos.x,p.pos.y,p.radius,p)}return o},s.separate=function(){for(var e=[],s=0;s<Math.floor(this.ctx.tunables.get("enemy.separationPasses"));s++){for(var i,n=this.spatial(),r=!1,o=a(this.enemies.values());!(i=o()).done;){var p=i.value;if(p.alive){e.length=0,n.queryCircle(p.pos.x,p.pos.y,p.radius,e);for(var c,u=a(e);!(c=u()).done;){var l=c.value;if(!(l.id<=p.id)){var d=l.pos.x-p.pos.x,v=l.pos.y-p.pos.y,x=Math.hypot(d,v),f=p.radius+l.radius-x;if(!(f<=1e-8)){var y=x>1e-8?h(d,v):{x:p.id%2==0?1:-1,y:0},g=t({},p.pos);p.pos=this.ctx.arena.clamp({x:p.pos.x-y.x*f/2,y:p.pos.y-y.y*f/2},p.radius);var m=(g.x-p.pos.x)*y.x+(g.y-p.pos.y)*y.y,k=t({},l.pos);l.pos=this.ctx.arena.clamp({x:l.pos.x+y.x*(f-m),y:l.pos.y+y.y*(f-m)},l.radius);var b=(l.pos.x-k.x)*y.x+(l.pos.y-k.y)*y.y,M=Math.max(0,f-m-b);p.pos=this.ctx.arena.clamp({x:p.pos.x-y.x*M,y:p.pos.y-y.y*M},p.radius),r=!0}}}}}if(!r)break}},s.chase=function(e,t,a){var s=t.x-e.pos.x,i=t.y-e.pos.y;this.move(e,h(s,i),Math.min(e.speed,Math.hypot(s,i)/a),a)},s.updateBoar=function(e,a,s,i){void 0===i&&(i=s);var n=this.ctx.tunables;if("chase"===e.phase){if(Math.hypot(a.x-e.pos.x,a.y-e.pos.y)>n.get("boar.triggerRange"))return void(i>0&&this.chase(e,a,i));e.phase="windup",e.phaseLeft=n.get("boar.windup");var r=h(a.x-e.pos.x,a.y-e.pos.y);e.chargeDir=Math.hypot(r.x,r.y)>0?r:t({},e.facing),e.facing=t({},e.chargeDir)}for(var o=s,p=s-i;o>1e-9||e.phaseLeft<=1e-9;){var c=Math.min(o,e.phaseLeft);if("charge"===e.phase&&i>0){var u=Math.max(0,c-p),l={x:e.pos.x+e.chargeDir.x*e.chargeSpeed*u,y:e.pos.y+e.chargeDir.y*e.chargeSpeed*u};this.move(e,e.chargeDir,e.chargeSpeed,u),this.ctx.arena.contains(l,e.radius)||(e.phaseLeft=c)}if(e.phaseLeft=Math.max(0,e.phaseLeft-c),o-=c,p=Math.max(0,p-c),e.phaseLeft>1e-9)break;if("windup"===e.phase)e.phase="charge",e.phaseLeft=n.get("boar.chargeTime");else{if("charge"!==e.phase){e.phase="chase";break}e.phase="recover",e.phaseLeft=n.get("boar.stunTime")}}},s.move=function(e,a,s,i){e.pos=this.ctx.arena.clamp({x:e.pos.x+a.x*s*i,y:e.pos.y+a.y*s*i},e.radius),Math.hypot(a.x,a.y)>0&&(e.facing=t({},a))},e}());function h(e,t){var a=Math.hypot(e,t);return a>1e-8?{x:e/a,y:t/a}:{x:0,y:0}}s._RF.pop()}}}));
+System.register("chunks:///_virtual/Damage.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports({
+        baseDamage: baseDamage,
+        contactDamage: contactDamage,
+        dragAtTier: dragAtTier,
+        dragDamage: dragDamage,
+        linkDamage: linkDamage,
+        ropeLength: ropeLength,
+        slotDamage: slotDamage,
+        speedTier: speedTier
+      });
+      cclegacy._RF.push({}, "6164fPZnh5CTK9HTsnfdBZe", "Damage", undefined);
+      /** P0 §6.2; properties W/Lg/Cv are independent tunables, never level/velocity proxies. */
+      function baseDamage(p) {
+        return p.get('sword.baseDmg') * Math.pow(p.get('sword.levelGrowth'), p.get('sword.level'));
+      }
+      function speedTier(p, vTip) {
+        return vTip < p.get('drag.vDead') ? 0 : Math.max(0, Math.min(p.get('drag.qCap'), vTip / p.get('drag.vRef')));
+      }
+      function dragAtTier(p, q) {
+        return baseDamage(p) * Math.pow(p.get('sword.W'), p.get('drag.weightExp')) * Math.pow(q, p.get('drag.speedExp'));
+      }
+      function dragDamage(p, vTip) {
+        return dragAtTier(p, speedTier(p, vTip));
+      }
+      /** P0 §6.3: the growth base here is explicitly 1.12, independent of sword.levelGrowth. */
+      function linkDamage(p, grade, N) {
+        return p.get('chain.baseDmg') * Math.pow(1.12, grade + p.get('chain.mainLevelShare') * p.get('sword.level')) * (1 + p.get('chain.resonPer') * Math.min(N, p.get('chain.resonCount')));
+      }
+      function slotDamage(p, grades, N) {
+        if (grades.length === 0) return 0;
+        var highest = 0;
+        for (var _iterator = _createForOfIteratorHelperLoose(grades), _step; !(_step = _iterator()).done;) {
+          var grade = _step.value;
+          highest = Math.max(highest, linkDamage(p, grade, N));
+        }
+        return highest * (1 + p.get('chain.stackBonus') * (grades.length - 1));
+      }
+      function contactDamage(p, damage, speed) {
+        return damage * p.get('chain.contactMul') * speed / p.get('drag.vRef');
+      }
+      function ropeLength(p, slots) {
+        return Math.min(p.get('rope.baseLen') + p.get('rope.lenPerLg') * p.get('sword.Lg') + p.get('rope.lenPerSlot') * slots, p.get('rope.lenCap'));
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/events.ts",["cc"],(function(e){var n;return{setters:[function(e){n=e.cclegacy}],execute:function(){n._RF.push({},"7b95cBxjJBMraoOad3POBC/","events",void 0);e("GameEvent",{SessionStart:"session:start",SessionEnd:"session:end",EnemySpawned:"enemy:spawned",EnemyDamaged:"enemy:damaged",EnemyDied:"enemy:died",LootSword:"loot:sword",PlayerDamaged:"player:damaged",PlayerDied:"player:died",SwordWhip:"sword:whip",SwordFullCharge:"sword:fullCharge",ChainChanged:"chain:changed",ChainPickup:"chain:pickup",ChainBreak:"chain:break",ChainScatterExpired:"chain:scatterExpired",ThrowStart:"throw:start",ThrowCancel:"throw:cancel",ThrowCatch:"throw:catch",ThrowMiss:"throw:miss",ThrowRecovered:"throw:recovered",JianzhenWarn:"jianzhen:warn",JianzhenStart:"jianzhen:start",JianzhenLoop:"jianzhen:loop",JianzhenRejectedLoop:"jianzhen:rejectedLoop",JianzhenHit:"jianzhen:hit",JianzhenEnd:"jianzhen:end",JianzhenCut:"jianzhen:cut",FxHitstop:"fx:hitstop",FxShake:"fx:shake",TuningChanged:"tuning:changed",DebugCommand:"debug:command"});n._RF.pop()}}}));
+System.register("chunks:///_virtual/DebugInputSource.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Vec2.ts'], function (exports) {
+  var _extends, _createForOfIteratorHelperLoose, _createClass, cclegacy, vec2;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      vec2 = module.vec2;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "98b339MoJdGr7b/qGihYL9O", "DebugInputSource", undefined);
 
-System.register("chunks:///_virtual/FixedLoop.ts",["./rollupPluginModLoBabelHelpers.js","cc","./SystemOrder.ts"],(function(t){var s,e,i,r;return{setters:[function(t){s=t.createForOfIteratorHelperLoose,e=t.createClass},function(t){i=t.cclegacy},function(t){r=t.SystemOrder}],execute:function(){i._RF.push({},"d1239ZU+S9OL76iYUAWgOae","FixedLoop",void 0);t("FIXED_HZ",60);var u=t("FIXED_DT",1/60),o=t("MAX_STEPS_PER_FRAME",5);t("FixedLoop",function(){function t(){this.systems=[],this.accumulator=0,this.simTimeValue=0,this.hitstopLeft=0,this.stepsThisFrameValue=0}var i=t.prototype;return i.addSystem=function(t){var s=this.systems.findIndex((function(s){return s.id===t.id}));s>=0&&this.systems.splice(s,1),this.systems.push(t),this.systems.sort((function(t,s){return t.order-s.order}))},i.removeSystem=function(t){var s=this.systems.findIndex((function(s){return s.id===t}));s>=0&&this.systems.splice(s,1)},i.hitstop=function(t){var s=Math.max(0,Math.floor(t));this.hitstopLeft+=s},i.resetClock=function(){this.accumulator=0,this.simTimeValue=0,this.hitstopLeft=0,this.stepsThisFrameValue=0},i.tick=function(t){var e=Number.isFinite(t)&&t>0?t:0;this.accumulator+=e;var i=u*o;this.accumulator>i&&(this.accumulator=i);for(var r=0,a=0,n=o;n>0&&this.accumulator>=u-1e-8;)this.accumulator-=u,this.accumulator>-1e-8&&this.accumulator<0&&(this.accumulator=0),n-=1,this.hitstopLeft>0?(this.hitstopLeft-=1,a+=1,this.step(!0)):(this.step(!1),this.simTimeValue+=u,r+=1);this.stepsThisFrameValue=r;for(var c,h=s(this.systems);!(c=h()).done;){var m=c.value;null==m.render||m.render()}return{steps:r,hitstopSteps:a}},i.step=function(t){for(var e,i=s(this.systems);!(e=i()).done;){var o=e.value;t&&o.order!==r.Input||o.fixedUpdate(u)}},e(t,[{key:"simTime",get:function(){return this.simTimeValue}},{key:"stepsThisFrame",get:function(){return this.stepsThisFrameValue}}]),t}());i._RF.pop()}}}));
+      /** How long input samples are kept, in seconds. */
+      var INPUT_HISTORY_SECONDS = exports('INPUT_HISTORY_SECONDS', 0.5);
+      var DEFAULT_CONFIG = {
+        radiusPx: 72 * 1.2,
+        deadZone: 0.08,
+        followCenter: true
+      };
+      function emptyFrame(time) {
+        if (time === void 0) {
+          time = 0;
+        }
+        return {
+          touching: false,
+          dir: vec2(),
+          mag: 0,
+          pressedThisTick: false,
+          releasedThisTick: false,
+          time: time
+        };
+      }
 
-System.register("chunks:///_virtual/FloatingJoystick.ts",["./rollupPluginModLoBabelHelpers.js","cc","./InputHistory.ts","./InputParams.ts"],(function(e){var t,i,s,n,r,o;return{setters:[function(e){t=e.extends,i=e.createClass},function(e){s=e.cclegacy},function(e){n=e.InputHistory},function(e){r=e.INPUT_DEFAULTS,o=e.INPUT_PIXELS_PER_UNIT}],execute:function(){s._RF.push({},"26ea7j9JM5LQYTczl7+HUc7","FloatingJoystick",void 0);e("FloatingJoystick",function(){function e(){this.history=new n,this.config={radiusPx:o*r.joyRadius,deadZone:r.deadZone,followCenter:Boolean(r.followCenter)},this.frameValue={touching:!1,dir:{x:0,y:0},mag:0,pressedThisTick:!1,releasedThisTick:!1,time:0},this.owner=null,this.centerValue={x:0,y:0},this.pointerValue={x:0,y:0},this.pressed=!1,this.released=!1,this.lastRelease=-1}var s=e.prototype;return s.setConfig=function(e){var i;this.config=t({},e),this.history.setDirectionEpsilon(null!=(i=e.directionEpsilon)?i:r.directionEpsilon),this.follow()},s.pointerDown=function(e,t,i){null===this.owner&&(this.owner=e,this.centerValue={x:t,y:i},this.pointerValue={x:t,y:i},this.pressed=!0)},s.pointerMove=function(e,t,i){e===this.owner&&(this.pointerValue={x:t,y:i},this.follow())},s.pointerUp=function(e){e===this.owner&&(this.owner=null,this.released=!0)},s.fixedUpdate=function(e){this.follow();var t=this.pointerValue.x-this.centerValue.x,i=this.pointerValue.y-this.centerValue.y,s=Math.hypot(t,i),n=this.config.radiusPx,r=this.config.deadZone,o=this.touching&&n>0&&r<1?Math.max(0,Math.min(1,(s/n-r)/(1-r))):0;this.released&&(this.lastRelease=e),this.frameValue={touching:this.touching,dir:o>0?{x:t/s,y:i/s}:{x:0,y:0},mag:o,pressedThisTick:this.pressed,releasedThisTick:this.released,time:e},this.pressed=!1,this.released=!1,this.history.record(this.frameValue)},s.beginSession=function(){this.history.clear(),this.frameValue=t({},{touching:!1,dir:{x:0,y:0},mag:0,pressedThisTick:!1,releasedThisTick:!1,time:0},{touching:this.touching}),this.pressed=!1,this.released=!1,this.lastRelease=-1},s.reset=function(){this.owner=null,this.beginSession()},s.avgDir=function(e,t){return void 0===t&&(t=this.frameValue.time),this.history.avgDir(e,t)},s.minMag=function(e,t){return void 0===t&&(t=this.frameValue.time),this.history.minMag(e,t)},s.magDrop=function(e,t){return void 0===t&&(t=this.frameValue.time),this.history.magDrop(e,t)},s.follow=function(){if(this.touching&&this.config.followCenter&&!(this.config.radiusPx<=0)){var e=this.pointerValue.x-this.centerValue.x,t=this.pointerValue.y-this.centerValue.y,i=Math.hypot(e,t);if(!(i<=this.config.radiusPx)){var s=(i-this.config.radiusPx)/i;this.centerValue={x:this.centerValue.x+e*s,y:this.centerValue.y+t*s}}}},i(e,[{key:"frame",get:function(){return this.frameValue}},{key:"lastReleaseTime",get:function(){return this.lastRelease}},{key:"touching",get:function(){return null!==this.owner}},{key:"center",get:function(){return this.centerValue}},{key:"pointer",get:function(){return this.pointerValue}},{key:"radiusPx",get:function(){return this.config.radiusPx}}]),e}());s._RF.pop()}}}));
+      /**
+       * Fallback `IInputSource` until the input module provides its own.
+       * One pointer: the first finger (or the mouse) wins; later pointers are ignored.
+       * History queries use samples with `t < endTime`, so the release step still
+       * sees the values from before the finger came up.
+       */
+      var DebugInputSource = exports('DebugInputSource', /*#__PURE__*/function () {
+        function DebugInputSource() {
+          this.samples = [];
+          this.config = _extends({}, DEFAULT_CONFIG);
+          this.frameValue = emptyFrame();
+          this.lastRelease = -1;
+          this.down = false;
+          this.pointerId = 0;
+          this.centerX = 0;
+          this.centerY = 0;
+          this.pointerX = 0;
+          this.pointerY = 0;
+        }
+        var _proto = DebugInputSource.prototype;
+        _proto.setConfig = function setConfig(config) {
+          this.config = config;
+        };
+        _proto.pointerDown = function pointerDown(id, x, y) {
+          if (this.down) return;
+          this.down = true;
+          this.pointerId = id;
+          this.centerX = x;
+          this.centerY = y;
+          this.pointerX = x;
+          this.pointerY = y;
+        };
+        _proto.pointerMove = function pointerMove(id, x, y) {
+          if (!this.down || id !== this.pointerId) return;
+          this.pointerX = x;
+          this.pointerY = y;
+          if (!this.config.followCenter || this.config.radiusPx <= 0) return;
+          var dx = x - this.centerX;
+          var dy = y - this.centerY;
+          var dist = Math.hypot(dx, dy);
+          if (dist > this.config.radiusPx) {
+            var scale = (dist - this.config.radiusPx) / dist;
+            this.centerX += dx * scale;
+            this.centerY += dy * scale;
+          }
+        };
+        _proto.pointerUp = function pointerUp(id) {
+          if (!this.down || id !== this.pointerId) return;
+          this.down = false;
+        }
 
-System.register("chunks:///_virtual/FxDriver.ts",["cc"],(function(t){var i;return{setters:[function(t){i=t.cclegacy}],execute:function(){i._RF.push({},"0e41fh0y8BGQLEmWtvD8izZ","FxDriver",void 0);t("FxDriver",function(){function t(){this.amp=0,this.timeLeft=0,this.duration=0,this.offset={x:0,y:0}}var i=t.prototype;return i.requestShake=function(t,i){var e=Math.max(0,t),s=Math.max(0,i);e<=0||s<=0||this.timeLeft>0&&e<this.amp||(this.amp=e,this.duration=s,this.timeLeft=s)},i.update=function(t,i){if(this.timeLeft<=0||this.duration<=0)return this.offset.x=0,this.offset.y=0,this.offset;var e=Number.isFinite(t)&&t>0?t:0;this.timeLeft=Math.max(0,this.timeLeft-e);var s=this.amp*(this.timeLeft/this.duration),h=i.next()*Math.PI*2;return this.offset.x=Math.cos(h)*s,this.offset.y=Math.sin(h)*s,this.offset},i.reset=function(){this.amp=0,this.timeLeft=0,this.duration=0,this.offset.x=0,this.offset.y=0},t}());i._RF.pop()}}}));
+        /**
+         * Sample the pointer and store one history row for this sim time.
+         * A second call at the same time (hit-stop, while sim time is frozen)
+         * replaces that row instead of stacking duplicates.
+         */;
+        _proto.fixedUpdate = function fixedUpdate(time) {
+          var previous = this.frameValue.touching;
+          var stick = this.readStick();
+          var touching = this.down;
+          var pressedThisTick = touching && !previous;
+          var releasedThisTick = !touching && previous;
+          if (releasedThisTick) this.lastRelease = time;
+          this.frameValue = {
+            touching: touching,
+            dir: stick.mag === 0 ? vec2() : vec2(stick.x, stick.y),
+            mag: touching ? stick.mag : 0,
+            pressedThisTick: pressedThisTick,
+            releasedThisTick: releasedThisTick,
+            time: time
+          };
+          var row = {
+            time: time,
+            x: this.frameValue.dir.x,
+            y: this.frameValue.dir.y,
+            mag: this.frameValue.mag,
+            touching: touching
+          };
+          var last = this.samples[this.samples.length - 1];
+          if (last && last.time === time) this.samples[this.samples.length - 1] = row;else this.samples.push(row);
+          var cutoff = time - INPUT_HISTORY_SECONDS;
+          while (this.samples.length > 0) {
+            var head = this.samples[0];
+            if (!head || head.time >= cutoff) break;
+            this.samples.shift();
+          }
+        }
 
-System.register("chunks:///_virtual/GameContext.ts",["cc"],(function(){var t;return{setters:[function(e){t=e.cclegacy}],execute:function(){t._RF.push({},"1f93fZZEK5LSpwY0V2tc0g8","GameContext",void 0),t._RF.pop()}}}));
+        /** Drop history and edge flags. Keeps a finger that is still down. */;
+        _proto.beginSession = function beginSession() {
+          this.samples.length = 0;
+          this.lastRelease = -1;
+          this.frameValue = emptyFrame();
+          this.frameValue = _extends({}, this.frameValue, {
+            touching: this.down
+          });
+        };
+        _proto.avgDir = function avgDir(windowS, endTime) {
+          var rows = this.windowRows(windowS, endTime != null ? endTime : this.frameValue.time);
+          var x = 0;
+          var y = 0;
+          for (var _iterator = _createForOfIteratorHelperLoose(rows), _step; !(_step = _iterator()).done;) {
+            var row = _step.value;
+            x += row.x;
+            y += row.y;
+          }
+          var len = Math.hypot(x, y);
+          if (len <= 1e-8) return vec2();
+          return vec2(x / len, y / len);
+        };
+        _proto.minMag = function minMag(windowS, endTime) {
+          var rows = this.windowRows(windowS, endTime != null ? endTime : this.frameValue.time);
+          var first = rows[0];
+          if (!first) return 0;
+          var min = first.mag;
+          for (var _iterator2 = _createForOfIteratorHelperLoose(rows), _step2; !(_step2 = _iterator2()).done;) {
+            var row = _step2.value;
+            min = Math.min(min, row.mag);
+          }
+          return min;
+        };
+        _proto.magDrop = function magDrop(windowS, endTime) {
+          var end = endTime != null ? endTime : this.frameValue.time;
+          var rows = this.windowRows(windowS, end);
+          if (rows.length === 0) return 0;
+          var max = 0;
+          for (var _iterator3 = _createForOfIteratorHelperLoose(rows), _step3; !(_step3 = _iterator3()).done;) {
+            var row = _step3.value;
+            max = Math.max(max, row.mag);
+          }
+          return max - this.magAt(end);
+        };
+        _proto.reset = function reset() {
+          this.samples.length = 0;
+          this.frameValue = emptyFrame();
+          this.lastRelease = -1;
+          this.down = false;
+        };
+        _proto.readStick = function readStick() {
+          if (!this.down || this.config.radiusPx <= 0) return {
+            x: 0,
+            y: 0,
+            mag: 0
+          };
+          var dx = this.pointerX - this.centerX;
+          var dy = this.pointerY - this.centerY;
+          var dist = Math.hypot(dx, dy);
+          var dead = Math.max(0, Math.min(1, this.config.deadZone)) * this.config.radiusPx;
+          if (dist <= dead) return {
+            x: 0,
+            y: 0,
+            mag: 0
+          };
+          var span = Math.max(1e-6, this.config.radiusPx - dead);
+          return {
+            x: dx / dist,
+            y: dy / dist,
+            mag: Math.min(1, (dist - dead) / span)
+          };
+        }
 
-System.register("chunks:///_virtual/geom.ts",["cc","./Geom2.ts"],(function(t){var n,r;return{setters:[function(t){n=t.cclegacy},function(t){r=t.pointSegmentDistance}],execute:function(){t({capsuleContact:function(t,n,u,l,f){if(r(t,u,l)<=f+e)return 0;for(var y=[],x=0,h=[u,l];x<h.length;x++){var c=o(t,n,h[x],f);null!==c&&y.push(c)}var v=i(u,l);if(v>e)for(var m=-(l.y-u.y)/v*f,g=(l.x-u.x)/v*f,s=0,p=[-1,1];s<p.length;s++){var M=p[s],d=a(t,n,{x:u.x+M*m,y:u.y+M*g},{x:l.x+M*m,y:l.y+M*g});d&&y.push(d.t)}return y.length>0?Math.min.apply(Math,y):null},distance:i,douglasPeucker:function(t,n){if(t.length<=2||n<=0)return t.slice();var e=new Set([0,t.length-1]),a=[[0,t.length-1]];for(;a.length>0;){var i=a.pop();if(!i)break;for(var u=i[0],l=i[1],o=n,f=-1,y=u+1;y<l;y++){var x=r(t[y],t[u],t[l]);x>o&&(o=x,f=y)}f>=0&&(e.add(f),a.push([u,f],[f,l]))}return t.filter((function(t,n){return e.has(n)}))},findClosure:function(t,n,r,o,f,y){if(t.length<2||i(n,r)<=e)return null;for(var x=o-f,h=null,c=1;c<t.length;c++){var v=t[c-1],m=t[c];if(v.time>x)break;var g=m.time>x?u(v,m,(x-v.time)/(m.time-v.time)):m,s=a(n,r,v,g);s&&(!h||s.t<h.t)&&(h={point:s.point,after:c,t:s.t})}if(!h)for(var p=y,M=0;M<t.length;M++){var d=t[M];if(d.time>x)break;var b=i(r,d);b<p&&(p=b,h={point:d,after:M+1,t:1})}if(!h)return null;var k=[h.point].concat(t.slice(h.after),[n,r]);return{polygon:k,area:l(k)}},interpolate:u,pointInPolygon:function(t,n){if(n.length<3)return!1;for(var a=!1,i=0,u=n.length-1;i<n.length;u=i++){var l=n[u],o=n[i];if(r(t,l,o)<=e)return!0;l.y>t.y!=o.y>t.y&&t.x<(o.x-l.x)*(t.y-l.y)/(o.y-l.y)+l.x&&(a=!a)}return a},polygonArea:l,segmentIntersection:a,trailLength:function(t){for(var n=0,r=1;r<t.length;r++)n+=i(t[r-1],t[r]);return n},trimOldest:function(t,n){if(n<=0)return t.slice();for(var r=1;r<t.length;r++){var a=i(t[r-1],t[r]);if(a>n+e)return[u(t[r-1],t[r],n/a)].concat(t.slice(r));n-=a}return t.length>0?t.slice(-1):[]}}),n._RF.push({},"2bd61R5xFREeJxn1wNATMag","geom",void 0);var e=1e-9;function a(t,n,a,i){var u=n.x-t.x,l=n.y-t.y,o=i.x-a.x,f=i.y-a.y,y=u*u+l*l,x=o*o+f*f;if(y<=1e-18){if(r(t,a,i)>e)return null;var h=x<=1e-18?0:((t.x-a.x)*o+(t.y-a.y)*f)/x;return{point:{x:t.x,y:t.y},t:0,u:Math.max(0,Math.min(1,h))}}var c,v,m=a.x-t.x,g=a.y-t.y,s=u*f-l*o;if(Math.abs(s)<=e){if(Math.abs(m*l-g*u)>e)return null;var p=(m*u+g*l)/y,M=((i.x-t.x)*u+(i.y-t.y)*l)/y;if((c=Math.max(0,Math.min(p,M)))>Math.min(1,Math.max(p,M))+e)return null;v=x<=1e-18?0:((t.x+u*c-a.x)*o+(t.y+l*c-a.y)*f)/x}else if(v=(m*l-g*u)/s,(c=(m*f-g*o)/s)<-e||c>1+e||v<-e||v>1+e)return null;return c=Math.max(0,Math.min(1,c)),{point:{x:t.x+u*c,y:t.y+l*c},t:c,u:Math.max(0,Math.min(1,v))}}function i(t,n){return Math.hypot(n.x-t.x,n.y-t.y)}function u(t,n,r){return{x:t.x+(n.x-t.x)*r,y:t.y+(n.y-t.y)*r,time:t.time+(n.time-t.time)*r}}function l(t){for(var n=0,r=0;r<t.length;r++){var e=t[r],a=t[(r+1)%t.length];n+=e.x*a.y-a.x*e.y}return Math.abs(n)/2}function o(t,n,r,a){var i=n.x-t.x,u=n.y-t.y,l=t.x-r.x,o=t.y-r.y,f=l*l+o*o-a*a;if(f<=e)return 0;var y=i*i+u*u;if(y<=e)return null;var x=l*i+o*u,h=x*x-y*f;if(h<-e)return null;var c=(-x-Math.sqrt(Math.max(0,h)))/y;return c>=-e&&c<=1+e?Math.max(0,Math.min(1,c)):null}n._RF.pop()}}}));
+        /** Touching samples with start <= t < endTime. */;
+        _proto.windowRows = function windowRows(windowS, endTime) {
+          var start = endTime - windowS;
+          var rows = [];
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.samples), _step4; !(_step4 = _iterator4()).done;) {
+            var sample = _step4.value;
+            if (sample.time >= start && sample.time < endTime && sample.touching) rows.push(sample);
+          }
+          return rows;
+        };
+        _proto.magAt = function magAt(endTime) {
+          for (var i = this.samples.length - 1; i >= 0; i--) {
+            var sample = this.samples[i];
+            if (!sample) continue;
+            if (sample.time <= endTime) return sample.mag;
+          }
+          return 0;
+        };
+        _createClass(DebugInputSource, [{
+          key: "frame",
+          get: function get() {
+            return this.frameValue;
+          }
+        }, {
+          key: "lastReleaseTime",
+          get: function get() {
+            return this.lastRelease;
+          }
+        }]);
+        return DebugInputSource;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Geom2.ts",["cc"],(function(t){var n;return{setters:[function(t){n=t.cclegacy}],execute:function(){t({circleIntersectsSegment:function(t,n,r,a){return!(n<0)&&e(t,r,a)<=n},pointSegmentDistance:e,segmentIntersection:function(t,n,e,x){var y=n.x-t.x,u=n.y-t.y,i=x.x-e.x,c=x.y-e.y,h=y*c-u*i,o=e.x-t.x,s=e.y-t.y;if(Math.abs(h)<=r){var v=o*u-s*y;return Math.abs(v)>r?null:function(t,n,e,x){var y=n.x-t.x,u=n.y-t.y,i=Math.abs(y)>=Math.abs(u),c=i?t.x:t.y,h=i?n.x:n.y,o=i?e.x:e.y,s=i?x.x:x.y,v=Math.max(Math.min(c,h),Math.min(o,s)),M=Math.min(Math.max(c,h),Math.max(o,s));if(v>M+r)return null;var f=h-c,m=Math.abs(f)<=r?0:(v-c)/f,l=s-o,p=Math.abs(l)<=r?0:(v-o)/l,b=a(m);return{point:{x:t.x+b*(n.x-t.x),y:t.y+b*(n.y-t.y)},t:b,u:a(p)}}(t,n,e,x)}var M=(o*c-s*i)/h,f=(o*u-s*y)/h;if(M<-r||M>1+r||f<-r||f>1+r)return null;var m=a(M);return{point:{x:t.x+m*y,y:t.y+m*u},t:m,u:a(f)}}}),n._RF.push({},"95337lk+bZHwoY2hTAdxBfv","Geom",void 0);var r=1e-9;function a(t){return t<0?0:t>1?1:t}function e(t,n,a){var e=a.x-n.x,x=a.y-n.y,y=e*e+x*x;if(y<=r)return Math.hypot(t.x-n.x,t.y-n.y);var u=((t.x-n.x)*e+(t.y-n.y)*x)/y;u<0?u=0:u>1&&(u=1);var i=t.x-(n.x+u*e),c=t.y-(n.y+u*x);return Math.hypot(i,c)}n._RF.pop()}}}));
+System.register("chunks:///_virtual/DirectorParams.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './EnemyParams.ts'], function (exports) {
+  var _extends, cclegacy, numberParam;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      numberParam = module.numberParam;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "1fddaXc3FtEVJVg1ZVLPdJs", "DirectorParams", undefined);
 
-System.register("chunks:///_virtual/Hud.ts",["cc","./TuningParams.ts"],(function(l){var e,n;return{setters:[function(l){e=l.cclegacy},function(l){n=l.P0_RULES}],execute:function(){l("readHud",(function(l){var e,u,a,s,i,d,r,t,o,v,g,c,h,p,m,f,b=l.services.has("swordRig")?l.services.get("swordRig"):null,y=l.services.has("director")?l.services.get("director"):null,R=l.services.has("player")?l.services.get("player"):null;return{seed:l.session.seed,paramsHash:l.tunables.hash().slice(0,n.hashLength),elapsed:null!=(e=null==y?void 0:y.elapsed)?e:l.loop.simTime,danger:null!=(u=null==y?void 0:y.danger)?u:null,alive:null!=(a=null==y?void 0:y.alive)?a:null,hp:null!=(s=null==R?void 0:R.hp)?s:null,maxHp:null!=(i=null==R?void 0:R.maxHp)?i:null,state:null!=(d=null==R?void 0:R.state)?d:null,speed:R?Math.hypot(R.vel.x,R.vel.y):null,maxSpeed:null!=(r=null==R?void 0:R.maxSpeed)?r:null,vTip:null!=(t=null==b?void 0:b.vTip)?t:null,fullCharge:null!=(o=null==b?void 0:b.fullCharge)?o:null,vDead:l.tunables.has("drag.vDead")?l.tunables.get("drag.vDead"):null,vRef:l.tunables.has("drag.vRef")?l.tunables.get("drag.vRef"):null,fullChargeSpeed:l.tunables.has("sword.fullChargeMul")&&l.tunables.has("drag.vRef")?l.tunables.get("sword.fullChargeMul")*l.tunables.get("drag.vRef"):null,ink:null,arrayRemaining:null,N:null!=(v=null==b?void 0:b.N)?v:null,slots:null!=(g=null==b?void 0:b.slots)?g:null,ropeLength:null!=(c=null==b?void 0:b.ropeLength)?c:null,mode:null!=(h=null==b?void 0:b.mode)?h:null,jianyi:null!=(p=null==b?void 0:b.jianyi)?p:null,combo:null!=(m=null==b?void 0:b.combo)?m:null,enemyTimeScale:null!=(f=null==b?void 0:b.enemyTimeScale)?f:null}})),e._RF.push({},"974e9N4QfpI+rvKUl1isclj","Hud",void 0),e._RF.pop()}}}));
+      // P0 §8 overrides GDD §8.4 (budgetBase 1.5, not 2).
+      var DIRECTOR_PARAMS = exports('DIRECTOR_PARAMS', [numberParam('diff.tA', '难度', '时间一次系数', 0.10, 0, 1), numberParam('diff.tB', '难度', '时间二次系数', 0.012, 0, 0.1, 0.001), numberParam('diff.dmgK', '难度', '伤害随难度系数', 0.5, 0, 2), numberParam('diff.budgetBase', '难度', '基础刷怪点数(点/s)', 1.5, 0, 10), numberParam('diff.budgetExp', '难度', '预算指数', 0.6, 0, 2), numberParam('spawn.edgeInset', '刷怪', '边缘内缩(u)', 0.3, 0, 2), numberParam('spawn.bottomExclude', '刷怪', '底部禁刷高度(u)', 2, 0, 5), numberParam('spawn.minDistFromPet', '刷怪', '距宠物最小距离(u)', 3, 0, 8), numberParam('session.length', '局', '时长(s)', 180, 30, 900, 1), {
+        key: 'session.endless',
+        group: '局',
+        label: '无尽模式',
+        kind: 'bool',
+        "default": 0
+      }, _extends({}, numberParam('session.seed', '局', '种子(0=随机)', 0, 0, 999999, 1), {
+        restart: true
+      }),
+      // P0 §8 specifies a 0.5s purchase cadence, but no key name.
+      numberParam('spawn.purchaseInterval', '刷怪', '预算购买间隔(s)', 0.5, 0.1, 2),
+      // P0 未定义，自选默认值: radius of a group's spawn neighbourhood.
+      numberParam('sheep.groupSpawnRadius', '群聚羊', '整群出生半径(u)', 1, 0, 3)]);
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/index.ts",["cc","./SystemOrder.ts","./ThrowController.ts","./ThrowParams.ts","./ThrowView.ts"],(function(n){var e,t,r,o,s;return{setters:[function(n){e=n.cclegacy},function(n){t=n.SystemOrder},function(n){r=n.ThrowController},function(n){o=n.THROW_PARAMS},function(n){s=n.mountThrowView}],execute:function(){n("installThrow",(function(n){var e=n.ctx;e.tunables.define(o);var i=new r(n),u=null;e.loop.addSystem({id:"sword.throw",order:t.Sword,fixedUpdate:function(n){return i.fixedUpdate(n)},render:function(){u||(u=s(n,i)),null==u||u()}}),e.events.on("session:start",(function(){return i.reset()})),e.events.on("session:end",(function(){return i.stop()}))})),e._RF.push({},"166efzLXk9B/Z9wiePXU2YG","index",void 0),e._RF.pop()}}}));
+System.register("chunks:///_virtual/EnemyModule.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './SystemOrder.ts', './DirectorParams.ts', './EnemyParams.ts', './EnemyWorld.ts', './SpawnDirector.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy, SystemOrder, DIRECTOR_PARAMS, ENEMY_PARAMS, EnemyWorld, SpawnDirector;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      DIRECTOR_PARAMS = module.DIRECTOR_PARAMS;
+    }, function (module) {
+      ENEMY_PARAMS = module.ENEMY_PARAMS;
+    }, function (module) {
+      EnemyWorld = module.EnemyWorld;
+    }, function (module) {
+      SpawnDirector = module.SpawnDirector;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "a10aeR7f3dIrJT9K4AmmhrY", "EnemyModule", undefined);
+      /** Owns lifecycle and the two ordered systems; the view owns no gameplay. */
+      var EnemyModule = exports('EnemyModule', /*#__PURE__*/function () {
+        function EnemyModule(ctx) {
+          this.world = void 0;
+          this.director = void 0;
+          this.timing = {
+            steps: 0,
+            lastMs: 0,
+            maxMs: 0,
+            totalMs: 0
+          };
+          this.unsubs = [];
+          this.attached = false;
+          this.running = false;
+          this.aiMs = 0;
+          this.ctx = void 0;
+          this.ctx = ctx;
+          this.world = new EnemyWorld(ctx);
+          this.director = new SpawnDirector(ctx, this.world);
+        }
+        var _proto = EnemyModule.prototype;
+        _proto.install = function install() {
+          var _this = this;
+          // Preserve definitions already registered by the owning integration.
+          this.ctx.tunables.define([].concat(ENEMY_PARAMS, DIRECTOR_PARAMS).filter(function (def) {
+            return !_this.ctx.tunables.has(def.key);
+          }));
+          this.ctx.services.provide('enemies', this.world);
+          this.ctx.services.provide('director', this.director);
+          this.ctx.loop.addSystem({
+            id: 'enemy.ai',
+            order: SystemOrder.Enemy,
+            fixedUpdate: function fixedUpdate(dt) {
+              if (!_this.attached || !_this.running) return;
+              var start = now();
+              _this.world.update(dt);
+              _this.aiMs = now() - start;
+            }
+          });
+          this.ctx.loop.addSystem({
+            id: 'enemy.resolve',
+            order: SystemOrder.EnemyResolve,
+            fixedUpdate: function fixedUpdate(dt) {
+              if (!_this.attached || !_this.running) return;
+              var start = now();
+              _this.world.resolveDeaths();
+              if (_this.running) _this.director.update(dt);
+              var ms = _this.aiMs + now() - start;
+              _this.timing.steps += 1;
+              _this.timing.lastMs = ms;
+              _this.timing.totalMs += ms;
+              _this.timing.maxMs = Math.max(_this.timing.maxMs, ms);
+            }
+          });
+          this.attach();
+        };
+        _proto.attach = function attach() {
+          var _this2 = this;
+          if (this.attached) return;
+          this.attached = true;
+          this.world.setEnabled(this.running);
+          this.unsubs.push(this.ctx.events.on('session:start', function () {
+            _this2.world.clear();
+            _this2.director.reset();
+            _this2.running = true;
+            _this2.world.setEnabled(true);
+            _this2.timing.steps = 0;
+            _this2.timing.lastMs = 0;
+            _this2.timing.maxMs = 0;
+            _this2.timing.totalMs = 0;
+          }));
+          this.unsubs.push(this.ctx.events.on('session:end', function () {
+            _this2.running = false;
+            _this2.world.setEnabled(false);
+            _this2.director.stop();
+          }));
+          this.unsubs.push(this.ctx.events.on('debug:command', function (_ref) {
+            var cmd = _ref.cmd,
+              arg = _ref.arg;
+            if (!_this2.running) return;
+            if (cmd === 'spawn') _this2.director.debugSpawn(arg);else if (cmd === 'clearEnemies') _this2.world.clear();
+          }));
+        };
+        _proto.detach = function detach() {
+          if (!this.attached) return;
+          this.attached = false;
+          this.world.setEnabled(false);
+          this.director.stop();
+          for (var _iterator = _createForOfIteratorHelperLoose(this.unsubs), _step; !(_step = _iterator()).done;) {
+            var off = _step.value;
+            off();
+          }
+          this.unsubs.length = 0;
+        };
+        return EnemyModule;
+      }());
+      function now() {
+        return typeof performance === 'undefined' ? Date.now() : performance.now();
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/index2.ts",["cc","./FloatingJoystick.ts","./InputParams.ts","./InputSystem.ts","./JoystickView.ts"],(function(t){var n,i,e,s,o;return{setters:[function(t){n=t.cclegacy},function(t){i=t.FloatingJoystick},function(t){e=t.INPUT_PARAMS},function(t){s=t.InputSystem},function(t){o=t.mountJoystick}],execute:function(){t("install",(function(t){t.tunables.define(e);var n=new i;t.services.provide("input",n);var u=new s(t,n,(function(){return null==c?void 0:c.redraw()})),c=o(t,n,u);t.loop.addSystem(u)})),n._RF.push({},"23d1bZtW9xA16rLTPUaSXg6","index",void 0),n._RF.pop()}}}));
+System.register("chunks:///_virtual/EnemyParams.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports('numberParam', numberParam);
+      cclegacy._RF.push({}, "fab42y1HS5H+ZQSUDjVndko", "EnemyParams", undefined);
+      // P0 §7: shared rules, base stats and behaviour tables.
+      var ENEMY_PARAMS = exports('ENEMY_PARAMS', [].concat(kindParams('blob', '软团子', 30, 0.30, 1.2, 5, 1, 0, 0, 1.0), kindParams('sheep', '群聚羊', 20, 0.28, 1.6, 3, 0.6, 0, 20, 0.6), kindParams('boar', '冲锋猪', 80, 0.45, 1.0, 12, 4, 0.7, 60, 0.3), [numberParam('enemy.maxAlive', '敌人', '同屏上限', 80, 10, 200, 1), numberParam('enemy.contactCooldown', '敌人', '接触伤害间隔(s)', 0.5, 0.5, 10), numberParam('enemy.knockbackTime', '敌人', '线性击退时间(s)', 0.15, 0.01, 0.15), numberParam('sheep.groupMin', '群聚羊', '每群最少只数', 6, 1, 30, 1), numberParam('sheep.groupMax', '群聚羊', '每群最多只数', 10, 1, 30, 1), numberParam('sheep.sep', '群聚羊', '分离权重', 1.0, 0, 3), numberParam('sheep.coh', '群聚羊', '聚合权重', 0.6, 0, 3), numberParam('sheep.align', '群聚羊', '对齐权重', 0.4, 0, 3), numberParam('sheep.seek', '群聚羊', '趋向宠物权重', 0.3, 0, 3), numberParam('sheep.sepDist', '群聚羊', '分离距离(u)', 0.5, 0.1, 2), numberParam('sheep.scareRadius', '群聚羊', '受惊传播半径(u)', 1.5, 0, 5), numberParam('sheep.scareTime', '群聚羊', '四散时间(s)', 1.0, 0, 5), numberParam('sheep.scareSpeedMul', '群聚羊', '四散速度倍率', 1.8, 1, 4), numberParam('boar.triggerRange', '冲锋猪', '蓄力距离(u)', 5, 1, 12), numberParam('boar.windup', '冲锋猪', '蓄力(s)', 1.0, 0.2, 3), numberParam('boar.chargeSpeed', '冲锋猪', '冲锋速度(u/s)', 9, 2, 20), numberParam('boar.chargeTime', '冲锋猪', '冲锋时间(s)', 0.6, 0.1, 2), numberParam('boar.stunTime', '冲锋猪', '冲锋后愣住(s)', 1.2, 0, 5), numberParam('boar.stunDmgTakenMul', '冲锋猪', '愣住受伤倍率', 1.5, 1, 5), {
+        key: 'boar.cutsTrail',
+        group: '冲锋猪',
+        label: '冲锋切断未闭合剑痕',
+        kind: 'bool',
+        "default": 1,
+        note: 'P0 supplement 1. Read by sword/loop; enemy only exposes charging boars.'
+      }, numberParam('chain.dropChance', '剑链', '普通怪掉散剑概率', 0.08, 0, 1),
+      // P0 §6.3; define only if absent.
+      // P0 未定义，自选默认值: neighbourhood / flock steering normalisation are documented in README.
+      numberParam('sheep.flockRadius', '群聚羊', '群集感知半径(u)', 3, 0, 20),
+      // P0 未定义，自选默认值: bounded spatial-hash overlap solver iterations.
+      numberParam('enemy.separationPasses', '敌人', '碰撞分离迭代次数', 8, 1, 32, 1), numberParam('enemy.damageNumberMax', '敌人', '同屏伤害数字上限', 30, 1, 30, 1),
+      // P0 §3.
+      numberParam('enemy.damageMergeTime', '敌人', '同目标数字合并窗口(s)', 0.2, 0, 1),
+      // P0 §5.
+      // P0 未定义，自选默认值: number lifetime and vertical rise speed (visual only).
+      numberParam('enemy.damageNumberTime', '敌人', '伤害数字寿命(s)', 0.6, 0.2, 3), numberParam('enemy.damageNumberRise', '敌人', '伤害数字上浮速度(u/s)', 1, 0, 5),
+      // P0 未定义，自选默认值: hit feedback duration (visual only).
+      numberParam('enemy.hitFlashTime', '敌人', '受击闪白(s)', 0.12, 0, 1)]));
 
-System.register("chunks:///_virtual/index3.ts",["cc","./EnemyModule.ts","./EnemyView.ts"],(function(n){var e,t,i;return{setters:[function(n){e=n.cclegacy},function(n){t=n.EnemyModule},function(n){i=n.mountEnemyView}],execute:function(){n("install",(function(n){var e=new t(n);e.install(),i(n,e)})),e._RF.push({},"3ec1aIAdwNIypeDajmhb7ih","index",void 0),e._RF.pop()}}}));
+      // P0 未定义，自选默认值: UI step .05 unless supplied; registry does not quantise values.
+      function numberParam(key, group, label, value, min, max, step) {
+        if (step === void 0) {
+          step = 0.05;
+        }
+        return {
+          key: key,
+          group: group,
+          label: label,
+          kind: 'number',
+          "default": value,
+          min: min,
+          max: max,
+          step: step
+        };
+      }
+      function kindParams(kind, group, hp, radius, speed, damage, cost, resistance, unlockAt, weight) {
+        return [numberParam(kind + ".hp", group, '生命', hp, 1, 2000, 1), numberParam(kind + ".radius", group, '半径(u)', radius, 0.1, 1), numberParam(kind + ".speed", group, '速度(u/s)', speed, 0, 8), numberParam(kind + ".dmg", group, '接触伤害', damage, 0, 100, 1), numberParam(kind + ".cost", group, '刷怪点数(每只)', cost, 0.1, 20), numberParam(kind + ".kbResist", group, '击退抗性', resistance, 0, 1), numberParam(kind + ".unlockAt", group, '解锁时间(s)', unlockAt, 0, 600, 1), numberParam(kind + ".weight", group, '选怪权重(羊按群)', weight, 0, 5)];
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/index4.ts",["cc","./SystemOrder.ts","./LoopController.ts","./LoopParams.ts","./LoopView.ts"],(function(o){var t,n,e,r,i;return{setters:[function(o){t=o.cclegacy},function(o){n=o.SystemOrder},function(o){e=o.LoopController},function(o){r=o.registerLoopParams},function(o){i=o.mountLoopView}],execute:function(){o("installLoop",(function(o){r(o.ctx.tunables);var t=new e(o);t.attach();var c=null;o.ctx.loop.addSystem({id:"sword.loop",order:n.Sword,fixedUpdate:function(o){return t.fixedUpdate(o)},render:function(){c||(c=i(t)),null==c||c()}})})),t._RF.push({},"b4a77gLg5xDiIrCkmxW4xmH","index",void 0),t._RF.pop()}}}));
+System.register("chunks:///_virtual/EnemyView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './ScreenLayout.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, _extends, cclegacy, _decorator, Color, Graphics, Label, view, Node, UITransform, Component, layoutScreen;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      Graphics = module.Graphics;
+      Label = module.Label;
+      view = module.view;
+      Node = module.Node;
+      UITransform = module.UITransform;
+      Component = module.Component;
+    }, function (module) {
+      layoutScreen = module.layoutScreen;
+    }],
+    execute: function () {
+      exports('mountEnemyView', mountEnemyView);
+      cclegacy._RF.push({}, "48a48MOp6JDoKV+sdbh9Zw8", "EnemyView", undefined);
+      var ccclass = _decorator.ccclass;
+      var BLOB = new Color(112, 165, 126, 255);
+      var SHEEP = new Color(220, 220, 228, 255);
+      var BOAR = new Color(184, 121, 110, 255);
+      var FLASH = new Color(255, 255, 255, 255);
+      var WARNING = new Color(255, 89, 72, 255);
+      /** Single batched Graphics for silhouettes and warning lines; bounded label pool. */
+      var EnemyGreyboxView = exports('EnemyGreyboxView', /*#__PURE__*/function (_Component) {
+        _inheritsLoose(EnemyGreyboxView, _Component);
+        function EnemyGreyboxView() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.ctx = null;
+          _this.module = null;
+          _this.graphics = null;
+          _this.hud = null;
+          _this.numbers = [];
+          _this.pool = [];
+          _this.unsubs = [];
+          _this.subscribed = false;
+          _this.hudNode = null;
+          _this.fxNode = null;
+          return _this;
+        }
+        var _proto = EnemyGreyboxView.prototype;
+        _proto.configure = function configure(ctx, module) {
+          this.ctx = ctx;
+          this.module = module;
+          this.graphics = this.node.addComponent(Graphics);
+          this.hudNode = makeNode(ctx.layers.get('hud'), 'EnemyDirectorHUD');
+          this.hud = this.hudNode.addComponent(Label);
+          if (this.hud) {
+            this.hud.fontSize = 18;
+            this.hud.lineHeight = 24;
+            this.hud.color = FLASH;
+          }
+          this.fxNode = makeNode(ctx.layers.get('fx'), 'EnemyDamageNumbers');
+          this.subscribe();
+        };
+        _proto.onEnable = function onEnable() {
+          var _this$module;
+          (_this$module = this.module) == null || _this$module.attach();
+          if (this.hudNode) this.hudNode.active = true;
+          if (this.fxNode) this.fxNode.active = true;
+          this.subscribe();
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$module2;
+          this.unsubscribe();
+          (_this$module2 = this.module) == null || _this$module2.detach();
+          if (this.hudNode) this.hudNode.active = false;
+          if (this.fxNode) this.fxNode.active = false;
+          this.resetNumbers();
+        };
+        _proto.onDestroy = function onDestroy() {
+          var _this$module3, _this$hudNode, _this$fxNode;
+          this.unsubscribe();
+          (_this$module3 = this.module) == null || _this$module3.detach();
+          (_this$hudNode = this.hudNode) == null || _this$hudNode.destroy();
+          (_this$fxNode = this.fxNode) == null || _this$fxNode.destroy();
+          this.ctx = null;
+          this.module = null;
+        };
+        _proto.update = function update() {
+          var ctx = this.ctx;
+          var module = this.module;
+          var g = this.graphics;
+          if (!ctx || !module || !g) return;
+          g.clear();
+          var scale = ctx.toPx({
+            x: 1,
+            y: 0
+          }).x - ctx.toPx({
+            x: 0,
+            y: 0
+          }).x;
+          for (var _iterator = _createForOfIteratorHelperLoose(module.world.enemies.values()), _step; !(_step = _iterator()).done;) {
+            var e = _step.value;
+            if (e.alive) this.drawEnemy(g, e, scale, ctx);
+          }
+          if (!ctx.services.has('player')) {
+            var p = ctx.toPx(module.world.player().pos);
+            g.strokeColor = new Color(120, 180, 255, 255);
+            g.lineWidth = 2;
+            g.circle(p.x, p.y, module.world.player().radius * scale);
+            g.stroke();
+          }
+          if (this.hud) {
+            this.hud.string = "t " + module.director.elapsed.toFixed(3) + "   D " + module.director.danger.toFixed(3) + "   \u654C " + module.director.alive;
+            var size = view.getVisibleSize();
+            var rect = layoutScreen(size.width, size.height).hud;
+            this.hud.node.setPosition(rect.x + rect.width / 2 - size.width / 2, rect.y + rect.height / 2 - size.height / 2, 0);
+          }
+          for (var i = this.numbers.length - 1; i >= 0; i--) {
+            var number = this.numbers[i];
+            if (!number) continue;
+            var age = ctx.loop.simTime - number.born;
+            if (age > ctx.tunables.get('enemy.damageNumberTime')) {
+              number.label.node.active = false;
+              this.pool.push(number.label);
+              this.numbers.splice(i, 1);
+            } else {
+              var _p = ctx.toPx({
+                x: number.pos.x,
+                y: number.pos.y + age * ctx.tunables.get('enemy.damageNumberRise')
+              });
+              number.label.node.setPosition(_p);
+            }
+          }
+        };
+        _proto.drawEnemy = function drawEnemy(g, e, scale, ctx) {
+          var p = ctx.toPx(e.pos);
+          var r = e.radius * scale;
+          if (e.kind === 'boar' && e.phase === 'windup') {
+            // Visible from the very first windup frame; aim was locked by AI.
+            var end = ctx.toPx({
+              x: e.pos.x + e.chargeDir.x * e.chargeSpeed * ctx.tunables.get('boar.chargeTime'),
+              y: e.pos.y + e.chargeDir.y * e.chargeSpeed * ctx.tunables.get('boar.chargeTime')
+            });
+            g.strokeColor = WARNING;
+            g.lineWidth = Math.max(2, r * 0.15);
+            g.moveTo(p.x, p.y);
+            g.lineTo(end.x, end.y);
+            g.stroke();
+          }
+          g.fillColor = e.flashLeft > 0 ? FLASH : e.kind === 'blob' ? BLOB : e.kind === 'sheep' ? SHEEP : BOAR;
+          if (e.kind === 'boar') g.roundRect(p.x - r, p.y - r, 2 * r, 2 * r, r / 2);else g.circle(p.x, p.y, r);
+          g.fill();
+        };
+        _proto.subscribe = function subscribe() {
+          var _this2 = this;
+          var ctx = this.ctx;
+          if (!ctx || this.subscribed) return;
+          this.subscribed = true;
+          this.unsubs.push(ctx.events.on('session:start', function () {
+            return _this2.resetNumbers();
+          }));
+          this.unsubs.push(ctx.events.on('debug:command', function (_ref) {
+            var cmd = _ref.cmd;
+            if (cmd === 'clearEnemies') _this2.resetNumbers();
+          }));
+          this.unsubs.push(ctx.events.on('enemy:damaged', function (_ref2) {
+            var _this2$pool$pop;
+            var id = _ref2.id,
+              pos = _ref2.pos,
+              amount = _ref2.amount,
+              source = _ref2.source;
+            if (!_this2.fxNode) return;
+            var existing = _this2.numbers.find(function (number) {
+              return number.id === id && ctx.loop.simTime - number.born <= ctx.tunables.get('enemy.damageMergeTime');
+            });
+            if (existing) {
+              // P0 未定义，自选默认值: mixed-source merged colour follows the latest source.
+              existing.label.color = source === 'whip' ? new Color(255, 220, 110, 255) : source === 'loop' ? new Color(80, 230, 230, 255) : FLASH;
+              existing.amount += amount;
+              existing.label.string = String(Math.round(existing.amount * 10) / 10);
+              return;
+            }
+            if (_this2.numbers.length >= Math.floor(ctx.tunables.get('enemy.damageNumberMax'))) return;
+            var label = (_this2$pool$pop = _this2.pool.pop()) != null ? _this2$pool$pop : makeNode(_this2.fxNode, 'Damage').addComponent(Label);
+            if (!label) return;
+            label.node.active = true;
+            label.fontSize = 22;
+            label.lineHeight = 26;
+            label.color = source === 'whip' ? new Color(255, 220, 110, 255) : source === 'loop' ? new Color(80, 230, 230, 255) : FLASH;
+            label.string = String(Math.round(amount * 10) / 10);
+            label.node.setPosition(ctx.toPx(pos));
+            _this2.numbers.push({
+              label: label,
+              pos: _extends({}, pos),
+              born: ctx.loop.simTime,
+              id: id,
+              amount: amount
+            });
+          }));
+        };
+        _proto.unsubscribe = function unsubscribe() {
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.unsubs), _step2; !(_step2 = _iterator2()).done;) {
+            var off = _step2.value;
+            off();
+          }
+          this.unsubs.length = 0;
+          this.subscribed = false;
+        };
+        _proto.resetNumbers = function resetNumbers() {
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.numbers), _step3; !(_step3 = _iterator3()).done;) {
+            var number = _step3.value;
+            number.label.node.active = false;
+            this.pool.push(number.label);
+          }
+          this.numbers.length = 0;
+        };
+        return EnemyGreyboxView;
+      }(Component));
+      ccclass('EnemyGreyboxView')(EnemyGreyboxView);
+      function makeNode(parent, name) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        node.addComponent(UITransform);
+        parent.addChild(node);
+        return node;
+      }
+      function mountEnemyView(ctx, module) {
+        var parent = ctx.layers.get('enemies');
+        // Core's headless ports deliberately supply only { name }, not a Cocos Node.
+        if (typeof parent.addChild !== 'function') return;
+        var node = makeNode(parent, 'EnemyGreybox');
+        var component = node.addComponent(EnemyGreyboxView);
+        if (component) component.configure(ctx, module);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/index5.ts",["cc","./TuningView.ts"],(function(n){var t,c;return{setters:[function(n){t=n.cclegacy},function(n){c=n.mountTuning}],execute:function(){n("install",(function(n){c(n)})),t._RF.push({},"c71b43zd+ZLC7aWcPJK4kG5","index",void 0),t._RF.pop()}}}));
+System.register("chunks:///_virtual/EnemyWorld.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './SpatialHash.ts', './Geom2.ts'], function (exports) {
+  var _extends, _createForOfIteratorHelperLoose, cclegacy, SpatialHash, pointSegmentDistance;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SpatialHash = module.SpatialHash;
+    }, function (module) {
+      pointSegmentDistance = module.pointSegmentDistance;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "42a37+zTrVMDp1Sh2wN4eiY", "EnemyWorld", undefined);
+      var MISS = {
+        applied: false,
+        dealt: 0,
+        killed: false
+      };
 
-System.register("chunks:///_virtual/index6.ts",["cc","./SystemOrder.ts","./SwordRig.ts","./SwordParams.ts","./index.ts","./index4.ts","./SwordView.ts"],(function(e){var t,n,r,i,d,o,s;return{setters:[function(e){t=e.cclegacy},function(e){n=e.SystemOrder},function(e){r=e.SwordRig},function(e){i=e.SWORD_PARAMS},function(e){d=e.installThrow},function(e){o=e.installLoop},function(e){s=e.mountSwordView}],execute:function(){e("install",(function(e){e.tunables.define(i);var t=new r(e);e.services.provide("player",t.pet),e.services.provide("swordRig",t),t.attach();var c=null;e.loop.addSystem({id:"sword.pet",order:n.Pet,fixedUpdate:function(e){return t.stepPet(e)}}),e.loop.addSystem({id:"sword.rig",order:n.Sword,fixedUpdate:function(e){return t.fixedUpdate(e)},render:function(){c||(c=s(t)),null==c||c()}}),d(t),o(t)})),t._RF.push({},"d3d8ekPleNKubDgcXeZKpqc","index",void 0),t._RF.pop()}}}));
+      /** P0 §12 T4 allows a fixed test pet; P0 未定义，自选默认值: arena centre.
+       * Radius/HP use P0 §6.1; the fixture is immobile, takes no damage and registers no service. */
+      var FIXED_TEST_PLAYER = exports('FIXED_TEST_PLAYER', {
+        pos: {
+          x: 5,
+          y: 7.5
+        },
+        vel: {
+          x: 0,
+          y: 0
+        },
+        radius: 0.35,
+        maxSpeed: 0,
+        hp: 100,
+        maxHp: 100,
+        state: 'normal',
+        isInvulnerable: function isInvulnerable() {
+          return false;
+        },
+        applyDamage: function applyDamage() {
+          return false;
+        }
+      });
 
-System.register("chunks:///_virtual/index7.ts",["cc","./Vec2.ts","./Geom2.ts","./SpatialHash.ts","./events.ts","./TypedEventBus.ts","./Tunables.ts","./Rng.ts","./SystemOrder.ts","./FixedLoop.ts","./StepProbe.ts","./Session.ts","./SessionWatch.ts","./Arena.ts","./ScreenLayout.ts","./Layers.ts","./ServiceRegistry.ts","./FxDriver.ts","./DebugInputSource.ts","./Modules.ts","./App.ts","./CoreArenaView.ts","./CoreBootstrap.ts","./CoreDebugInput.ts"],(function(e){var t;return{setters:[function(e){t=e.cclegacy},function(t){var n={};n.vAdd=t.vAdd,n.vCopy=t.vCopy,n.vDist=t.vDist,n.vDistSq=t.vDistSq,n.vDot=t.vDot,n.vLen=t.vLen,n.vLenSq=t.vLenSq,n.vLerp=t.vLerp,n.vNormalize=t.vNormalize,n.vScale=t.vScale,n.vSet=t.vSet,n.vSub=t.vSub,n.vec2=t.vec2,e(n)},function(t){var n={};n.circleIntersectsSegment=t.circleIntersectsSegment,n.pointSegmentDistance=t.pointSegmentDistance,n.segmentIntersection=t.segmentIntersection,e(n)},function(t){e("SpatialHash",t.SpatialHash)},function(t){e("GameEvent",t.GameEvent)},function(t){e("TypedEventBus",t.TypedEventBus)},function(t){var n={};n.Tunables=t.Tunables,n.hashValues=t.hashValues,e(n)},function(t){var n={};n.RngStream=t.RngStream,n.createSessionRng=t.createSessionRng,n.deriveStreamSeed=t.deriveStreamSeed,n.mulberry32=t.mulberry32,e(n)},function(t){e("SystemOrder",t.SystemOrder)},function(t){var n={};n.FIXED_DT=t.FIXED_DT,n.FIXED_HZ=t.FIXED_HZ,n.FixedLoop=t.FixedLoop,n.MAX_STEPS_PER_FRAME=t.MAX_STEPS_PER_FRAME,e(n)},function(t){e("StepProbe",t.StepProbe)},function(t){var n={};n.Session=t.Session,n.nextSessionId=t.nextSessionId,e(n)},function(t){e("createSessionWatch",t.createSessionWatch)},function(t){var n={};n.ARENA_HEIGHT=t.ARENA_HEIGHT,n.ARENA_WIDTH=t.ARENA_WIDTH,n.arenaClamp=t.arenaClamp,n.arenaContains=t.arenaContains,e(n)},function(t){var n={};n.DESIGN_HEIGHT=t.DESIGN_HEIGHT,n.DESIGN_WIDTH=t.DESIGN_WIDTH,n.UNIT_PX=t.UNIT_PX,n.arenaToPx=t.arenaToPx,n.intersectRect=t.intersectRect,n.layoutScreen=t.layoutScreen,n.rectInside=t.rectInside,e(n)},function(t){e("LAYER_NAMES",t.LAYER_NAMES)},function(t){e("ServiceRegistry",t.ServiceRegistry)},function(t){e("FxDriver",t.FxDriver)},function(t){var n={};n.DebugInputSource=t.DebugInputSource,n.INPUT_HISTORY_SECONDS=t.INPUT_HISTORY_SECONDS,e(n)},function(t){var n={};n.installModules=t.installModules,n.moduleInstalls=t.moduleInstalls,e(n)},function(t){e("createApp",t.createApp)},function(t){e("CoreArenaView",t.CoreArenaView)},function(t){e("CoreBootstrap",t.CoreBootstrap)},function(t){e("CoreDebugInput",t.CoreDebugInput)}],execute:function(){t._RF.push({},"dd841DFjSxDAKu5MeMvO3wE","index",void 0),t._RF.pop()}}}));
+      /** Exact linear queries at P0's 80 entities also handle synchronous knockback
+       * without stale spatial cells. No Cocos runtime dependencies. */
+      var EnemyWorld = exports('EnemyWorld', /*#__PURE__*/function () {
+        function EnemyWorld(ctx) {
+          this.enemies = new Map();
+          this.nextId = 1;
+          this.alive = 0;
+          this.pending = [];
+          this.generation = 0;
+          this.enabled = false;
+          this.ctx = void 0;
+          this.ctx = ctx;
+        }
+        var _proto = EnemyWorld.prototype;
+        _proto.setEnabled = function setEnabled(enabled) {
+          this.enabled = enabled;
+        };
+        _proto.player = function player() {
+          return this.ctx.services.has('player') ? this.ctx.services.get('player') : FIXED_TEST_PLAYER;
+        };
+        _proto.clear = function clear() {
+          this.generation += 1;
+          this.enemies.clear();
+          this.pending.length = 0;
+          this.alive = 0;
+          // Keep IDs unique across restarts: stale attack IDs cannot hit new enemies.
+          // Debug clearing never grants kills or loot.
+        };
 
-System.register("chunks:///_virtual/InputHistory.ts",["./rollupPluginModLoBabelHelpers.js","cc","./InputParams.ts"],(function(t){var i,e,s,n,r;return{setters:[function(t){i=t.extends,e=t.createForOfIteratorHelperLoose},function(t){s=t.cclegacy},function(t){n=t.HISTORY_SECONDS,r=t.INPUT_DEFAULTS}],execute:function(){s._RF.push({},"53ff65b7iFMfYgWnkFK5+YA","InputHistory",void 0);t("InputHistory",function(){function t(){this.samples=[],this.directionEpsilon=r.directionEpsilon}var s=t.prototype;return s.setDirectionEpsilon=function(t){this.directionEpsilon=t},s.record=function(t){var e=this.samples[this.samples.length-1];e&&t.time<e.time&&this.clear();var s=i({},t,{dir:i({},t.dir)}),r=this.samples[this.samples.length-1];r&&r.time===t.time?this.samples[this.samples.length-1]=s:this.samples.push(s);for(var o=t.time-n;this.samples.length>0&&this.samples[0].time<o;)this.samples.shift()},s.clear=function(){this.samples.length=0},s.avgDir=function(t,i){for(var s,n=0,r=0,o=e(this.windowRows(t,i));!(s=o()).done;){var a=s.value;n+=a.dir.x,r+=a.dir.y}var u=Math.hypot(n,r);return u<=this.directionEpsilon?{x:0,y:0}:{x:n/u,y:r/u}},s.minMag=function(t,i){var s=this.windowRows(t,i);if(0===s.length)return 0;for(var n,r=1,o=e(s);!(n=o()).done;){var a=n.value;r=Math.min(r,a.mag)}return r},s.magDrop=function(t,i){var s=this.windowRows(t,i);if(0===s.length)return 0;for(var n,r=0,o=e(s);!(n=o()).done;){var a=n.value;r=Math.max(r,a.mag)}for(var u=this.samples.length-1;u>=0;u--){var l=this.samples[u];if(l.time<=i)return r-l.mag}return 0},s.windowRows=function(t,i){if(!(t>0&&Number.isFinite(t)&&Number.isFinite(i)))return[];var e=i-Math.min(t,n);return this.samples.filter((function(t){return t.touching&&t.time>=e&&t.time<i}))},t}());s._RF.pop()}}}));
+        _proto.spawn = function spawn(kind, pos, danger) {
+          var t = this.ctx.tunables;
+          if (!this.enabled || this.alive >= Math.floor(t.get('enemy.maxAlive'))) return null;
+          // P0 §8: snapshot HP and contact damage at birth; speed never scales with D.
+          var enemy = {
+            id: this.nextId++,
+            kind: kind,
+            pos: this.ctx.arena.clamp(pos, t.get(kind + ".radius")),
+            vel: {
+              x: 0,
+              y: 0
+            },
+            facing: {
+              x: 0,
+              y: -1
+            },
+            radius: t.get(kind + ".radius"),
+            hp: t.get(kind + ".hp") * danger,
+            alive: true,
+            speed: t.get(kind + ".speed"),
+            damage: t.get(kind + ".dmg") * (1 + t.get('diff.dmgK') * (danger - 1)),
+            resistance: t.get(kind + ".kbResist"),
+            knockbackLeft: 0,
+            knockbackRemaining: {
+              x: 0,
+              y: 0
+            },
+            phase: 'chase',
+            phaseLeft: 0,
+            chargeDir: {
+              x: 0,
+              y: -1
+            },
+            chargeSpeed: t.get('boar.chargeSpeed'),
+            scatterLeft: 0,
+            scatterDir: {
+              x: 0,
+              y: 0
+            },
+            contactLeft: 0,
+            flashLeft: 0,
+            fatalSource: 'drag',
+            hits: new Map()
+          };
+          this.enemies.set(enemy.id, enemy);
+          this.alive += 1;
+          this.ctx.events.emit('enemy:spawned', {
+            id: enemy.id,
+            kind: kind,
+            pos: _extends({}, enemy.pos)
+          });
+          return enemy;
+        };
+        _proto.aliveCount = function aliveCount() {
+          return this.alive;
+        };
+        _proto.queryCircle = function queryCircle(c, r, out) {
+          if (r < 0) return 0;
+          return this.collect(out, function (e) {
+            return Math.hypot(e.pos.x - c.x, e.pos.y - c.y) <= r + e.radius;
+          });
+        };
+        _proto.querySegment = function querySegment(a, b, r, out) {
+          if (r < 0) return 0;
+          return this.collect(out, function (e) {
+            return pointSegmentDistance(e.pos, a, b) <= r + e.radius;
+          });
+        };
+        _proto.queryAABB = function queryAABB(minX, minY, maxX, maxY, out) {
+          if (minX > maxX || minY > maxY) return 0;
+          return this.collect(out, function (e) {
+            var x = Math.max(minX, Math.min(maxX, e.pos.x));
+            var y = Math.max(minY, Math.min(maxY, e.pos.y));
+            return Math.hypot(e.pos.x - x, e.pos.y - y) <= e.radius;
+          });
+        };
+        _proto.nearest = function nearest(c, r) {
+          var nearest = null;
+          var distance = r;
+          for (var _iterator = _createForOfIteratorHelperLoose(this.enemies.values()), _step; !(_step = _iterator()).done;) {
+            var _e = _step.value;
+            if (!_e.alive) continue;
+            var d = Math.max(0, Math.hypot(_e.pos.x - c.x, _e.pos.y - c.y) - _e.radius);
+            if (d <= distance && (nearest === null || d < distance)) {
+              nearest = _e;
+              distance = d;
+            }
+          }
+          return nearest;
+        };
+        _proto.getChargingBoars = function getChargingBoars() {
+          var out = [];
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.enemies.values()), _step2; !(_step2 = _iterator2()).done;) {
+            var _e2 = _step2.value;
+            if (_e2.alive && _e2.kind === 'boar' && _e2.phase === 'charge') {
+              out.push({
+                id: _e2.id,
+                pos: _extends({}, _e2.pos),
+                radius: _e2.radius
+              });
+            }
+          }
+          // Do not filter on cutsTrail: sword/loop owns that policy switch.
+          return out;
+        };
+        _proto.hit = function hit(id, req) {
+          var e = this.enemies.get(id);
+          if (!this.enabled || !e || !e.alive || !Number.isFinite(req.amount) || req.amount <= 0 || !Number.isFinite(req.cooldown) || req.cooldown < 0) return _extends({}, MISS);
+          var now = this.ctx.loop.simTime;
+          this.pruneHits(e, now);
+          var until = e.hits.get(req.hitKey);
+          if (until !== undefined && now + 1e-9 < until) return _extends({}, MISS);
+          // P0 §7: stun vulnerability applies to every damage source, before overkill clamp.
+          var multiplier = e.kind === 'boar' && e.phase === 'recover' ? this.ctx.tunables.get('boar.stunDmgTakenMul') : 1;
+          var dealt = Math.min(e.hp, req.amount * multiplier);
+          e.hits.set(req.hitKey, now + req.cooldown);
+          e.hp -= dealt;
+          e.flashLeft = this.ctx.tunables.get('enemy.hitFlashTime');
+          // Propagate fear around the impact position, before knockback moves it.
+          if (e.kind === 'sheep') this.scatter(e);
+          if (req.dir && Number.isFinite(req.dir.x) && Number.isFinite(req.dir.y) && req.knockback !== undefined && Number.isFinite(req.knockback) && req.knockback > 0) {
+            var dir = unit(req.dir.x, req.dir.y);
+            var distance = req.knockback * (1 - e.resistance);
+            e.knockbackRemaining.x += dir.x * distance;
+            e.knockbackRemaining.y += dir.y * distance;
+            e.knockbackLeft = this.ctx.tunables.get('enemy.knockbackTime');
+          }
+          var killed = e.hp <= 0;
+          if (killed) {
+            e.alive = false;
+            e.vel = {
+              x: 0,
+              y: 0
+            };
+            e.fatalSource = req.source;
+            this.alive -= 1;
+            this.pending.push(e);
+          }
+          this.ctx.events.emit('enemy:damaged', {
+            id: id,
+            kind: e.kind,
+            source: req.source,
+            amount: dealt,
+            killed: killed,
+            pos: _extends({}, e.pos)
+          });
+          return {
+            applied: true,
+            dealt: dealt,
+            killed: killed
+          };
+        };
+        _proto.update = function update(dt) {
+          if (!this.enabled || dt <= 0) return;
+          var rigScale = this.ctx.services.has('swordRig') ? this.ctx.services.get('swordRig').enemyTimeScale : 1;
+          var scaled = dt * (Number.isFinite(rigScale) ? Math.max(0, rigScale) : 1);
+          if (scaled === 0) {
+            for (var _iterator3 = _createForOfIteratorHelperLoose(this.enemies.values()), _step3; !(_step3 = _iterator3()).done;) {
+              var _e3 = _step3.value;
+              _e3.vel = {
+                x: 0,
+                y: 0
+              };
+            }
+            return;
+          }
+          var player = this.player();
+          var generation = this.generation;
+          // Pre-step flock snapshot avoids order-dependent alignment and cohesion.
+          var steering = new Map();
+          var before = new Map();
+          var grid = this.spatial();
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.enemies.values()), _step4; !(_step4 = _iterator4()).done;) {
+            var _e4 = _step4.value;
+            if (!_e4.alive) continue;
+            before.set(_e4.id, _extends({}, _e4.pos));
+            if (_e4.kind === 'sheep') steering.set(_e4.id, this.sheepDirection(_e4, player.pos, grid));
+          }
+          for (var _iterator5 = _createForOfIteratorHelperLoose(this.enemies.values()), _step5; !(_step5 = _iterator5()).done;) {
+            var _e5 = _step5.value;
+            if (!_e5.alive) continue;
+            this.pruneHits(_e5, this.ctx.loop.simTime);
+            _e5.flashLeft = Math.max(0, _e5.flashLeft - scaled);
+            _e5.contactLeft = Math.max(0, _e5.contactLeft - scaled);
+            // Knockback replaces locomotion for its slice, so its requested
+            // distance is not cancelled by pursuit. Timers still advance.
+            var knockDt = Math.min(scaled, _e5.knockbackLeft);
+            if (knockDt > 0) {
+              var fraction = knockDt / _e5.knockbackLeft;
+              _e5.pos = this.ctx.arena.clamp({
+                x: _e5.pos.x + _e5.knockbackRemaining.x * fraction,
+                y: _e5.pos.y + _e5.knockbackRemaining.y * fraction
+              }, _e5.radius);
+              _e5.knockbackRemaining.x *= 1 - fraction;
+              _e5.knockbackRemaining.y *= 1 - fraction;
+              _e5.knockbackLeft = Math.max(0, _e5.knockbackLeft - knockDt);
+            }
+            var moveDt = scaled - knockDt;
+            if (_e5.kind === 'boar') this.updateBoar(_e5, player.pos, scaled, moveDt);else if (_e5.kind === 'sheep') {
+              var _steering$get;
+              var direction = (_steering$get = steering.get(_e5.id)) != null ? _steering$get : {
+                x: 0,
+                y: 0
+              };
+              var scatterDt = Math.min(moveDt, Math.max(0, _e5.scatterLeft - knockDt));
+              if (scatterDt > 0) this.move(_e5, _e5.scatterDir, _e5.speed * this.ctx.tunables.get('sheep.scareSpeedMul'), scatterDt);
+              _e5.scatterLeft = Math.max(0, _e5.scatterLeft - scaled);
+              if (moveDt > scatterDt) this.move(_e5, direction, _e5.speed, moveDt - scatterDt);
+            } else if (moveDt > 0) this.chase(_e5, player.pos, moveDt);
+          }
+          this.separate();
+          for (var _iterator6 = _createForOfIteratorHelperLoose(this.enemies.values()), _step6; !(_step6 = _iterator6()).done;) {
+            var _e6 = _step6.value;
+            var start = before.get(_e6.id);
+            if (!_e6.alive || !start) continue;
+            _e6.vel = {
+              x: (_e6.pos.x - start.x) / dt,
+              y: (_e6.pos.y - start.y) / dt
+            };
+            if (player.state !== 'dead' && _e6.contactLeft <= 1e-9 && pointSegmentDistance(player.pos, start, _e6.pos) <= player.radius + _e6.radius) {
+              _e6.contactLeft = this.ctx.tunables.get('enemy.contactCooldown');
+              // Player owns invulnerability and jianzhen's 30% ink loss.
+              player.applyDamage(_e6.damage, {
+                enemyId: _e6.id,
+                kind: _e6.kind
+              });
+              if (generation !== this.generation || !this.enabled) return;
+            }
+          }
+        };
+        _proto.resolveDeaths = function resolveDeaths() {
+          if (!this.enabled) return;
+          var pending = this.pending;
+          this.pending = [];
+          var generation = this.generation;
+          for (var _iterator7 = _createForOfIteratorHelperLoose(pending), _step7; !(_step7 = _iterator7()).done;) {
+            var _e7 = _step7.value;
+            this.enemies["delete"](_e7.id);
+            var drop = this.ctx.rng.loot.next() < this.ctx.tunables.get('chain.dropChance');
+            this.ctx.events.emit('enemy:died', {
+              id: _e7.id,
+              kind: _e7.kind,
+              pos: _extends({}, _e7.pos),
+              source: _e7.fatalSource
+            });
+            if (generation !== this.generation || !this.enabled) return;
+            // P0 §6.3 assigns grade RNG to sword/chain; core's loot:sword grade is
+            // optional (#23), so enemy omits it and reads no grade keys.
+            if (drop) this.ctx.events.emit('loot:sword', {
+              pos: _extends({}, _e7.pos)
+            });
+            if (generation !== this.generation || !this.enabled) return;
+          }
+        };
+        _proto.collect = function collect(out, keep) {
+          var before = out.length;
+          for (var _iterator8 = _createForOfIteratorHelperLoose(this.enemies.values()), _step8; !(_step8 = _iterator8()).done;) {
+            var _e8 = _step8.value;
+            if (_e8.alive && keep(_e8)) out.push(_e8);
+          }
+          return out.length - before;
+        };
+        _proto.pruneHits = function pruneHits(e, now) {
+          for (var _iterator9 = _createForOfIteratorHelperLoose(e.hits), _step9; !(_step9 = _iterator9()).done;) {
+            var _step9$value = _step9.value,
+              key = _step9$value[0],
+              until = _step9$value[1];
+            if (now + 1e-9 >= until) e.hits["delete"](key);
+          }
+        };
+        _proto.scatter = function scatter(hit) {
+          var t = this.ctx.tunables;
+          var pet = this.player().pos;
+          for (var _iterator10 = _createForOfIteratorHelperLoose(this.enemies.values()), _step10; !(_step10 = _iterator10()).done;) {
+            var _e9 = _step10.value;
+            if (!_e9.alive || _e9.kind !== 'sheep') continue;
+            if (Math.hypot(_e9.pos.x - hit.pos.x, _e9.pos.y - hit.pos.y) > t.get('sheep.scareRadius')) continue;
+            _e9.scatterLeft = t.get('sheep.scareTime');
+            var away = unit(_e9.pos.x - pet.x, _e9.pos.y - pet.y);
+            // At the exact pet centre no away vector exists: deterministic
+            // opposite headings by ID, without consuming gameplay RNG.
+            _e9.scatterDir = Math.hypot(away.x, away.y) > 0 ? away : {
+              x: _e9.id % 2 === 0 ? 1 : -1,
+              y: 0
+            };
+          }
+        };
+        _proto.sheepDirection = function sheepDirection(e, player, grid) {
+          var t = this.ctx.tunables;
+          var nearby = [];
+          grid.queryCircle(e.pos.x, e.pos.y, t.get('sheep.flockRadius'), nearby);
+          var cx = 0;
+          var cy = 0;
+          var ax = 0;
+          var ay = 0;
+          var sx = 0;
+          var sy = 0;
+          var count = 0;
+          for (var _i = 0, _nearby = nearby; _i < _nearby.length; _i++) {
+            var other = _nearby[_i];
+            if (other.kind !== 'sheep' || other.id === e.id) continue;
+            var dx = other.pos.x - e.pos.x;
+            var dy = other.pos.y - e.pos.y;
+            var distance = Math.hypot(dx, dy);
+            if (distance > t.get('sheep.flockRadius')) continue;
+            cx += dx;
+            cy += dy;
+            ax += other.vel.x;
+            ay += other.vel.y;
+            if (distance > 1e-8 && distance < t.get('sheep.sepDist')) {
+              sx -= dx / distance;
+              sy -= dy / distance;
+            }
+            count += 1;
+          }
+          // P0 未定义，自选默认值: normalise the four steering vectors, weight
+          // their sum, then normalise once more to preserve sheep.speed.
+          var separation = unit(sx, sy);
+          var cohesion = unit(count ? cx / count : 0, count ? cy / count : 0);
+          var alignment = unit(count ? ax / count : 0, count ? ay / count : 0);
+          var seek = unit(player.x - e.pos.x, player.y - e.pos.y);
+          return unit(separation.x * t.get('sheep.sep') + cohesion.x * t.get('sheep.coh') + alignment.x * t.get('sheep.align') + seek.x * t.get('sheep.seek'), separation.y * t.get('sheep.sep') + cohesion.y * t.get('sheep.coh') + alignment.y * t.get('sheep.align') + seek.y * t.get('sheep.seek'));
+        };
+        _proto.spatial = function spatial() {
+          var radius = 0;
+          for (var _iterator11 = _createForOfIteratorHelperLoose(this.enemies.values()), _step11; !(_step11 = _iterator11()).done;) {
+            var _e10 = _step11.value;
+            if (_e10.alive) radius = Math.max(radius, _e10.radius);
+          }
+          // Cell side derives from the largest collision diameter, not a new tunable.
+          var grid = new SpatialHash(radius > 0 ? 2 * radius : this.ctx.tunables.get('blob.radius') * 2);
+          for (var _iterator12 = _createForOfIteratorHelperLoose(this.enemies.values()), _step12; !(_step12 = _iterator12()).done;) {
+            var _e11 = _step12.value;
+            if (_e11.alive) grid.insert(_e11.id, _e11.pos.x, _e11.pos.y, _e11.radius, _e11);
+          }
+          return grid;
+        };
+        _proto.separate = function separate() {
+          var candidates = [];
+          for (var pass = 0; pass < Math.floor(this.ctx.tunables.get('enemy.separationPasses')); pass++) {
+            var grid = this.spatial();
+            var changed = false;
+            for (var _iterator13 = _createForOfIteratorHelperLoose(this.enemies.values()), _step13; !(_step13 = _iterator13()).done;) {
+              var _e12 = _step13.value;
+              if (!_e12.alive) continue;
+              candidates.length = 0;
+              grid.queryCircle(_e12.pos.x, _e12.pos.y, _e12.radius, candidates);
+              for (var _iterator14 = _createForOfIteratorHelperLoose(candidates), _step14; !(_step14 = _iterator14()).done;) {
+                var other = _step14.value;
+                if (other.id <= _e12.id) continue;
+                var dx = other.pos.x - _e12.pos.x;
+                var dy = other.pos.y - _e12.pos.y;
+                var distance = Math.hypot(dx, dy);
+                var overlap = _e12.radius + other.radius - distance;
+                if (overlap <= 1e-8) continue;
+                var dir = distance > 1e-8 ? unit(dx, dy) : {
+                  x: _e12.id % 2 === 0 ? 1 : -1,
+                  y: 0
+                };
+                // Equal split; if a wall blocks one half the other takes the rest.
+                var start = _extends({}, _e12.pos);
+                _e12.pos = this.ctx.arena.clamp({
+                  x: _e12.pos.x - dir.x * overlap / 2,
+                  y: _e12.pos.y - dir.y * overlap / 2
+                }, _e12.radius);
+                var moved = (start.x - _e12.pos.x) * dir.x + (start.y - _e12.pos.y) * dir.y;
+                var otherStart = _extends({}, other.pos);
+                other.pos = this.ctx.arena.clamp({
+                  x: other.pos.x + dir.x * (overlap - moved),
+                  y: other.pos.y + dir.y * (overlap - moved)
+                }, other.radius);
+                var otherMoved = (other.pos.x - otherStart.x) * dir.x + (other.pos.y - otherStart.y) * dir.y;
+                var remainder = Math.max(0, overlap - moved - otherMoved);
+                _e12.pos = this.ctx.arena.clamp({
+                  x: _e12.pos.x - dir.x * remainder,
+                  y: _e12.pos.y - dir.y * remainder
+                }, _e12.radius);
+                changed = true;
+              }
+            }
+            if (!changed) break;
+          }
+        };
+        _proto.chase = function chase(e, player, dt) {
+          var dx = player.x - e.pos.x;
+          var dy = player.y - e.pos.y;
+          this.move(e, unit(dx, dy), Math.min(e.speed, Math.hypot(dx, dy) / dt), dt);
+        };
+        _proto.updateBoar = function updateBoar(e, player, dt, moveDt) {
+          if (moveDt === void 0) {
+            moveDt = dt;
+          }
+          var t = this.ctx.tunables;
+          if (e.phase === 'chase') {
+            if (Math.hypot(player.x - e.pos.x, player.y - e.pos.y) > t.get('boar.triggerRange')) {
+              if (moveDt > 0) this.chase(e, player, moveDt);
+              return;
+            }
+            e.phase = 'windup';
+            e.phaseLeft = t.get('boar.windup');
+            var dir = unit(player.x - e.pos.x, player.y - e.pos.y);
+            e.chargeDir = Math.hypot(dir.x, dir.y) > 0 ? dir : _extends({}, e.facing);
+            e.facing = _extends({}, e.chargeDir);
+          }
+          // Carry leftover time across phase boundaries, including slow motion.
+          var left = dt;
+          var blocked = dt - moveDt;
+          while (left > 1e-9 || e.phaseLeft <= 1e-9) {
+            var step = Math.min(left, e.phaseLeft);
+            if (e.phase === 'charge' && moveDt > 0) {
+              var travel = Math.max(0, step - blocked);
+              var destination = {
+                x: e.pos.x + e.chargeDir.x * e.chargeSpeed * travel,
+                y: e.pos.y + e.chargeDir.y * e.chargeSpeed * travel
+              };
+              this.move(e, e.chargeDir, e.chargeSpeed, travel);
+              if (!this.ctx.arena.contains(destination, e.radius)) e.phaseLeft = step;
+            }
+            e.phaseLeft = Math.max(0, e.phaseLeft - step);
+            left -= step;
+            blocked = Math.max(0, blocked - step);
+            if (e.phaseLeft > 1e-9) break;
+            if (e.phase === 'windup') {
+              e.phase = 'charge';
+              e.phaseLeft = t.get('boar.chargeTime');
+            } else if (e.phase === 'charge') {
+              e.phase = 'recover';
+              e.phaseLeft = t.get('boar.stunTime');
+            } else {
+              e.phase = 'chase';
+              break;
+            }
+          }
+        };
+        _proto.move = function move(e, dir, speed, dt) {
+          e.pos = this.ctx.arena.clamp({
+            x: e.pos.x + dir.x * speed * dt,
+            y: e.pos.y + dir.y * speed * dt
+          }, e.radius);
+          if (Math.hypot(dir.x, dir.y) > 0) e.facing = _extends({}, dir);
+        };
+        return EnemyWorld;
+      }());
+      function unit(x, y) {
+        var length = Math.hypot(x, y);
+        return length > 1e-8 ? {
+          x: x / length,
+          y: y / length
+        } : {
+          x: 0,
+          y: 0
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/InputParams.ts",["cc"],(function(e){var n;return{setters:[function(e){n=e.cclegacy}],execute:function(){n._RF.push({},"349e1FmvANJfYI7XNt97wI9","InputParams",void 0);e("INPUT_PIXELS_PER_UNIT",72),e("HISTORY_SECONDS",.5);var o=e("INPUT_DEFAULTS",{joyRadius:1.2,deadZone:.08,followCenter:1,directionEpsilon:1e-8});e("JOYSTICK_STYLE",{ringWidth:3,thumbRadius:8,colorR:230,colorG:238,colorB:255,ringAlpha:120,thumbAlpha:180}),e("INPUT_PARAMS",[{key:"input.joyRadius",group:"输入",label:"摇杆半径",kind:"number",default:o.joyRadius,min:.5,max:3,step:.1,note:"竞技场单位；下一模拟步生效"},{key:"input.deadZone",group:"输入",label:"摇杆死区",kind:"number",default:o.deadZone,min:0,max:.3,step:.01},{key:"input.followCenter",group:"输入",label:"中心跟随",kind:"bool",default:o.followCenter},{key:"input.directionEpsilon",group:"输入额外参数",label:"方向抵消阈值【默认·待试玩】",kind:"number",default:o.directionEpsilon,min:0,step:1e-8,note:"【默认·待试玩】方向和长度不超过阈值时返回零向量；下一模拟步生效"}]);n._RF.pop()}}}));
+System.register("chunks:///_virtual/events.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "7b95cBxjJBMraoOad3POBC/", "events", undefined);
+      /** Events that carry no fields. `{}` is the only valid payload. */
+      /**
+       * A charging boar cut the ink trail.
+       * Emitted by sword/loop (issue #3 correction). Enemy does not emit this;
+       * it only answers `IEnemyQuery.getChargingBoars()`.
+       * `pos` is the cut point (issue #3). `inkLost` is the discarded older ink (P0 supplement).
+       */
+      /**
+       * P0 event table (requirements §4.3) plus `jianzhen:cut`.
+       * Payloads are plain data. Do not put Node or Component references in them.
+       */
+      var GameEvent = exports('GameEvent', {
+        SessionStart: 'session:start',
+        SessionEnd: 'session:end',
+        EnemySpawned: 'enemy:spawned',
+        EnemyDamaged: 'enemy:damaged',
+        EnemyDied: 'enemy:died',
+        LootSword: 'loot:sword',
+        PlayerDamaged: 'player:damaged',
+        PlayerDied: 'player:died',
+        SwordWhip: 'sword:whip',
+        SwordFullCharge: 'sword:fullCharge',
+        ChainChanged: 'chain:changed',
+        ChainPickup: 'chain:pickup',
+        ChainBreak: 'chain:break',
+        ChainScatterExpired: 'chain:scatterExpired',
+        ThrowStart: 'throw:start',
+        ThrowCancel: 'throw:cancel',
+        ThrowCatch: 'throw:catch',
+        ThrowMiss: 'throw:miss',
+        ThrowRecovered: 'throw:recovered',
+        JianzhenWarn: 'jianzhen:warn',
+        JianzhenStart: 'jianzhen:start',
+        JianzhenLoop: 'jianzhen:loop',
+        JianzhenRejectedLoop: 'jianzhen:rejectedLoop',
+        JianzhenHit: 'jianzhen:hit',
+        JianzhenEnd: 'jianzhen:end',
+        JianzhenCut: 'jianzhen:cut',
+        FxHitstop: 'fx:hitstop',
+        FxShake: 'fx:shake',
+        TuningChanged: 'tuning:changed',
+        DebugCommand: 'debug:command'
+      });
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/InputSystem.ts",["cc","./SystemOrder.ts"],(function(s){var t,i;return{setters:[function(s){t=s.cclegacy},function(s){i=s.SystemOrder}],execute:function(){t._RF.push({},"88940kuQUFAZ6oFWRoosWzu","InputSystem",void 0);s("InputSystem",function(){function s(s,t,n){this.id="input.joystick",this.order=i.Input,this.sid=void 0,this.ctx=void 0,this.source=void 0,this.draw=void 0,this.offSession=null,this.ctx=s,this.source=t,this.draw=n,this.sid=s.session.sid,this.refreshConfig(),this.attach()}var t=s.prototype;return t.fixedUpdate=function(s){this.syncSession(),this.refreshConfig(),this.source.fixedUpdate(this.ctx.loop.simTime)},t.attach=function(){var s=this;this.syncSession(),this.offSession||(this.offSession=this.ctx.events.on("session:start",(function(){s.sid=s.ctx.session.sid,s.source.beginSession()})))},t.detach=function(){var s;null==(s=this.offSession)||s.call(this),this.offSession=null},t.syncSession=function(){this.sid!==this.ctx.session.sid&&(this.sid=this.ctx.session.sid,this.source.beginSession())},t.render=function(){this.draw()},t.refreshConfig=function(){var s=this.ctx.toPx({x:0,y:0}),t=this.ctx.toPx({x:1,y:0});this.source.setConfig({radiusPx:this.ctx.tunables.get("input.joyRadius")*Math.hypot(t.x-s.x,t.y-s.y),deadZone:this.ctx.tunables.get("input.deadZone"),followCenter:this.ctx.tunables.getBool("input.followCenter"),directionEpsilon:this.ctx.tunables.get("input.directionEpsilon")})},s}());t._RF.pop()}}}));
+System.register("chunks:///_virtual/FixedLoop.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './SystemOrder.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _createClass, cclegacy, SystemOrder;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "d1239ZU+S9OL76iYUAWgOae", "FixedLoop", undefined);
+      var FIXED_HZ = exports('FIXED_HZ', 60);
+      var FIXED_DT = exports('FIXED_DT', 1 / 60);
+      var MAX_STEPS_PER_FRAME = exports('MAX_STEPS_PER_FRAME', 5);
+      /**
+       * 60 Hz accumulator. Each render frame runs at most 5 steps; extra time is
+       * dropped so a stall cannot spiral.
+       * During hit-stop, simulation time stays put and only `SystemOrder.Input`
+       * systems run. `render` still runs once per render frame.
+       */
+      var FixedLoop = exports('FixedLoop', /*#__PURE__*/function () {
+        function FixedLoop() {
+          this.systems = [];
+          this.accumulator = 0;
+          this.simTimeValue = 0;
+          this.hitstopLeft = 0;
+          this.stepsThisFrameValue = 0;
+          this.pausedValue = false;
+        }
+        var _proto = FixedLoop.prototype;
+        _proto.addSystem = function addSystem(system) {
+          var existing = this.systems.findIndex(function (item) {
+            return item.id === system.id;
+          });
+          if (existing >= 0) this.systems.splice(existing, 1);
+          this.systems.push(system);
+          this.systems.sort(function (a, b) {
+            return a.order - b.order;
+          });
+        };
+        _proto.removeSystem = function removeSystem(id) {
+          var index = this.systems.findIndex(function (item) {
+            return item.id === id;
+          });
+          if (index >= 0) this.systems.splice(index, 1);
+        }
 
-System.register("chunks:///_virtual/JoystickView.ts",["./rollupPluginModLoBabelHelpers.js","cc","./InputParams.ts"],(function(t){var o,n,e,r,i,u,s,c,a,l,h,d,p,v,f;return{setters:[function(t){o=t.inheritsLoose,n=t.createForOfIteratorHelperLoose},function(t){e=t.cclegacy,r=t._decorator,i=t.Input,u=t.Graphics,s=t.input,c=t.view,a=t.Color,l=t.Button,h=t.UITransform,d=t.Node,p=t.EventMouse,v=t.Component},function(t){f=t.JOYSTICK_STYLE}],execute:function(){var y;t("mountJoystick",(function(t,o,n){var e,r=t.layers.get("debug");if(!r.isValid)return null;var i=new d("InputJoystick");i.layer=r.layer,null==(e=i.addComponent(h))||e.setAnchorPoint(0,0),r.addChild(i);var u=i.addComponent(m);if(!u)return i.destroy(),null;return u.configure(t,o,n),u})),e._RF.push({},"00a2bWGRqRIZoxZBQ+Acj+G","JoystickView",void 0);var g=r.ccclass,T=-1,w=[i.EventType.TOUCH_START,i.EventType.TOUCH_MOVE,i.EventType.TOUCH_END,i.EventType.TOUCH_CANCEL,i.EventType.MOUSE_DOWN,i.EventType.MOUSE_MOVE,i.EventType.MOUSE_UP],m=t("JoystickView",g("InputJoystickView")(y=function(t){function e(){for(var o,n=arguments.length,e=new Array(n),r=0;r<n;r++)e[r]=arguments[r];return(o=t.call.apply(t,[this].concat(e))||this).ctx=null,o.source=null,o.system=null,o.graphics=null,o.captureRoot=null,o.bound=!1,o.sawTouch=!1,o.mouseDown=!1,o.onTouchStart=function(t){var n;if(o.sawTouch=!0,t.touch&&!o.overButton(t)){var e=t.getUILocation();null==(n=o.source)||n.pointerDown(t.touch.getID(),e.x,e.y),o.redraw()}},o.onTouchMove=function(t){var n;if(t.touch){var e=t.getUILocation();null==(n=o.source)||n.pointerMove(t.touch.getID(),e.x,e.y),o.redraw()}},o.onTouchEnd=function(t){var n;t.touch&&(null==(n=o.source)||n.pointerUp(t.touch.getID())),o.redraw()},o.onMouseDown=function(t){var n;if(!o.sawTouch&&t.getButton()===p.BUTTON_LEFT&&!o.overButton(t)){o.mouseDown=!0;var e=t.getUILocation();null==(n=o.source)||n.pointerDown(T,e.x,e.y),o.redraw()}},o.onMouseMove=function(t){var n;if(!o.sawTouch&&o.mouseDown){var e=t.getUILocation();null==(n=o.source)||n.pointerMove(T,e.x,e.y),o.redraw()}},o.onMouseUp=function(t){var n;o.mouseDown&&t.getButton()===p.BUTTON_LEFT&&(o.mouseDown=!1,null==(n=o.source)||n.pointerUp(T),o.redraw())},o.handlers=[o.onTouchStart,o.onTouchMove,o.onTouchEnd,o.onTouchEnd,o.onMouseDown,o.onMouseMove,o.onMouseUp],o}o(e,t);var r=e.prototype;return r.configure=function(t,o,n){var e;this.ctx=t,this.source=o,this.system=n,this.graphics=null!=(e=this.getComponent(u))?e:this.addComponent(u),this.captureRoot=t.layers.get("hud").parent,this.enabledInHierarchy&&this.bind()},r.onEnable=function(){this.bind()},r.onDisable=function(){var t,o,n;if(this.bound){for(var e=0;e<w.length;e++){var r;s.off(w[e],this.handlers[e],this),null==(r=this.captureRoot)||r.off(w[e],this.handlers[e],this,!0)}this.bound=!1}this.mouseDown=!1,null==(t=this.system)||t.detach(),null==(o=this.source)||o.reset(),null==(n=this.graphics)||n.clear()},r.onDestroy=function(){this.onDisable(),this.ctx=null,this.source=null,this.system=null,this.graphics=null,this.captureRoot=null},r.redraw=function(){var t=this.graphics,o=this.source,n=this.ctx;if(t&&o&&n&&this.enabledInHierarchy&&(t.clear(),o.touching)){var e=c.getVisibleSize(),r=o.center.x-e.width/2,i=o.center.y-e.height/2,u=f.colorR,s=f.colorG,l=f.colorB,h=f.ringWidth,d=f.ringAlpha,p=f.thumbAlpha,v=f.thumbRadius;t.lineWidth=h,t.strokeColor=new a(u,s,l,d),t.circle(r,i,o.radiusPx),t.stroke(),t.fillColor=new a(u,s,l,p),t.circle(o.pointer.x-e.width/2,o.pointer.y-e.height/2,v),t.fill()}},r.bind=function(){var t;if(!this.bound&&this.ctx&&this.source){null==(t=this.system)||t.attach(),this.bound=!0;for(var o=0;o<w.length;o++){var n;s.on(w[o],this.handlers[o],this),null==(n=this.captureRoot)||n.on(w[o],this.handlers[o],this,!0)}}},r.overButton=function(t){if(!this.ctx)return!1;for(var o,e=n(["hud","debug"]);!(o=e()).done;)for(var r,i=o.value,u=this.ctx.layers.get(i).getComponentsInChildren(l),s=n(u);!(r=s()).done;){var c=r.value;if(c.enabledInHierarchy&&c.interactable){var a=c.node.getComponent(h);if(null!=a&&a.hitTest(t.getLocation()))return!0}}return!1},e}(v))||y);e._RF.pop()}}}));
+        /** Add hit-stop frames (60 Hz). Stacks with any frames still pending. */;
+        _proto.hitstop = function hitstop(frames) {
+          var count = Math.max(0, Math.floor(frames));
+          this.hitstopLeft += count;
+        }
 
-System.register("chunks:///_virtual/Layers.ts",["cc"],(function(e){var c;return{setters:[function(e){c=e.cclegacy}],execute:function(){c._RF.push({},"e835fbj7glBCpPAfOmMcfVc","Layers",void 0);e("LAYER_NAMES",["arena","trail","enemies","rig","fx","hud","debug"]);c._RF.pop()}}}));
+        /**
+         * Pause simulation without consuming hit-stop or retaining partial elapsed
+         * time. Rendering continues from `tick`.
+         */;
+        _proto.pause = function pause() {
+          this.pausedValue = true;
+          this.accumulator = 0;
+          this.stepsThisFrameValue = 0;
+        }
 
-System.register("chunks:///_virtual/LoopController.ts",["./rollupPluginModLoBabelHelpers.js","cc","./geom.ts","./LoopParams.ts"],(function(i){var t,s,e,n,h,a,o,r,l,p,u,c,m,d;return{setters:[function(i){t=i.createForOfIteratorHelperLoose,s=i.extends,e=i.createClass},function(i){n=i.cclegacy},function(i){h=i.distance,a=i.findClosure,o=i.trimOldest,r=i.douglasPeucker,l=i.pointInPolygon,p=i.capsuleContact,u=i.interpolate,c=i.trailLength},function(i){m=i.inkBudget,d=i.loopDamage}],execute:function(){n._RF.push({},"8c9f1jPaPxNS5RB/5+1uleq","LoopController",void 0);i("LoopController",function(){function i(i){this.rig=void 0,this.ctx=void 0,this.phase="normal",this.jianyi=0,this.ink=0,this.inkRaw=0,this.duration=0,this.elapsed=0,this.loops=0,this.points=[],this.flashPolygon=[],this.flashCount=0,this.flashLeft=0,this.unsubs=[],this.attached=!1,this.running=!1,this.time=0,this.warningElapsed=0,this.returnElapsed=0,this.sinceSample=0,this.hitUntil=0,this.samples=[],this.liveHead=!1,this.previous={x:0,y:0},this.hitGains=[],this.linkGains=[],this.boarPositions=new Map,this.emptyStart=!0,this.serial=0,this.rig=i,this.ctx=i.ctx}var n=i.prototype;return n.attach=function(){var i=this;if(!this.attached){this.attached=!0;var t=this.ctx.events;this.unsubs.push(t.on("session:start",(function(){return i.reset()}))),this.unsubs.push(t.on("session:end",(function(){return i.stop()}))),this.unsubs.push(t.on("player:died",(function(){return i.stop()}))),this.unsubs.push(t.on("enemy:damaged",(function(t){t.amount>0&&("drag"===t.source||"whip"===t.source)&&i.gain(i.p("jianyi.hit"),i.hitGains,i.p("jianyi.hitCap"))}))),this.unsubs.push(t.on("enemy:died",(function(t){"link_auto"===t.source||"link_contact"===t.source?i.gain(i.p("jianyi.linkKill"),i.linkGains,i.p("jianyi.linkCap")):i.gain(i.p("whip"===t.source?"jianyi.whipKill":"jianyi.kill"))}))),this.unsubs.push(t.on("throw:catch",(function(t){"perfect"===t.kind&&i.gain(i.p("jianyi.perfectCatch"))}))),this.unsubs.push(t.on("player:damaged",(function(){return i.onHit()}))),this.unsubs.push(t.on("debug:command",(function(t){"fillJianyi"===t.cmd&&i.canGain()&&(i.setJianyi(i.p("jianyi.max")),i.maybeWarn())})))}},n.detach=function(){for(var i,s=t(this.unsubs);!(i=s()).done;){(0,i.value)()}this.unsubs.length=0,this.attached=!1},n.reset=function(){this.phase="normal",this.running=!0,this.time=this.elapsed=this.warningElapsed=this.returnElapsed=this.sinceSample=this.hitUntil=0,this.ink=this.inkRaw=this.duration=this.loops=this.serial=0,this.samples=this.points=[],this.liveHead=!1,this.flashPolygon=[],this.flashLeft=this.flashCount=0,this.hitGains.length=this.linkGains.length=0,this.boarPositions.clear(),this.previous=s({},this.rig.petPos),this.setJianyi(0),this.rig.setEnemyTimeScale(1)},n.fixedUpdate=function(i){if(this.attached&&this.running&&!(i<=0)){if(this.time+=i,this.flashLeft=Math.max(0,this.flashLeft-i),this.ctx.tunables.getBool("mech.loop")||("drawing"===this.phase&&this.end(!0),"warning"===this.phase&&(this.phase="normal"),this.setJianyi(0),this.hitGains.length=this.linkGains.length=0),"returning"===this.phase)return this.returnElapsed+=i,void(this.returnElapsed+1e-9>=this.p("loop.returnTime")&&(this.phase="normal"));if(this.ctx.tunables.getBool("mech.loop"))if("normal"!==this.phase){if("warning"===this.phase)return this.warningElapsed+=i,void(this.warningElapsed+1e-9>=this.p("loop.warnTime")&&this.begin());if(this.elapsed+=i,this.refreshBudget(),this.rig.setEnemyTimeScale(this.p("loop.bulletTime")),this.elapsed+1e-9>=this.duration)this.end(!1);else{var t=s({},this.rig.petPos);this.sinceSample+=i,this.liveHead&&this.samples.pop();var e=this.sinceSample+1e-9>=this.p("loop.sampleInterval");e&&(this.sinceSample%=this.p("loop.sampleInterval"));var n=this.samples[this.samples.length-1];this.liveHead=!1,(!n||h(n,t)>1e-9)&&(this.samples.push(s({},t,{time:this.time})),this.liveHead=!e),this.rebuild(),this.cutByBoars();var o=a(this.points,this.previous,t,this.time,this.p("loop.closeAge"),this.p("loop.closeTol")),r=!1;o&&(o.area<this.p("loop.minArea")?this.ctx.events.emit("jianzhen:rejectedLoop",{area:o.area}):(this.slash(o),r=!0)),r&&this.restartTrail(t),this.previous=t}}else this.maybeWarn()}},n.p=function(i){return this.ctx.tunables.get(i)},n.canGain=function(){return this.running&&this.attached&&"normal"===this.phase&&this.ctx.tunables.getBool("mech.loop")},n.setJianyi=function(i){this.jianyi=Math.max(0,Math.min(this.p("jianyi.max"),i)),this.rig.setJianyi(this.jianyi)},n.gain=function(i,s,e){if(void 0===e&&(e=0),this.canGain()){if(s){for(var n=this.ctx.loop.simTime;s.length>0&&s[0].time<=n-1+1e-9;)s.shift();for(var h,a=0,o=t(s);!(h=o()).done;){a+=h.value.amount}(i=Math.max(0,Math.min(i,e-a)))>0&&s.push({time:n,amount:i})}this.setJianyi(this.jianyi+i*this.p("jianyi.globalMul")),this.maybeWarn()}},n.maybeWarn=function(){!this.canGain()||this.jianyi<this.p("jianyi.max")||(this.phase="warning",this.warningElapsed=0,this.ctx.events.emit("jianzhen:warn",{}))},n.refreshBudget=function(){var i=m(this.ctx.tunables,this.rig.N,this.rig.Lg,this.rig.mainHeld);this.ink=i.ink,this.inkRaw=i.raw,this.duration=i.duration},n.begin=function(){this.phase="drawing",this.elapsed=this.loops=0,this.hitUntil=0,this.setJianyi(0),this.refreshBudget(),this.rig.setChainLanded(!0),this.rig.setEnemyTimeScale(this.p("loop.bulletTime")),this.boarPositions.clear(),this.restartTrail(this.rig.petPos),this.previous=s({},this.rig.petPos);var i=[];this.ctx.services.has("enemies")&&this.ctx.services.get("enemies").queryCircle(s({},this.rig.petPos),4,i);var t=i.filter((function(i){return i.alive})).length;this.emptyStart=t<3,this.ctx.events.emit("jianzhen:start",{ink:this.ink,inkRaw:this.inkRaw,duration:this.duration,N:this.rig.N,enemiesNear:t})},n.restartTrail=function(i){this.samples=[s({},i,{time:this.time})],this.points=this.samples.slice(),this.sinceSample=0,this.liveHead=!1},n.rebuild=function(){this.samples=o(this.samples,Math.max(0,this.length-this.ink));var i=Math.floor(this.p("loop.maxPoints"));this.samples.length>i&&(this.samples=this.samples.slice(-i)),this.samples.length<=1&&(this.liveHead=!1),this.points=r(this.samples,this.p("loop.dpEpsilon"))},n.slash=function(i){for(var s,e=[],n=i.polygon,h=1/0,a=1/0,o=-1/0,r=-1/0,p=t(n);!(s=p()).done;){var u=s.value;h=Math.min(h,u.x),a=Math.min(a,u.y),o=Math.max(o,u.x),r=Math.max(r,u.y)}var c=this.ctx.services.has("enemies")?this.ctx.services.get("enemies"):null;c&&c.queryAABB(h,a,o,r,e);for(var m,g=new Set,f=e.filter((function(i){return!(!i.alive||g.has(i.id)||!l(i.pos,n))&&(g.add(i.id),!0)})),v=f.length,y=d(this.ctx.tunables,this.rig.B,v,i.area),x="loop:"+ ++this.serial,b=0,k=0,w=t(f);!(m=w()).done;){var j=m.value;if(!c)break;var P=c.hit(j.id,{source:"loop",amount:y,hitKey:x,cooldown:0});P.applied&&(b+=P.dealt,P.killed&&k++)}this.loops++,this.flashPolygon=n.map((function(i){return{x:i.x,y:i.y}})),this.flashCount=v,this.flashLeft=this.p("loop.flashTime"),this.ctx.tunables.getBool("fx.hitstop")&&this.ctx.events.emit("fx:hitstop",{frames:this.p("loop.hitstopFrames")}),this.ctx.events.emit("jianzhen:loop",{area:i.area,n:v,totalDamage:b,kills:k,points:n.length})},n.onHit=function(){if(this.running&&"drawing"===this.phase&&!(this.time+1e-9<this.hitUntil)){this.hitUntil=this.time+this.p("loop.hitProtect");var i=this.p("loop.hitMode"),t=0===i?this.length*this.p("loop.hitInkLoss"):this.length;this.samples=o(this.samples,t),this.rebuild(),this.ctx.events.emit("jianzhen:hit",{mode:i,inkLost:t}),1===i&&(this.setJianyi(this.p("loop.hitRefund")*this.p("jianyi.max")),this.end(!0))}},n.cutByBoars=function(){if(this.ctx.services.has("enemies")){for(var i,e=this.ctx.services.get("enemies").getChargingBoars(),n=new Map,h=t(e);!(i=h()).done;){var a,o=i.value,r=null!=(a=this.boarPositions.get(o.id))?a:o.pos;if(n.set(o.id,s({},o.pos)),!this.ctx.tunables.has("boar.cutsTrail")||this.ctx.tunables.getBool("boar.cutsTrail"))for(var l=this.samples.length-1;l>0;l--){var m=this.samples[l],d=this.samples[l-1],g=p(m,d,r,o.pos,o.radius);if(null!==g){var f=u(m,d,g),v=g<=1e-9?this.samples.slice(l):[f].concat(this.samples.slice(l)),y=this.length-c(v);y>1e-9&&(this.samples=v,this.rebuild(),this.ctx.events.emit("jianzhen:cut",{pos:{x:f.x,y:f.y},inkLost:y}));break}}}this.boarPositions=n}},n.end=function(i){"drawing"===this.phase&&(this.phase="returning",this.returnElapsed=0,this.samples=this.points=[],this.boarPositions.clear(),this.rig.setEnemyTimeScale(1),this.rig.setChainLanded(!1,this.p("loop.postReturnImmune")),this.ctx.events.emit("jianzhen:end",{loops:this.loops,interrupted:i,emptyStart:this.emptyStart}))},n.stop=function(){this.end(!0),this.running=!1,this.phase="normal",this.samples=this.points=[],this.flashLeft=0,this.rig.setEnemyTimeScale(1)},e(i,[{key:"remaining",get:function(){return"drawing"===this.phase?Math.max(0,this.duration-this.elapsed):0}},{key:"length",get:function(){return c(this.samples)}}]),i}());n._RF.pop()}}}));
+        /** Resume from the next supplied frame delta, without catch-up steps. */;
+        _proto.resume = function resume() {
+          this.pausedValue = false;
+        };
+        _proto.resetClock = function resetClock() {
+          this.accumulator = 0;
+          this.simTimeValue = 0;
+          this.hitstopLeft = 0;
+          this.stepsThisFrameValue = 0;
+        };
+        _proto.tick = function tick(frameDt) {
+          if (this.pausedValue) {
+            this.accumulator = 0;
+            this.stepsThisFrameValue = 0;
+            for (var _iterator = _createForOfIteratorHelperLoose(this.systems), _step; !(_step = _iterator()).done;) {
+              var system = _step.value;
+              system.render == null || system.render();
+            }
+            return {
+              steps: 0,
+              hitstopSteps: 0
+            };
+          }
+          var dt = Number.isFinite(frameDt) && frameDt > 0 ? frameDt : 0;
+          this.accumulator += dt;
+          var cap = FIXED_DT * MAX_STEPS_PER_FRAME;
+          if (this.accumulator > cap) this.accumulator = cap;
+          var steps = 0;
+          var hitstopSteps = 0;
+          var budget = MAX_STEPS_PER_FRAME;
+          while (budget > 0 && this.accumulator >= FIXED_DT - 1e-8) {
+            this.accumulator -= FIXED_DT;
+            if (this.accumulator > -1e-8 && this.accumulator < 0) this.accumulator = 0;
+            budget -= 1;
+            if (this.hitstopLeft > 0) {
+              this.hitstopLeft -= 1;
+              hitstopSteps += 1;
+              this.step(true);
+            } else {
+              this.step(false);
+              this.simTimeValue += FIXED_DT;
+              steps += 1;
+            }
+          }
+          this.stepsThisFrameValue = steps;
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.systems), _step2; !(_step2 = _iterator2()).done;) {
+            var _system = _step2.value;
+            _system.render == null || _system.render();
+          }
+          return {
+            steps: steps,
+            hitstopSteps: hitstopSteps
+          };
+        };
+        _proto.step = function step(hitstop) {
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.systems), _step3; !(_step3 = _iterator3()).done;) {
+            var system = _step3.value;
+            if (hitstop && system.order !== SystemOrder.Input) continue;
+            system.fixedUpdate(FIXED_DT);
+          }
+        };
+        _createClass(FixedLoop, [{
+          key: "simTime",
+          get: function get() {
+            return this.simTimeValue;
+          }
+        }, {
+          key: "stepsThisFrame",
+          get: function get() {
+            return this.stepsThisFrameValue;
+          }
+        }, {
+          key: "paused",
+          get: function get() {
+            return this.pausedValue;
+          }
+        }]);
+        return FixedLoop;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/LoopParams.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(o){var e,a,l;return{setters:[function(o){e=o.extends,a=o.createForOfIteratorHelperLoose},function(o){l=o.cclegacy}],execute:function(){function i(o,e,a,l,i){return{key:o,group:"剑阵",label:e,kind:"number",default:a,min:l,max:i,note:"P0 §6.5"}}o({inkBudget:function(o,e,a,l){var i=o.get("loop.inkBase")+o.get("loop.inkPerSword")*e+(l?o.get("loop.inkPerLg")*a:0),n=o.get("loop.inkCap");return{raw:i,ink:Math.min(i,n),duration:o.get("loop.duration")+Math.min(o.get("loop.overflowSecPerU")*Math.max(i-n,0),o.get("loop.overflowSecCap"))}},loopDamage:function(o,e,a,l){var i=Math.max(o.get("loop.areaMin"),Math.min(o.get("loop.areaMax"),l/o.get("loop.areaRef")));return e*o.get("loop.dmgK")*(1+o.get("loop.nLogK")*Math.log(1+a))*Math.pow(i,o.get("loop.areaExp"))},registerLoopParams:function(o){for(var e,l=a(n);!(e=l()).done;){var i=e.value;o.has(i.key)||o.define([i])}}}),l._RF.push({},"22dd4oyh+dMcq0AFX0ARvu5","LoopParams",void 0);var n=o("LOOP_PARAMS",[{key:"mech.loop",group:"剑阵",label:"剑阵机制",kind:"bool",default:1},i("jianyi.max","剑意上限",100,10,500),i("jianyi.hit","拖剑命中剑意",1,0,10),i("jianyi.hitCap","命中每秒剑意上限",5,0,50),i("jianyi.kill","击杀剑意",2,0,20),i("jianyi.whipKill","鞭响击杀剑意",4,0,20),i("jianyi.linkKill","链剑击杀剑意",.5,0,5),i("jianyi.linkCap","链剑每秒剑意上限",2,0,20),i("jianyi.perfectCatch","完美接剑剑意",12,0,50),i("jianyi.globalMul","剑意总倍率",1,.1,5),i("loop.warnTime","预警时长",1,0,3),i("loop.duration","基础剑阵时长",6,2,15),i("loop.inkBase","基础墨量",6,0,20),i("loop.inkPerSword","每把链剑墨量",.8,0,3),i("loop.inkPerLg","每点剑长墨量",.5,0,2),i("loop.inkCap","墨量上限",22,5,60),i("loop.overflowSecPerU","超出墨量转时长",.15,0,1),i("loop.overflowSecCap","额外时长上限",3,0,10),i("loop.sampleInterval","剑痕采样间隔",.05,.01,.2),i("loop.dpEpsilon","剑痕简化容差",.05,0,.3),i("loop.maxPoints","剑痕点数上限",200,50,500),i("loop.closeAge","可闭合剑痕年龄",.3,.1,1),i("loop.closeTol","闭合容差",.3,0,1),i("loop.minArea","最小有效面积",1.5,0,10),i("loop.dmgK","斩击系数",6,0,30),i("loop.nLogK","人数对数系数",.35,0,2),i("loop.areaRef","面积参考值",8,1,30),i("loop.areaMin","面积项下限",.5,0,1),i("loop.areaMax","面积项上限",3,1,10),i("loop.areaExp","面积指数",.3,0,1),{key:"loop.hitMode",group:"剑阵",label:"受击规则",kind:"enum",default:0,options:["扣墨","整段作废"]},i("loop.hitInkLoss","受击剑痕损失比例",.3,0,1),i("loop.hitProtect","扣墨保护时长",.5,0,2),i("loop.hitRefund","作废返还剑意比例",.4,0,1),i("loop.bulletTime","敌人时间倍率",.7,.3,1),i("loop.hitstopFrames","闭合顿帧",9,0,20),e({},i("loop.flashTime","闭合闪光时长",.4,0,2),{note:"P0未定义持续时间，灰盒自选默认值"})]);l._RF.pop()}}}));
+System.register("chunks:///_virtual/FloatingJoystick.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './InputHistory.ts', './InputParams.ts'], function (exports) {
+  var _extends, _createClass, cclegacy, InputHistory, INPUT_DEFAULTS, INPUT_PIXELS_PER_UNIT;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      InputHistory = module.InputHistory;
+    }, function (module) {
+      INPUT_DEFAULTS = module.INPUT_DEFAULTS;
+      INPUT_PIXELS_PER_UNIT = module.INPUT_PIXELS_PER_UNIT;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "26ea7j9JM5LQYTczl7+HUc7", "FloatingJoystick", undefined);
+      function emptyFrame() {
+        return {
+          touching: false,
+          dir: {
+            x: 0,
+            y: 0
+          },
+          mag: 0,
+          pressedThisTick: false,
+          releasedThisTick: false,
+          time: 0
+        };
+      }
 
-System.register("chunks:///_virtual/LoopView.ts",["./rollupPluginModLoBabelHelpers.js","cc","./geom.ts"],(function(o){var t,n,e,i,r,a,l,s,h,c,u;return{setters:[function(o){t=o.inheritsLoose,n=o.createForOfIteratorHelperLoose},function(o){e=o.cclegacy,i=o._decorator,r=o.Color,a=o.Graphics,l=o.Node,s=o.UITransform,h=o.Label,c=o.Component},function(o){u=o.distance}],execute:function(){var d;o("mountLoopView",(function(o){var t=o.ctx.layers.get("trail");if("function"!=typeof t.addChild)return null;var n=b(t,"SwordLoop").addComponent(L);return n.bind(o),function(){return n.draw()}})),e._RF.push({},"a479aEzDStA+psZVgMMGfzP","LoopView",void 0);var f=i.ccclass,y=.3,x=.24,p=.12,v=2,g=6,m=18,w=30,P=new r(100,235,235),C=new r(255,240,165),L=o("LoopView",f("SwordLoopGreyboxView")(d=function(o){function e(){for(var t,n=arguments.length,e=new Array(n),i=0;i<n;i++)e[i]=arguments[i];return(t=o.call.apply(o,[this].concat(e))||this).controller=null,t.graphics=null,t.hud=null,t.caption=null,t}t(e,o);var i=e.prototype;return i.bind=function(o){this.controller=o,this.graphics=b(this.node,"Geometry").addComponent(a),this.hud=T(o.ctx.layers.get("hud"),"LoopStatus"),this.caption=T(this.node,"LoopCaption")},i.onEnable=function(){var o;null==(o=this.controller)||o.attach()},i.onDisable=function(){var o;null==(o=this.controller)||o.detach()},i.onDestroy=function(){var o,t;null==(o=this.controller)||o.detach(),null==(t=this.hud)||t.node.destroy(),this.controller=null},i.draw=function(){var o=this.controller,t=this.graphics;if(o&&t&&this.enabledInHierarchy){var e=o.ctx.toPx,i=Math.abs(e({x:1,y:0}).x-e({x:0,y:0}).x);t.clear(),t.lineWidth=v,t.strokeColor=P;var r=o.points;if("drawing"===o.phase&&r.length>0){this.outline(t,r);for(var a=0,l=1;l<r.length;l++){var s=r[l-1],h=r[l],c=u(s,h);if(!(c<=1e-9)){for(;a<c;a+=y){var d=a/c;this.blade(t,{x:s.x+(h.x-s.x)*d,y:s.y+(h.y-s.y)*d},i)}a-=c}}var f=e(r[r.length-1]),x=e(o.rig.petPos);t.moveTo(f.x,f.y),t.lineTo(x.x,x.y),t.stroke()}if("warning"===o.phase&&(t.strokeColor=C,t.lineWidth=g,this.outline(t,[{x:0,y:0},{x:10,y:0},{x:10,y:15},{x:0,y:15},{x:0,y:0}])),o.flashLeft>0&&o.flashPolygon.length>0){t.strokeColor=C,t.lineWidth=v,this.outline(t,o.flashPolygon.concat(o.flashPolygon.slice(0,1)));for(var p,m=0,L=0,b=n(o.flashPolygon);!(p=b()).done;){var T=p.value;m+=T.x,L+=T.y}for(var k,F={x:m/o.flashPolygon.length,y:L/o.flashPolygon.length},M=Math.max(0,Math.min(1,1-o.flashLeft/Math.max(1e-9,o.ctx.tunables.get("loop.flashTime")))),S=n(o.flashPolygon);!(k=S()).done;){var V=k.value;this.blade(t,{x:V.x+(F.x-V.x)*M,y:V.y+(F.y-V.y)*M},i)}if(this.caption){this.caption.string="×"+o.flashCount+" 一圈斩！"+(o.flashCount>=20?" 大满贯":"");var z=e(F);this.caption.node.setPosition(z.x,z.y,0)}}this.caption&&(this.caption.node.active=o.flashLeft>0),this.hud&&(this.hud.node.setPosition(0,15*i/2+w/2,0),this.hud.string="drawing"===o.phase?"墨量 "+o.length.toFixed(1)+"/"+o.ink.toFixed(1)+"u  剩余 "+o.remaining.toFixed(1)+"s":"warning"===o.phase?"剑意已满 · 剑阵将至":"returning"===o.phase?"剑阵回收中":"剑意 "+o.jianyi.toFixed(0)+"/"+o.ctx.tunables.get("jianyi.max"))}},i.outline=function(o,t){var n=this.controller;if(n&&0!==t.length){var e=n.ctx.toPx(t[0]);o.moveTo(e.x,e.y);for(var i=1;i<t.length;i++){var r=n.ctx.toPx(t[i]);o.lineTo(r.x,r.y)}o.stroke()}},i.blade=function(o,t,n){var e=this.controller;if(e){var i=e.ctx.toPx(t);o.moveTo(i.x,i.y),o.lineTo(i.x,i.y+x*n),o.moveTo(i.x-p*n/2,i.y+x*n/3),o.lineTo(i.x+p*n/2,i.y+x*n/3),o.stroke()}},e}(c))||d);function b(o,t){var n=new l(t);return n.layer=o.layer,n.addComponent(s).setAnchorPoint(0,0),o.addChild(n),n}function T(o,t){var n=new l(t);n.layer=o.layer;var e=n.addComponent(s);e.setAnchorPoint(.5,.5),e.setContentSize(680,w),o.addChild(n);var i=n.addComponent(h);return i.fontSize=m,i.lineHeight=m+4,i.color=P,i}e._RF.pop()}}}));
+      /** Single-owner pointer state, in UI pixels (+y up). No Cocos runtime dependency. */
+      var FloatingJoystick = exports('FloatingJoystick', /*#__PURE__*/function () {
+        function FloatingJoystick() {
+          this.history = new InputHistory();
+          this.config = {
+            radiusPx: INPUT_PIXELS_PER_UNIT * INPUT_DEFAULTS.joyRadius,
+            deadZone: INPUT_DEFAULTS.deadZone,
+            followCenter: Boolean(INPUT_DEFAULTS.followCenter)
+          };
+          this.frameValue = emptyFrame();
+          this.owner = null;
+          this.centerValue = {
+            x: 0,
+            y: 0
+          };
+          this.pointerValue = {
+            x: 0,
+            y: 0
+          };
+          this.pressed = false;
+          this.released = false;
+          this.lastRelease = -1;
+        }
+        var _proto = FloatingJoystick.prototype;
+        _proto.setConfig = function setConfig(config) {
+          var _config$directionEpsi;
+          this.config = _extends({}, config);
+          this.history.setDirectionEpsilon((_config$directionEpsi = config.directionEpsilon) != null ? _config$directionEpsi : INPUT_DEFAULTS.directionEpsilon);
+          this.follow();
+        };
+        _proto.pointerDown = function pointerDown(id, x, y) {
+          if (this.owner !== null) return;
+          this.owner = id;
+          this.centerValue = {
+            x: x,
+            y: y
+          };
+          this.pointerValue = {
+            x: x,
+            y: y
+          };
+          this.pressed = true;
+        };
+        _proto.pointerMove = function pointerMove(id, x, y) {
+          if (id !== this.owner) return;
+          this.pointerValue = {
+            x: x,
+            y: y
+          };
+          this.follow();
+        };
+        _proto.pointerUp = function pointerUp(id) {
+          if (id !== this.owner) return;
+          this.owner = null;
+          this.released = true;
+        };
+        _proto.fixedUpdate = function fixedUpdate(time) {
+          this.follow();
+          var dx = this.pointerValue.x - this.centerValue.x;
+          var dy = this.pointerValue.y - this.centerValue.y;
+          var distance = Math.hypot(dx, dy);
+          var radius = this.config.radiusPx;
+          var dead = this.config.deadZone;
+          // P0 §6.1: clamp((distance / radius - deadZone) / (1 - deadZone), 0, 1).
+          var mag = this.touching && radius > 0 && dead < 1 ? Math.max(0, Math.min(1, (distance / radius - dead) / (1 - dead))) : 0;
+          if (this.released) this.lastRelease = time;
+          this.frameValue = {
+            touching: this.touching,
+            dir: mag > 0 ? {
+              x: dx / distance,
+              y: dy / distance
+            } : {
+              x: 0,
+              y: 0
+            },
+            mag: mag,
+            pressedThisTick: this.pressed,
+            releasedThisTick: this.released,
+            time: time
+          };
+          this.pressed = false;
+          this.released = false;
+          this.history.record(this.frameValue);
+        }
 
-System.register("chunks:///_virtual/main",["./App.ts","./Arena.ts","./DebugInputSource.ts","./FixedLoop.ts","./FxDriver.ts","./GameContext.ts","./Layers.ts","./Modules.ts","./Rng.ts","./ScreenLayout.ts","./ServiceRegistry.ts","./Session.ts","./SessionWatch.ts","./SpatialHash.ts","./StepProbe.ts","./SystemOrder.ts","./Tunables.ts","./TypedEventBus.ts","./contracts.ts","./events.ts","./index7.ts","./Geom2.ts","./Vec2.ts","./CoreArenaView.ts","./CoreBootstrap.ts","./CoreDebugInput.ts","./DirectorParams.ts","./EnemyModule.ts","./EnemyParams.ts","./EnemyWorld.ts","./SpawnDirector.ts","./index3.ts","./EnemyView.ts","./FloatingJoystick.ts","./InputHistory.ts","./InputParams.ts","./InputSystem.ts","./index2.ts","./JoystickView.ts","./SwordParams.ts","./SwordChain.ts","./Damage.ts","./Whip.ts","./index6.ts","./LoopController.ts","./LoopParams.ts","./geom.ts","./index4.ts","./LoopView.ts","./Pet.ts","./SwordCombat.ts","./SwordRig.ts","./SwordRigHooks.ts","./VerletRope.ts","./ThrowController.ts","./ThrowFormulas.ts","./ThrowParams.ts","./index.ts","./ThrowView.ts","./SwordView.ts","./Hud.ts","./Presets.ts","./Storage.ts","./Telemetry.ts","./TuningController.ts","./TuningParams.ts","./index5.ts","./TuningView.ts","./Widgets.ts"],(function(){return{setters:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],execute:function(){}}}));
+        /** Like core: a session clears history/edges but keeps an already held finger. */;
+        _proto.beginSession = function beginSession() {
+          this.history.clear();
+          this.frameValue = _extends({}, emptyFrame(), {
+            touching: this.touching
+          });
+          this.pressed = false;
+          this.released = false;
+          this.lastRelease = -1;
+        };
+        _proto.reset = function reset() {
+          this.owner = null;
+          this.beginSession();
+        };
+        _proto.avgDir = function avgDir(windowS, endTime) {
+          if (endTime === void 0) {
+            endTime = this.frameValue.time;
+          }
+          return this.history.avgDir(windowS, endTime);
+        };
+        _proto.minMag = function minMag(windowS, endTime) {
+          if (endTime === void 0) {
+            endTime = this.frameValue.time;
+          }
+          return this.history.minMag(windowS, endTime);
+        };
+        _proto.magDrop = function magDrop(windowS, endTime) {
+          if (endTime === void 0) {
+            endTime = this.frameValue.time;
+          }
+          return this.history.magDrop(windowS, endTime);
+        };
+        _proto.follow = function follow() {
+          if (!this.touching || !this.config.followCenter || this.config.radiusPx <= 0) return;
+          var dx = this.pointerValue.x - this.centerValue.x;
+          var dy = this.pointerValue.y - this.centerValue.y;
+          var distance = Math.hypot(dx, dy);
+          if (distance <= this.config.radiusPx) return;
+          // P0 §6.1: move the center by the excess, leaving exactly one radius to the pointer.
+          var excess = (distance - this.config.radiusPx) / distance;
+          this.centerValue = {
+            x: this.centerValue.x + dx * excess,
+            y: this.centerValue.y + dy * excess
+          };
+        };
+        _createClass(FloatingJoystick, [{
+          key: "frame",
+          get: function get() {
+            return this.frameValue;
+          }
+        }, {
+          key: "lastReleaseTime",
+          get: function get() {
+            return this.lastRelease;
+          }
+        }, {
+          key: "touching",
+          get: function get() {
+            return this.owner !== null;
+          }
+        }, {
+          key: "center",
+          get: function get() {
+            return this.centerValue;
+          }
+        }, {
+          key: "pointer",
+          get: function get() {
+            return this.pointerValue;
+          }
+        }, {
+          key: "radiusPx",
+          get: function get() {
+            return this.config.radiusPx;
+          }
+        }]);
+        return FloatingJoystick;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Modules.ts",["cc","./index2.ts","./index6.ts","./index3.ts","./index5.ts"],(function(n){var t,s,i,l,e;return{setters:[function(n){t=n.cclegacy},function(n){s=n.install},function(n){i=n.install},function(n){l=n.install},function(n){e=n.install}],execute:function(){n("installModules",(function(n){s(n),i(n),l(n),e(n)})),t._RF.push({},"5746dSfdfVIxLu2J1hsZltn","Modules",void 0);n("moduleInstalls",[s,i,l,e]);t._RF.pop()}}}));
+System.register("chunks:///_virtual/FxDriver.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "0e41fh0y8BGQLEmWtvD8izZ", "FxDriver", undefined);
+      /** Screen shake in arena units. Render keeps running during hit-stop. */
+      var FxDriver = exports('FxDriver', /*#__PURE__*/function () {
+        function FxDriver() {
+          this.amp = 0;
+          this.timeLeft = 0;
+          this.duration = 0;
+          this.offset = {
+            x: 0,
+            y: 0
+          };
+        }
+        var _proto = FxDriver.prototype;
+        _proto.requestShake = function requestShake(amp, dur) {
+          var nextAmp = Math.max(0, amp);
+          var nextDur = Math.max(0, dur);
+          if (nextAmp <= 0 || nextDur <= 0) return;
+          if (this.timeLeft > 0 && nextAmp < this.amp) return;
+          this.amp = nextAmp;
+          this.duration = nextDur;
+          this.timeLeft = nextDur;
+        }
 
-System.register("chunks:///_virtual/Pet.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var e,i;return{setters:[function(t){e=t.createClass},function(t){i=t.cclegacy}],execute:function(){i._RF.push({},"f8b91Usk/lC8b3u3EsgUBMb","Pet",void 0);t("Pet",function(){function t(t,e){this.pos={x:0,y:0},this.vel={x:0,y:0},this.previous={x:0,y:0},this.hpValue=100,this.maxHpValue=100,this.immune=0,this.active=!1,this.landed=!1,this.empty=!1,this.ctx=void 0,this.weight=void 0,this.ctx=t,this.weight=e}var i=t.prototype;return i.reset=function(){this.pos.x=this.previous.x=this.ctx.arena.width/2,this.pos.y=this.previous.y=this.ctx.arena.height/2,this.vel.x=this.vel.y=0,this.hpValue=this.maxHpValue=this.ctx.tunables.get("pet.maxHp"),this.immune=0,this.landed=this.empty=!1,this.active=!0},i.stop=function(){this.active=!1,this.vel.x=this.vel.y=0},i.setMode=function(t,e){this.landed=t,this.empty=e},i.fixedUpdate=function(t){if(this.active&&!(t<=0)&&(this.immune=Math.max(0,this.immune-t),this.previous.x=this.pos.x,this.previous.y=this.pos.y,!(this.hp<=0))){var e=this.ctx.services.get("input").frame,i=Math.max(0,Math.min(1,e.mag)),s=Math.hypot(e.dir.x,e.dir.y),h=e.touching&&s>0?this.maxSpeed*i/s:0,n=e.dir.x*h,a=e.dir.y*h,u=Math.hypot(n,a)<Math.hypot(this.vel.x,this.vel.y),p=this.ctx.tunables.get(u?"pet.decelTime":"pet.accelTime"),r=p<=0?1:1-Math.exp(-t/p),o=this.vel.x+(n-this.vel.x)*r,l=this.vel.y+(a-this.vel.y)*r,c=this.ctx.arena.clamp({x:this.pos.x+o*t,y:this.pos.y+l*t},this.radius);this.vel.x=(c.x-this.pos.x)/t,this.vel.y=(c.y-this.pos.y)/t,this.pos.x=c.x,this.pos.y=c.y}},i.isInvulnerable=function(){return!this.active||this.hp<=0||this.immune>1e-8||this.ctx.tunables.getBool("pet.godMode")},i.applyDamage=function(t,e){if(!Number.isFinite(t)||t<=0||this.isInvulnerable())return!1;var i=Math.min(this.hpValue,t);return this.hpValue-=i,this.immune=this.ctx.tunables.get("pet.invuln"),this.ctx.events.emit("player:damaged",{amount:i,byKind:e.kind,state:this.state}),this.hp<=0&&this.ctx.events.emit("player:died",{}),!0},e(t,[{key:"radius",get:function(){return this.ctx.tunables.get("pet.radius")}},{key:"maxSpeed",get:function(){return this.ctx.tunables.get("pet.speed")*(1-this.ctx.tunables.get("pet.weightSlow")*(this.weight()-1))}},{key:"hp",get:function(){return this.hpValue}},{key:"maxHp",get:function(){return this.maxHpValue}},{key:"state",get:function(){return this.hp<=0?"dead":this.landed?"jianzhen":this.empty?"empty":"normal"}},{key:"damageImmune",get:function(){return this.immune>1e-8}}]),t}());i._RF.pop()}}}));
+        /** Decay the shake and write a new offset. Uses the fx RNG stream. */;
+        _proto.update = function update(frameDt, rng) {
+          if (this.timeLeft <= 0 || this.duration <= 0) {
+            this.offset.x = 0;
+            this.offset.y = 0;
+            return this.offset;
+          }
+          var dt = Number.isFinite(frameDt) && frameDt > 0 ? frameDt : 0;
+          this.timeLeft = Math.max(0, this.timeLeft - dt);
+          var mag = this.amp * (this.timeLeft / this.duration);
+          var angle = rng.next() * Math.PI * 2;
+          this.offset.x = Math.cos(angle) * mag;
+          this.offset.y = Math.sin(angle) * mag;
+          return this.offset;
+        };
+        _proto.reset = function reset() {
+          this.amp = 0;
+          this.timeLeft = 0;
+          this.duration = 0;
+          this.offset.x = 0;
+          this.offset.y = 0;
+        };
+        return FxDriver;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Presets.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Tunables.ts","./Storage.ts"],(function(e){var r,t,s,a;return{setters:[function(e){r=e.createForOfIteratorHelperLoose},function(e){t=e.cclegacy},function(e){s=e.hashValues},function(e){a=e.isRecord}],execute:function(){e({applyPlayMode:function(e,r){for(var t=[],s=0,a=["mech.chain","mech.throw","mech.loop"];s<a.length;s++){var n=a[s];e.has(n)&&(e.set(n,r?1:0),t.push(n))}return t},parameterGroups:function(e,t,s){for(var a,n=new Map,o=t.trim().toLowerCase(),i=r(e.all());!(a=i()).done;){var u,h=a.value;if(!(o&&[h.key,h.label,h.group,null!=(u=h.note)?u:""].join(" ").toLowerCase().indexOf(o)<0)){var l=n.get(h.group);l||(l={name:h.group,collapsed:!o&&s.has(h.group),defs:[]},n.set(h.group,l)),l.defs.push(h)}}return Array.from(n.values())}}),t._RF.push({},"6e74dL7TjZBL68Qul10wCpw","Presets",void 0);var n="yuedie.tuning.presets.v1";e("Presets",function(){function e(e,t){this.saved=new Map,this.tunables=void 0,this.store=void 0,this.tunables=e,this.store=t;var s=t.read(n);if(Array.isArray(s))for(var a,i=r(s);!(a=i()).done;){var u=a.value;try{var h=o(u);this.saved.set(h.name,h)}catch(e){t.error="部分预设损坏，已跳过"}}}var t=e.prototype;return t.names=function(){return Array.from(this.saved.keys()).sort()},t.save=function(e){var r=this.capture(e);return this.saved.set(r.name,r),this.store.write(n,Array.from(this.saved.values()))},t.delete=function(e){return this.saved.delete(e),this.store.write(n,Array.from(this.saved.values()))},t.load=function(e){var r=this.saved.get(e);if(!r)throw new Error("未找到预设");return this.apply(r)},t.exportJson=function(e){return void 0===e&&(e="导出预设"),JSON.stringify(this.capture(e),null,4)},t.importJson=function(e){return this.apply(o(JSON.parse(e)))},t.capture=function(e){var r=e.trim();if(!r)throw new Error("请输入预设名");return{version:1,name:r,hash:this.tunables.hash(),values:this.tunables.snapshot()}},t.apply=function(e){return this.tunables.load(e.values),this.tunables.hash()===e.hash?"已应用 · "+e.hash:"已应用兼容项；哈希不同（参数缺失、新增或已夹值）· "+this.tunables.hash()},e}());function o(e){if(!a(e)||1!==e.version||"string"!=typeof e.name||!e.name.trim()||"string"!=typeof e.hash||!a(e.values))throw new Error("预设格式无效（需要 version/name/hash/values）");for(var r={},t=0,n=Object.keys(e.values);t<n.length;t++){var o=n[t],i=e.values[o];if("number"!=typeof i||!Number.isFinite(i))throw new Error("参数 "+o+" 必须是有限数值");if("__proto__"===o||"constructor"===o||"prototype"===o)throw new Error("预设参数名无效");r[o]=i}if(s(r)!==e.hash)throw new Error("预设哈希校验失败");return{version:1,name:e.name.trim(),hash:e.hash,values:r}}t._RF.pop()}}}));
+System.register("chunks:///_virtual/GameContext.ts", ['cc'], function () {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "1f93fZZEK5LSpwY0V2tc0g8", "GameContext", undefined);
+      /**
+       * Shared handle passed to every module's `install`.
+       * Modules talk only through `services` and `events`.
+       */
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Rng.ts",["cc"],(function(t){var n;return{setters:[function(t){n=t.cclegacy}],execute:function(){function e(t){var n=t>>>0,e={next:function(){n=n+1831565813>>>0;var t=Math.imul(n^n>>>15,1|n);return(((t=t+Math.imul(t^t>>>7,61|t)^t)^t>>>14)>>>0)/4294967296},nextInt:function(t){if(!Number.isInteger(t)||t<=0)throw new Error("nextInt max must be a positive integer, got "+t);return Math.floor(e.next()*t)},range:function(t,n){return t+(n-t)*e.next()}};return e}t({createSessionRng:function(t){return{spawn:e(u(t,r.Spawn)),loot:e(u(t,r.Loot)),fx:e(u(t,r.Fx))}},deriveStreamSeed:u,mulberry32:e}),n._RF.push({},"632a9LOHLFGP6hgqN4+0rC9","Rng",void 0);var r=t("RngStream",{Spawn:1,Loot:2,Fx:3});function u(t,n){var e=t>>>0^Math.imul(n+1>>>0,2654435769);return e=Math.imul(e^e>>>16,2146121005),0===(e=((e=Math.imul(e^e>>>15,2221713035))^e>>>16)>>>0)?1:e}n._RF.pop()}}}));
+System.register("chunks:///_virtual/geom.ts", ['cc', './Geom2.ts'], function (exports) {
+  var cclegacy, pointSegmentDistance;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      pointSegmentDistance = module.pointSegmentDistance;
+    }],
+    execute: function () {
+      exports({
+        capsuleContact: capsuleContact,
+        distance: distance,
+        douglasPeucker: douglasPeucker,
+        findClosure: findClosure,
+        interpolate: interpolate,
+        pointInPolygon: pointInPolygon,
+        polygonArea: polygonArea,
+        segmentIntersection: segmentIntersection,
+        trailLength: trailLength,
+        trimOldest: trimOldest
+      });
+      cclegacy._RF.push({}, "2bd61R5xFREeJxn1wNATMag", "geom", undefined);
+      var EPS = 1e-9; // Numerical precision, not a gameplay tolerance.
 
-System.register("chunks:///_virtual/ScreenLayout.ts",["cc","./Arena.ts"],(function(t){var e,i,n;return{setters:[function(t){e=t.cclegacy},function(t){i=t.ARENA_WIDTH,n=t.ARENA_HEIGHT}],execute:function(){t({arenaToPx:function(t,e){return{x:t.arenaOriginX+e.x*t.pxPerUnit,y:t.arenaOriginY+e.y*t.pxPerUnit}},intersectRect:u,layoutScreen:function(t,e,a){var c=Math.max(0,t),y=Math.max(0,e),g=null!=a?a:{x:0,y:0,width:c,height:y},o=c<=0||y/c>=x-1e-6,d=o?"width":"height",m=o?c/i:y/(h/r),M=i*m,s=n*m,f=Math.max(0,(c-M)/2),w=Math.max(0,y-s),I=f,P=w/2,_=u({x:I,y:P+s,width:M,height:Math.max(0,y-(P+s))},g),H=u({x:I,y:0,width:M,height:P},g);return{fit:d,pxPerUnit:m,arenaWidthPx:M,arenaHeightPx:s,arenaOriginX:I,arenaOriginY:P,hud:_,thumb:H,sideMargin:f}},rectInside:function(t,e){return t.x>=e.x-1e-6&&t.y>=e.y-1e-6&&t.x+t.width<=e.x+e.width+1e-6&&t.y+t.height<=e.y+e.height+1e-6}}),e._RF.push({},"0a229DPx49BXLhConS4UN/W","ScreenLayout",void 0);var a=t("DESIGN_WIDTH",720),h=t("DESIGN_HEIGHT",1280),r=t("UNIT_PX",72),x=h/a;function u(t,e){var i=Math.max(t.x,e.x),n=Math.max(t.y,e.y),a=Math.min(t.x+t.width,e.x+e.width),h=Math.min(t.y+t.height,e.y+e.height);return{x:i,y:n,width:Math.max(0,a-i),height:Math.max(0,h-n)}}e._RF.pop()}}}));
+      /** Includes degeneracies and returns the FIRST overlap traveling A -> B. */
+      function segmentIntersection(a, b, c, d) {
+        var rx = b.x - a.x,
+          ry = b.y - a.y;
+        var sx = d.x - c.x,
+          sy = d.y - c.y;
+        var rr = rx * rx + ry * ry,
+          ss = sx * sx + sy * sy;
+        if (rr <= EPS * EPS) {
+          if (pointSegmentDistance(a, c, d) > EPS) return null;
+          var _u = ss <= EPS * EPS ? 0 : ((a.x - c.x) * sx + (a.y - c.y) * sy) / ss;
+          return {
+            point: {
+              x: a.x,
+              y: a.y
+            },
+            t: 0,
+            u: Math.max(0, Math.min(1, _u))
+          };
+        }
+        var qx = c.x - a.x,
+          qy = c.y - a.y;
+        var cross = rx * sy - ry * sx;
+        var t, u;
+        if (Math.abs(cross) <= EPS) {
+          if (Math.abs(qx * ry - qy * rx) > EPS) return null;
+          var tc = (qx * rx + qy * ry) / rr;
+          var td = ((d.x - a.x) * rx + (d.y - a.y) * ry) / rr;
+          t = Math.max(0, Math.min(tc, td));
+          if (t > Math.min(1, Math.max(tc, td)) + EPS) return null;
+          u = ss <= EPS * EPS ? 0 : ((a.x + rx * t - c.x) * sx + (a.y + ry * t - c.y) * sy) / ss;
+        } else {
+          t = (qx * sy - qy * sx) / cross;
+          u = (qx * ry - qy * rx) / cross;
+          if (t < -EPS || t > 1 + EPS || u < -EPS || u > 1 + EPS) return null;
+        }
+        t = Math.max(0, Math.min(1, t));
+        return {
+          point: {
+            x: a.x + rx * t,
+            y: a.y + ry * t
+          },
+          t: t,
+          u: Math.max(0, Math.min(1, u))
+        };
+      }
+      function distance(a, b) {
+        return Math.hypot(b.x - a.x, b.y - a.y);
+      }
+      function interpolate(a, b, t) {
+        return {
+          x: a.x + (b.x - a.x) * t,
+          y: a.y + (b.y - a.y) * t,
+          time: a.time + (b.time - a.time) * t
+        };
+      }
 
-System.register("chunks:///_virtual/ServiceRegistry.ts",["cc"],(function(e){var t;return{setters:[function(e){t=e.cclegacy}],execute:function(){t._RF.push({},"b09eexTqw5MwaAQHY6bgt3s","ServiceRegistry",void 0);e("ServiceRegistry",function(){function e(){this.map=new Map}var t=e.prototype;return t.provide=function(e,t){this.map.set(e,t)},t.get=function(e){var t=this.map.get(e);if(void 0===t)throw new Error("Service not provided: "+e);return t},t.has=function(e){return this.map.has(e)},e}());t._RF.pop()}}}));
+      /** Iterative Douglas–Peucker; keeps original timestamped endpoints. */
+      function douglasPeucker(points, epsilon) {
+        if (points.length <= 2 || epsilon <= 0) return points.slice();
+        var keep = new Set([0, points.length - 1]);
+        var stack = [[0, points.length - 1]];
+        while (stack.length > 0) {
+          var range = stack.pop();
+          if (!range) break;
+          var start = range[0],
+            end = range[1];
+          var max = epsilon;
+          var index = -1;
+          for (var i = start + 1; i < end; i++) {
+            var d = pointSegmentDistance(points[i], points[start], points[end]);
+            if (d > max) {
+              max = d;
+              index = i;
+            }
+          }
+          if (index >= 0) {
+            keep.add(index);
+            stack.push([start, index], [index, end]);
+          }
+        }
+        return points.filter(function (_point, index) {
+          return keep.has(index);
+        });
+      }
+      function trailLength(points) {
+        var length = 0;
+        for (var i = 1; i < points.length; i++) length += distance(points[i - 1], points[i]);
+        return length;
+      }
 
-System.register("chunks:///_virtual/Session.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var n,s;return{setters:[function(t){n=t.createClass},function(t){s=t.cclegacy}],execute:function(){t("nextSessionId",e),s._RF.push({},"18080XCxz9JUbthkgHwpxe7","Session",void 0);var i=0;function e(t){return void 0===t&&(t=Date.now()),i+=1,"s"+t.toString(36)+"-"+i.toString(36)}t("Session",function(){function t(t){void 0===t&&(t={}),this.sidValue="",this.seedValue=1,this.runningValue=!1,this.startedAt=0,this.hooks=void 0,this.hooks=t}var s=t.prototype;return s.start=function(){var t,n,s,i,l,o,u,a,r,h,d,c,v;this.runningValue||(null==(t=(n=this.hooks).prepare)||t.call(n),this.sidValue=null!=(s=null==(i=(l=this.hooks).nowSid)?void 0:i.call(l))?s:e(),this.seedValue=this.resolveSeed(),this.runningValue=!0,this.startedAt=null!=(o=null==(u=(a=this.hooks).simTime)?void 0:u.call(a))?o:0,null==(r=(h=this.hooks).onStart)||r.call(h,{sid:this.sidValue,seed:this.seedValue,paramsHash:null!=(d=null==(c=(v=this.hooks).paramsHash)?void 0:c.call(v))?d:""}))},s.end=function(t){var n,s,i,e,l;if(this.runningValue){this.runningValue=!1;var o=null!=(n=null==(s=(i=this.hooks).simTime)?void 0:s.call(i))?n:0;null==(e=(l=this.hooks).onEnd)||e.call(l,{sid:this.sidValue,reason:t,duration:Math.max(0,o-this.startedAt)})}},s.restart=function(){this.runningValue=!1,this.start()},s.resolveSeed=function(){var t,n,s,i,e,l,o=null!=(t=null==(n=(s=this.hooks).resolveSeed)?void 0:n.call(s))?t:0;if(0!==o&&Number.isFinite(o)){var u=Math.floor(Math.abs(o));return 0===u?1:u}var a=null!=(i=null==(e=(l=this.hooks).random)?void 0:e.call(l))?i:Math.random(),r=Math.floor(999999*a);return 1+Math.max(0,Math.min(999998,r))},n(t,[{key:"sid",get:function(){return this.sidValue}},{key:"seed",get:function(){return this.seedValue}},{key:"running",get:function(){return this.runningValue}}]),t}());s._RF.pop()}}}));
+      /** Removes exactly `amount` units from the old end, interpolating cut time. */
+      function trimOldest(points, amount) {
+        if (amount <= 0) return points.slice();
+        for (var i = 1; i < points.length; i++) {
+          var length = distance(points[i - 1], points[i]);
+          if (length > amount + EPS) return [interpolate(points[i - 1], points[i], amount / length)].concat(points.slice(i));
+          amount -= length;
+        }
+        return points.length > 0 ? points.slice(-1) : [];
+      }
+      function polygonArea(points) {
+        var twice = 0;
+        for (var i = 0; i < points.length; i++) {
+          var a = points[i];
+          var b = points[(i + 1) % points.length];
+          twice += a.x * b.y - b.x * a.y;
+        }
+        return Math.abs(twice) / 2;
+      }
 
-System.register("chunks:///_virtual/SessionWatch.ts",["cc","./SystemOrder.ts"],(function(e){var s,n;return{setters:[function(e){s=e.cclegacy},function(e){n=e.SystemOrder}],execute:function(){e("createSessionWatch",(function(e){return{id:"core.session",order:n.Session,fixedUpdate:function(){e.session.running&&e.hasDirector()&&(e.endless()||e.elapsed()>=e.length()&&e.session.end("timeout"))}}})),s._RF.push({},"03f40ke0LJOLLgq9Y/5inYa","SessionWatch",void 0),s._RF.pop()}}}));
+      // P0 未定义，自选默认值: centers on polygon boundaries count as inside.
+      /** Ray casting, with an explicit boundary test. */
+      function pointInPolygon(point, polygon) {
+        if (polygon.length < 3) return false;
+        var inside = false;
+        for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+          var a = polygon[j];
+          var b = polygon[i];
+          if (pointSegmentDistance(point, a, b) <= EPS) return true;
+          if (a.y > point.y !== b.y > point.y && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+        }
+        return inside;
+      }
+      /** First crossing along this step wins; otherwise the nearest eligible sample. */
+      function findClosure(points, before, now, time, age, tolerance) {
+        if (points.length < 2 || distance(before, now) <= EPS) return null;
+        var cutoff = time - age;
+        var best = null;
+        for (var i = 1; i < points.length; i++) {
+          var a = points[i - 1];
+          var b = points[i];
+          if (a.time > cutoff) break;
+          var end = b.time > cutoff ? interpolate(a, b, (cutoff - a.time) / (b.time - a.time)) : b;
+          var hit = segmentIntersection(before, now, a, end);
+          if (hit && (!best || hit.t < best.t)) best = {
+            point: hit.point,
+            after: i,
+            t: hit.t
+          };
+        }
+        if (!best) {
+          var nearest = tolerance;
+          for (var _i = 0; _i < points.length; _i++) {
+            var p = points[_i];
+            if (p.time > cutoff) break;
+            var d = distance(now, p);
+            if (d < nearest) {
+              nearest = d;
+              best = {
+                point: p,
+                after: _i + 1,
+                t: 1
+              };
+            }
+          }
+        }
+        if (!best) return null;
+        var polygon = [best.point].concat(points.slice(best.after), [before, now]);
+        return {
+          polygon: polygon,
+          area: polygonArea(polygon)
+        };
+      }
 
-System.register("chunks:///_virtual/SpatialHash.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var e,i;return{setters:[function(t){e=t.createForOfIteratorHelperLoose},function(t){i=t.cclegacy}],execute:function(){i._RF.push({},"c32978uLZBNTpuYqsdoK/hd","SpatialHash",void 0);t("SpatialHash",function(){function t(t){if(this.cells=new Map,this.cellSize=void 0,!(t>0&&Number.isFinite(t)))throw new Error("SpatialHash cellSize must be > 0, got "+t);this.cellSize=t}var i=t.prototype;return i.clear=function(){this.cells.clear()},i.insert=function(t,e,i,n,r){for(var l={id:t,minX:e-n,minY:i-n,maxX:e+n,maxY:i+n,item:r},a=this.cellOf(l.minX),c=this.cellOf(l.minY),u=this.cellOf(l.maxX),o=this.cellOf(l.maxY),s=c;s<=o;s++)for(var f=a;f<=u;f++){var h=f+","+s,m=this.cells.get(h);m||(m=[],this.cells.set(h,m)),m.push(l)}},i.queryCircle=function(t,e,i,n){return this.collect(t-i,e-i,t+i,e+i,n,(function(n){return function(t,e,i,n){var r=Math.max(t.minX,Math.min(e,t.maxX)),l=Math.max(t.minY,Math.min(i,t.maxY)),a=r-e,c=l-i;return a*a+c*c<=n*n}(n,t,e,i)}))},i.queryAABB=function(t,e,i,n,r){return this.collect(t,e,i,n,r,(function(r){return function(t,e,i,n,r){return t.maxX>=e&&t.minX<=n&&t.maxY>=i&&t.minY<=r}(r,t,e,i,n)}))},i.querySegment=function(t,e,i,n,r,l){var a=Math.min(t,i)-r,c=Math.min(e,n)-r,u=Math.max(t,i)+r,o=Math.max(e,n)+r;return this.collect(a,c,u,o,l,(function(l){return function(t,e,i,n,r,l,a,c){var u=i-t,o=n-e,s=0,f=1,h=function(t,e){if(Math.abs(t)<=1e-12)return e>=0;var i=e/t;if(t<0){if(i>f)return!1;i>s&&(s=i)}else{if(i<s)return!1;i<f&&(f=i)}return s<=f};return!!h(-u,t-r)&&(!!h(u,a-t)&&(!!h(-o,e-l)&&!!h(o,c-e)))}(t,e,i,n,l.minX-r,l.minY-r,l.maxX+r,l.maxY+r)}))},i.collect=function(t,i,n,r,l,a){for(var c=new Set,u=l.length,o=this.cellOf(t),s=this.cellOf(i),f=this.cellOf(n),h=this.cellOf(r),m=s;m<=h;m++)for(var v=o;v<=f;v++){var p=this.cells.get(v+","+m);if(p)for(var x,M=e(p);!(x=M()).done;){var d=x.value;c.has(d.id)||a(d)&&(c.add(d.id),l.push(d.item))}}return l.length-u},i.cellOf=function(t){return Math.floor(t/this.cellSize)},t}());i._RF.pop()}}}));
+      /** First contact along AB with a circle, including tangency and zero-length AB. */
+      function circleContact(a, b, c, radius) {
+        var dx = b.x - a.x;
+        var dy = b.y - a.y;
+        var x = a.x - c.x;
+        var y = a.y - c.y;
+        var constant = x * x + y * y - radius * radius;
+        if (constant <= EPS) return 0;
+        var sq = dx * dx + dy * dy;
+        if (sq <= EPS) return null;
+        var dot = x * dx + y * dy;
+        var disc = dot * dot - sq * constant;
+        if (disc < -EPS) return null;
+        var t = (-dot - Math.sqrt(Math.max(0, disc))) / sq;
+        return t >= -EPS && t <= 1 + EPS ? Math.max(0, Math.min(1, t)) : null;
+      }
 
-System.register("chunks:///_virtual/SpawnDirector.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var e,i,n,s;return{setters:[function(t){e=t.createForOfIteratorHelperLoose,i=t.extends,n=t.createClass},function(t){s=t.cclegacy}],execute:function(){s._RF.push({},"d7c2cYUMg9D5ZsHLarNGjxy","SpawnDirector",void 0);var r=["blob","sheep","boar"];t("SpawnDirector",function(){function t(t,e){this.time=0,this.nextPurchase=0,this.previousPurchase=0,this.budget=0,this.pending=null,this.generation=0,this.ctx=void 0,this.world=void 0,this.ctx=t,this.world=e}var s=t.prototype;return s.reset=function(){this.generation+=1,this.time=0,this.budget=0,this.pending=null,this.previousPurchase=0,this.nextPurchase=this.ctx.tunables.get("spawn.purchaseInterval")},s.stop=function(){this.generation+=1},s.update=function(t){if(!(t<=0)){for(var e=this.time+t,i=this.ctx.tunables,n=this.generation;e+1e-9>=this.nextPurchase&&(this.time=this.nextPurchase,i.getBool("session.endless")||!(this.time+1e-9>=i.get("session.length")));){if(this.budget+=(this.time-this.previousPurchase)*i.get("diff.budgetBase")*Math.pow(this.danger,i.get("diff.budgetExp")),this.previousPurchase=this.time,this.buy(),n!==this.generation)return;this.nextPurchase+=i.get("spawn.purchaseInterval")}this.time=e}},s.debugSpawn=function(t){var e=void 0===t||""===t.trim()?["blob"]:t.trim().split(/\s+/),i=e[0];if(!("blob"!==i&&"sheep"!==i&&"boar"!==i||1!==e.length&&2!==e.length&&4!==e.length)){var n=e.length>=2?Number(e[1]):1;if(!(!Number.isInteger(n)||n<1||n>this.ctx.tunables.get("enemy.maxAlive"))){var s=null;if(4===e.length){var r=Number(e[2]),h=Number(e[3]);if(!Number.isFinite(r)||!Number.isFinite(h))return;s={x:r,y:h}}for(var a=this.generation,o=0;o<n&&this.alive<Math.floor(this.ctx.tunables.get("enemy.maxAlive"));o++){var u,l=null!=(u=s)?u:this.position(i);if(!l)return;if(this.world.spawn(i,l,this.danger),a!==this.generation)return}}}},s.buy=function(){for(var t=this.ctx.tunables,e=this.generation;this.alive<Math.floor(t.get("enemy.maxAlive"));){this.pending&&(t.get(this.pending.kind+".weight")<=0||this.time<t.get(this.pending.kind+".unlockAt"))&&(this.pending=null),this.pending||(this.pending=this.rollPurchase());var i=this.pending;if(!i)return;var n=i.count*t.get(i.kind+".cost");if(this.budget+1e-9<n||this.alive+i.count>Math.floor(t.get("enemy.maxAlive")))return;var s=this.position(i.kind);if(!s)return;this.budget=Math.max(0,this.budget-n),this.pending=null;for(var r=0;r<i.count;r++){var h="sheep"===i.kind?this.groupPosition(s):s;if(this.world.spawn(i.kind,h,this.danger),e!==this.generation)return}}},s.rollPurchase=function(){var t=this,i=this.ctx.tunables,n=r.filter((function(e){return t.time+1e-9>=i.get(e+".unlockAt")&&i.get(e+".weight")>0})),s=n.reduce((function(t,e){return t+i.get(e+".weight")}),0);if(s<=0)return null;for(var h,a=this.ctx.rng.spawn.next()*s,o=e(n);!(h=o()).done;){var u=h.value;if(!((a-=i.get(u+".weight"))>=0)){var l=Math.floor(Math.min(i.get("sheep.groupMin"),i.get("sheep.groupMax"))),g=Math.floor(Math.max(i.get("sheep.groupMin"),i.get("sheep.groupMax")));return{kind:u,count:"sheep"===u?l+Math.floor(this.ctx.rng.spawn.next()*(g-l+1)):1}}}return null},s.position=function(t){var e=this.ctx.tunables,i=e.get(t+".radius"),n=Math.max(i,e.get("spawn.edgeInset")),s=n,r=this.ctx.arena.width-n,h=Math.max(n,e.get("spawn.bottomExclude")+i),a=this.ctx.arena.height-n,o=this.world.player().pos,u=e.get("spawn.minDistFromPet"),l=[],g=function(t,e,i,n){if(!(n<i)){var s=e-(t?o.x:o.y),r=t?o.y:o.x;if(Math.abs(s)>=u)l.push({vertical:t,fixed:e,low:i,high:n});else{var h=Math.sqrt(u*u-s*s);r-h>=i&&l.push({vertical:t,fixed:e,low:i,high:Math.min(n,r-h)}),r+h<=n&&l.push({vertical:t,fixed:e,low:Math.max(i,r+h),high:n})}}};g(!0,s,h,a),g(!1,a,s,r),g(!0,r,h,a),e.get("spawn.bottomExclude")<=n-i&&g(!1,n,s,r);var c=l.reduce((function(t,e){return t+e.high-e.low}),0);if(c<=0)return null;for(var p=this.ctx.rng.spawn.next()*c,d=0,f=l;d<f.length;d++){var x=f[d],v=x.high-x.low;if(p<=v)return x.vertical?{x:x.fixed,y:x.low+p}:{x:x.low+p,y:x.fixed};p-=v}return null},s.groupPosition=function(t){var e=this.ctx.tunables,n=this.ctx.rng.spawn.next()*Math.PI*2,s=Math.sqrt(this.ctx.rng.spawn.next())*e.get("sheep.groupSpawnRadius"),r=e.get("sheep.radius"),h=this.ctx.arena.clamp({x:t.x+Math.cos(n)*s,y:Math.max(e.get("spawn.bottomExclude")+r,t.y+Math.sin(n)*s)},r),a=this.world.player().pos;return Math.hypot(h.x-a.x,h.y-a.y)+1e-9>=e.get("spawn.minDistFromPet")?h:i({},t)},n(t,[{key:"elapsed",get:function(){return this.time}},{key:"danger",get:function(){var t=this.time/60;return 1+this.ctx.tunables.get("diff.tA")*t+this.ctx.tunables.get("diff.tB")*t*t}},{key:"alive",get:function(){return this.world.aliveCount()}}]),t}());s._RF.pop()}}}));
+      /** Swept boar body = capsule CD. Returns first contact traveling along AB. */
+      function capsuleContact(a, b, c, d, radius) {
+        if (pointSegmentDistance(a, c, d) <= radius + EPS) return 0;
+        var candidates = [];
+        for (var _i2 = 0, _arr = [c, d]; _i2 < _arr.length; _i2++) {
+          var center = _arr[_i2];
+          var t = circleContact(a, b, center, radius);
+          if (t !== null) candidates.push(t);
+        }
+        var len = distance(c, d);
+        if (len > EPS) {
+          var nx = -(d.y - c.y) / len * radius;
+          var ny = (d.x - c.x) / len * radius;
+          for (var _i3 = 0, _arr2 = [-1, 1]; _i3 < _arr2.length; _i3++) {
+            var sign = _arr2[_i3];
+            var hit = segmentIntersection(a, b, {
+              x: c.x + sign * nx,
+              y: c.y + sign * ny
+            }, {
+              x: d.x + sign * nx,
+              y: d.y + sign * ny
+            });
+            if (hit) candidates.push(hit.t);
+          }
+        }
+        return candidates.length > 0 ? Math.min.apply(Math, candidates) : null;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/StepProbe.ts",["cc","./SystemOrder.ts"],(function(t){var e,r;return{setters:[function(t){e=t.cclegacy},function(t){r=t.SystemOrder}],execute:function(){e._RF.push({},"7c261UGE+ZFdb0tVUqtN67U","StepProbe",void 0);t("StepProbe",function(){function t(){this.id="core.stepProbe",this.order=r.StepProbe,this.steps=0}var e=t.prototype;return e.fixedUpdate=function(t){this.steps+=1},e.reset=function(){this.steps=0},t}());e._RF.pop()}}}));
+System.register("chunks:///_virtual/Geom2.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports({
+        circleIntersectsSegment: circleIntersectsSegment,
+        pointSegmentDistance: pointSegmentDistance,
+        segmentIntersection: segmentIntersection
+      });
+      cclegacy._RF.push({}, "95337lk+bZHwoY2hTAdxBfv", "Geom", undefined);
+      var EPS = 1e-9;
+      function clamp01(v) {
+        if (v < 0) return 0;
+        if (v > 1) return 1;
+        return v;
+      }
 
-System.register("chunks:///_virtual/Storage.ts",["cc"],(function(r){var t;return{setters:[function(r){t=r.cclegacy}],execute:function(){r("isRecord",(function(r){return"object"==typeof r&&null!==r&&!Array.isArray(r)})),t._RF.push({},"a752d1o2w9IUJvAosW9McNI","Storage",void 0);r("StoredJson",function(){function r(r){this.error="",this.storage=void 0,this.storage=r}var t=r.prototype;return t.read=function(r){if(!this.storage)return null;try{var t=this.storage.getItem(r);return null===t?null:JSON.parse(t)}catch(r){return this.error="本地数据读取失败；仍可导出内存数据",null}},t.write=function(r,t){if(!this.storage)return this.error="本地存储不可用；请导出数据",!1;try{return this.storage.setItem(r,JSON.stringify(t)),this.error="",!0}catch(r){return this.error="本地保存失败（空间或权限）；请导出数据",!1}},r}());t._RF.pop()}}}));
+      /**
+       * Intersection of segment AB with segment CD.
+       * Touching at an endpoint counts. Collinear overlap returns the point where
+       * the overlap starts when traveling from the lower projection bound.
+       */
+      function segmentIntersection(a, b, c, d) {
+        var rx = b.x - a.x;
+        var ry = b.y - a.y;
+        var sx = d.x - c.x;
+        var sy = d.y - c.y;
+        var denom = rx * sy - ry * sx;
+        var qpx = c.x - a.x;
+        var qpy = c.y - a.y;
+        if (Math.abs(denom) <= EPS) {
+          var cross = qpx * ry - qpy * rx;
+          if (Math.abs(cross) > EPS) return null;
+          return collinearOverlap(a, b, c, d);
+        }
+        var t = (qpx * sy - qpy * sx) / denom;
+        var u = (qpx * ry - qpy * rx) / denom;
+        if (t < -EPS || t > 1 + EPS || u < -EPS || u > 1 + EPS) return null;
+        var tc = clamp01(t);
+        return {
+          point: {
+            x: a.x + tc * rx,
+            y: a.y + tc * ry
+          },
+          t: tc,
+          u: clamp01(u)
+        };
+      }
+      function collinearOverlap(a, b, c, d) {
+        var abx = b.x - a.x;
+        var aby = b.y - a.y;
+        var useX = Math.abs(abx) >= Math.abs(aby);
+        var a0 = useX ? a.x : a.y;
+        var b0 = useX ? b.x : b.y;
+        var c0 = useX ? c.x : c.y;
+        var d0 = useX ? d.x : d.y;
+        var lo = Math.max(Math.min(a0, b0), Math.min(c0, d0));
+        var hi = Math.min(Math.max(a0, b0), Math.max(c0, d0));
+        if (lo > hi + EPS) return null;
+        var ab = b0 - a0;
+        var t = Math.abs(ab) <= EPS ? 0 : (lo - a0) / ab;
+        var cd = d0 - c0;
+        var u = Math.abs(cd) <= EPS ? 0 : (lo - c0) / cd;
+        var tc = clamp01(t);
+        return {
+          point: {
+            x: a.x + tc * (b.x - a.x),
+            y: a.y + tc * (b.y - a.y)
+          },
+          t: tc,
+          u: clamp01(u)
+        };
+      }
 
-System.register("chunks:///_virtual/SwordChain.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Damage.ts"],(function(t){var e,s,i,n,a;return{setters:[function(t){e=t.createForOfIteratorHelperLoose,s=t.extends,i=t.createClass},function(t){n=t.cclegacy},function(t){a=t.ropeLength}],execute:function(){n._RF.push({},"a9141+9o3hF9YL0JSJ2A/sn","SwordChain",void 0);t("SwordChain",function(){function t(t){this.slots=[],this.loose=[],this.slotMax=12,this.immune=0,this.startedAt=0,this.ctx=void 0,this.ctx=t}var n=t.prototype;return n.reset=function(){this.loose.length=0,this.immune=0,this.startedAt=this.ctx.loop.simTime,this.slotMax=Math.floor(this.ctx.tunables.get("chain.slotMax")),this.setCount(this.ctx.tunables.get("chain.startCount"))},n.rollGrade=function(){var t=Math.floor(this.ctx.tunables.get("chain.gradeMin")),e=Math.floor(this.ctx.tunables.get("chain.gradeMax"));return Math.min(t,e)+this.ctx.rng.loot.nextInt(Math.abs(t-e)+1)},n.setCount=function(t){if(Number.isFinite(t)){this.slots.length=0;for(var e=Math.max(0,Math.min(this.capacity,Math.floor(t))),s=0;s<e;s++)this.insert(this.rollGrade());this.changed()}},n.addLoose=function(t,e,s){Number.isFinite(t.x)&&Number.isFinite(t.y)&&Number.isFinite(e)&&this.loose.push({pos:this.ctx.arena.clamp(t,this.ctx.tunables.get("chain.linkRadius")),grade:Math.max(0,Math.min(5,Math.floor(e))),left:this.ctx.tunables.get(s?"scatter.blinkTime":"chain.groundLife"),recovered:s})},n.setImmune=function(t){Number.isFinite(t)&&(this.immune=Math.max(this.immune,t,0)),this.clearContacts()},n.clearContacts=function(){for(var t,s=e(this.slots);!(t=s()).done;){t.value.contactTime=0}},n.step=function(t,e){this.immune=Math.max(0,this.immune-t);for(var s=!1,i=this.slots.length-1;i>=0;i--){for(var n=this.slots[i];n.grades.length>this.stackMax;){var a=n.grades.pop();void 0!==a&&this.addLoose(n.pos,a,!1),s=!0}0===n.grades.length&&this.slots.splice(i,1)}for(;this.N>this.capacity;){var o=this.slots[this.slots.length-1],h=o.grades.pop();void 0!==h&&this.addLoose(o.pos,h,!1),0===o.grades.length&&this.slots.pop(),s=!0}s&&this.changed();for(var r=0,c=this.loose.length-1;c>=0;c--){var l=this.loose[c];l.left-=t,l.left<=1e-8?(r++,this.loose.splice(c,1)):this.N>=this.capacity||Math.hypot(e.x-l.pos.x,e.y-l.pos.y)>this.ctx.tunables.get("chain.pickupRadius")||(this.insert(l.grade),this.loose.splice(c,1),this.changed(),this.ctx.events.emit("chain:pickup",{N:this.N,recovered:l.recovered}))}r>0&&this.ctx.events.emit("chain:scatterExpired",{count:r})},n.place=function(t){for(var s,i=e(this.slots);!(s=i()).done;){var n=s.value,a=t.points[n.index+1];a&&(n.pos=a,n.previous={x:a.beforeX,y:a.beforeY})}},n.detectBreak=function(t,s,i,n){if(t<=0||!this.enabled||this.immune>1e-8||!this.ctx.tunables.getBool("break.enabled")||this.ctx.loop.simTime-this.startedAt+1e-8<this.ctx.tunables.get("break.spawnGrace"))return this.clearContacts(),null;for(var a,o=this.ctx.tunables.get("pet.radius")+this.ctx.tunables.get("chain.linkRadius"),h=this.ctx.tunables.get("break.minClosingSpeed"),r=e(this.slots);!(a=r()).done;){var c=a.value,l=c.pos.x-s.x,u=c.pos.y-s.y,g=Math.hypot(l,u),d=(c.pos.x-c.previous.x)/t,x=(c.pos.y-c.previous.y)/t,p=g>1e-9?((i.x-d)*l+(i.y-x)*u)/g:0,f=-(i.x*d+i.y*x),m=g>1e-9?(i.x*l+i.y*u)/g:0,b=g>1e-9?-(d*l+x*u)/g:0,v=2*Math.min(m,b),M=n.distanceTo(c.index+1);if(f<=0||m<=0||b<=0||v+1e-8<h||g>o||M+1e-8<this.ctx.tunables.get("break.minRopeDist")||p+1e-8<h)c.contactTime=0;else if(c.contactTime+=t,c.contactTime+1e-8>=this.ctx.tunables.get("break.minContactTime"))return{index:c.index,distance:M,closing:p}}return null},n.breakAt=function(t,s,i){if(!(t<0||t>=this.slots.length)){for(var n=this.N,a=t;a<this.slots.length;a++)for(var o,h=this.slots[a],r=e(h.grades);!(o=r()).done;){var c=o.value,l=this.ctx.rng.loot.range(0,2*Math.PI),u=this.ctx.rng.loot.range(0,this.ctx.tunables.get("scatter.spread"));this.addLoose({x:h.pos.x+Math.cos(l)*u,y:h.pos.y+Math.sin(l)*u},c,!0)}this.slots.splice(t),this.setImmune(this.ctx.tunables.get("break.immunity")),this.changed(),this.ctx.events.emit("chain:break",{slotIndex:t,lost:n-this.N,nBefore:n,ropeDist:s,closingSpeed:i})}},n.insert=function(t){if(!(this.N>=this.capacity))if(this.slots.length<this.slotMax){var i={x:this.ctx.arena.width/2,y:this.ctx.arena.height/2};this.slots.push({index:this.slots.length,grades:[t],pos:i,previous:s({},i),autoLeft:this.ctx.tunables.get("chain.autoInterval"),contactTime:0})}else{for(var n,a,o=null,h=e(this.slots);!(a=h()).done;){var r=a.value;r.grades.length<this.stackMax&&(!o||r.grades.length<o.grades.length)&&(o=r)}null==(n=o)||n.grades.push(t)}},n.changed=function(){this.ctx.events.emit("chain:changed",{N:this.N,slots:this.slots.length})},i(t,[{key:"N",get:function(){return this.slots.reduce((function(t,e){return t+e.grades.length}),0)}},{key:"targetLength",get:function(){return a(this.ctx.tunables,this.slots.length)}},{key:"enabled",get:function(){return this.ctx.tunables.getBool("mech.chain")}},{key:"capacity",get:function(){return this.enabled?Math.min(36,Math.floor(this.ctx.tunables.get("chain.maxCount")),this.slotMax*this.stackMax):0}},{key:"stackMax",get:function(){return Math.min(3,Math.floor(this.ctx.tunables.get("chain.stackMax")))}}]),t}());n._RF.pop()}}}));
+      /** Distance from point P to segment AB. */
+      function pointSegmentDistance(p, a, b) {
+        var abx = b.x - a.x;
+        var aby = b.y - a.y;
+        var lenSq = abx * abx + aby * aby;
+        if (lenSq <= EPS) return Math.hypot(p.x - a.x, p.y - a.y);
+        var t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / lenSq;
+        if (t < 0) t = 0;else if (t > 1) t = 1;
+        var dx = p.x - (a.x + t * abx);
+        var dy = p.y - (a.y + t * aby);
+        return Math.hypot(dx, dy);
+      }
 
-System.register("chunks:///_virtual/SwordCombat.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Geom2.ts"],(function(t){var e,s,i,o;return{setters:[function(t){e=t.createForOfIteratorHelperLoose,s=t.extends},function(t){i=t.cclegacy},function(t){o=t.pointSegmentDistance}],execute:function(){i._RF.push({},"f773afLGFFN/YuVnQas39mE","SwordCombat",void 0);t("SwordCombat",function(){function t(t){this.labels=[],this.out=[],this.lastHits=new Map,this.clock=0,this.ctx=void 0,this.ctx=t}var i=t.prototype;return i.reset=function(){this.labels.length=0,this.lastHits.clear(),this.clock=0},i.step=function(t){this.clock+=t;for(var s=this.labels.length-1;s>=0;s--)this.labels[s].left-=t,this.labels[s].left<=0&&this.labels.splice(s,1);for(var i,o=e(this.lastHits.values());!(i=o()).done;)for(var a,l=i.value,n=e(l);!(a=n()).done;){var r=a.value,c=r[0];r[1]<=this.clock&&l.delete(c)}},i.segment=function(t,s,i,a,l,n,r,c){if(void 0===c&&(c=0),this.ctx.services.has("enemies")&&!(a<=0)){var h=this.ctx.services.get("enemies");this.out.length=0,h.querySegment(t,s,i,this.out);for(var u,f=e(this.out);!(u=f()).done;){var d=u.value;!d.alive||o(d.pos,t,s)>i+d.radius||this.hit(d,a,l,n,r,{x:s.x-t.x,y:s.y-t.y},c)}}},i.circle=function(t,s,i,o,a,l,n){if(this.ctx.services.has("enemies")){var r=this.ctx.services.get("enemies");this.out.length=0,r.queryCircle(t,s,this.out);for(var c,h=null,u=1/0,f=e(this.out);!(c=f()).done;){var d=c.value,v=Math.hypot(d.pos.x-t.x,d.pos.y-t.y);!d.alive||v>s+d.radius||(n?v<u&&(h=d,u=v):this.hit(d,i,o,a,l,{x:d.pos.x-t.x,y:d.pos.y-t.y}))}h&&this.hit(h,i,o,a,l,{x:h.pos.x-t.x,y:h.pos.y-t.y})}},i.hit=function(t,e,i,o,a,l,n){var r,c=this;if(void 0===n&&(n=0),!(e<=0)){var h=this.lastHits.get(o);if(h||(h=new Map,this.lastHits.set(o,h)),!((null!=(r=h.get(t.id))?r:-1/0)>this.clock+1e-8)){var u=Math.hypot(l.x,l.y),f=this.ctx.services.get("enemies").hit(t.id,{source:i,amount:e,hitKey:o,cooldown:a,dir:u>0?{x:l.x/u,y:l.y/u}:{x:0,y:0},knockback:n});if(f.applied){h.set(t.id,this.clock+a);var d=this.labels.find((function(e){return e.enemyId===t.id&&c.clock-e.created<c.ctx.tunables.get("fx.damageMergeTime")}));if(d)return d.amount+=f.dealt,void(d.source=i);for(var v=Math.floor(this.ctx.tunables.get("fx.damageMax"));this.labels.length>0&&this.labels.length>=v;)this.labels.shift();v>0&&this.labels.push({enemyId:t.id,created:this.clock,pos:s({},t.pos),amount:f.dealt,source:i,left:this.ctx.tunables.get("fx.damageLife")})}}}},t}());i._RF.pop()}}}));
+      /** True when the circle of radius r around c touches segment AB. */
+      function circleIntersectsSegment(c, r, a, b) {
+        if (r < 0) return false;
+        return pointSegmentDistance(c, a, b) <= r;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/SwordParams.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var a,n;return{setters:[function(e){a=e.extends},function(e){n=e.cclegacy}],execute:function(){function r(e,a,n,r,i,t,o){return void 0===o&&(o=!1),{key:e,group:a,label:n,kind:"number",default:r,min:i,max:t,restart:o}}function i(e,a,n,r){return void 0===r&&(r=1),{key:e,group:a,label:n,kind:"bool",default:r}}n._RF.push({},"fe08bUOhyFBI4HA9Rl7k4N5","SwordParams",void 0);e("SWORD_PARAMS",[r("pet.speed","宠物","基础速度",4.5,2,9),r("pet.accelTime","宠物","加速时间",.08,0,.4),r("pet.decelTime","宠物","减速时间",.06,0,.4),r("pet.weightSlow","宠物","每点剑重减速",.05,0,.15),r("pet.radius","宠物","半径",.35,.2,.6),r("pet.maxHp","宠物","生命",100,10,1e3,!0),r("pet.invuln","宠物","受伤免疫秒",.8,0,3),i("pet.godMode","宠物","无敌",0),r("sword.level","主剑","强化等级",0,0,15),r("sword.baseDmg","主剑","基础伤害",10,1,100),r("sword.levelGrowth","主剑","每级成长",1.12,1,1.3),r("sword.W","主剑","剑重",2,1,5),r("sword.Lg","主剑","剑长",2,1,5),r("sword.Cv","主剑","弧度",1,0,3),r("sword.bladeLenBase","主剑","剑身基础长度",.4,.1,1.5),r("sword.bladeLenPerLg","主剑","每点剑长剑身长度",.2,0,.5),r("sword.bladeRadius","主剑","剑身半径",.15,.05,.5),r("sword.fullChargeMul","主剑","甩满参考速度倍率",1.3,1,2.5),r("rope.baseLen","绳索","基础绳长",1,.3,3),r("rope.lenPerLg","绳索","每点剑长加绳长",.2,0,.5),r("rope.lenPerSlot","绳索","每格加绳长",.3,.1,.6),r("rope.lenCap","绳索","绳长上限",5,2,5),r("rope.iterations","绳索","约束迭代",6,1,16),r("rope.damping","绳索","每步速度损失",.02,0,.2),r("rope.linkMass","绳索","链格质量",.5,.1,3),r("rope.mainMassPerW","绳索","主剑质量每剑重",1,.2,3),r("rope.wallBounce","绳索","撞墙反弹",.2,0,1),r("rope.tipFrames","绳索","剑尖速度平均步数",3,1,8),r("drag.vDead","拖剑","无伤速度",2,0,5),r("drag.vRef","拖剑","参考速度",6,2,15),r("drag.qCap","拖剑","速度档上限",3,1,5),r("drag.speedExp","拖剑","速度指数",1.3,.5,2.5),r("drag.weightExp","拖剑","重量指数",.7,0,1.5),r("drag.hitCooldown","拖剑","同敌命中间隔",.25,.05,1),r("drag.knockbackK","拖剑","击退系数",.4,0,2),r("whip.turnDeg","鞭响","转向角度",100,45,180),r("whip.window","鞭响","转向窗口",.3,.1,.6),r("whip.minSpeedFrac","鞭响","最低速度比例",.7,0,1),r("whip.impulse","鞭响","剑尖冲量",4,0,15),r("whip.dmgMul","鞭响","伤害倍率",1.8,1,4),r("whip.duration","鞭响","伤害窗口",.25,.05,1),r("whip.cooldown","鞭响","冷却",.6,0,2),r("fx.hitstopFrames","特效","鞭响顿帧",3,0,8),r("fx.shakeAmp","特效","震屏幅度",.08,0,.3),r("fx.shakeDur","特效","震屏时长",.12,0,.5),i("fx.trail","特效","拖影"),i("fx.hitstop","特效","顿帧"),i("fx.shake","特效","震屏"),i("mech.chain","剑链","剑链机制"),r("chain.startCount","剑链","开局剑数",0,0,36,!0),r("chain.maxCount","剑链","链剑上限",16,0,36),r("chain.slotMax","剑链","链格上限",12,4,12,!0),r("chain.stackMax","剑链","每格层数上限",3,1,3),r("chain.dropChance","剑链","普通怪掉散剑概率",.08,0,1),r("chain.pickupRadius","剑链","拾取半径",.5,.2,1.5),r("chain.gradeMin","剑链","散剑最低等级",0,0,5),r("chain.gradeMax","剑链","散剑最高等级",2,0,5),r("chain.baseDmg","剑链","链剑基础伤害",4,0,50),r("chain.mainLevelShare","剑链","主剑等级共享",.25,0,1),r("chain.resonPer","剑链","每把共鸣",.03,0,.1),r("chain.resonCount","剑链","共鸣计数上限",12,0,36),r("chain.stackBonus","剑链","叠层伤害加成",.6,0,1),r("chain.autoInterval","剑链","自动砍间隔",1,.2,3),r("chain.autoRange","剑链","自动砍范围",1,.3,3),r("chain.contactMul","剑链","接触伤害倍率",.3,0,2),r("chain.contactCooldown","剑链","接触伤害冷却",.25,.05,1),r("chain.linkRadius","剑链","链格半径",.2,.05,.5),i("break.enabled","断链","启用断链"),r("break.minRopeDist","断链","最小沿绳距离",1.2,0,5),r("break.minClosingSpeed","断链","最小相向接近速度",2.5,0,10),r("break.minContactTime","断链","最短持续接触",.08,0,.5),r("break.immunity","断链","断链免疫",.5,0,3),a({},r("break.spawnGrace","断链","开局断链保护秒",1,0,3),{step:.1}),r("scatter.blinkTime","散落","回收时间",4,0,10),r("scatter.spread","散落","随机偏移",.6,0,2),r("scatter.mainReturnDelay","散落","主剑飞回延迟",.8,0,3),r("scatter.mainReturnSpeed","散落","主剑飞回速度",10,2,30),r("scatter.mainReturnDmgMul","散落","主剑飞回伤害倍率",.5,0,2),r("loop.returnTime","剑阵","链格飞回时长",.4,0,2),r("loop.postReturnImmune","剑阵","飞回后断链免疫",1,0,3),r("rope.transitionTime","绳索","链格变化过渡",.2,0,.2),r("chain.groundLife","散落","普通散剑保留时间",10,0,10),r("fx.scatterBlinkHz","特效","散落闪烁频率",4,0,8),r("fx.scatterFastBlinkHz","特效","散落末段闪烁频率",8,0,16),r("fx.scatterFastTime","特效","加快闪烁剩余秒",1,0,4),r("fx.damageMergeTime","特效","同敌数字合并窗口",.2,0,1),r("fx.damageMax","特效","伤害数字上限",30,0,50),r("fx.trailTime","特效","速度拖影时间",.08,0,.5),r("fx.petBlinkHz","特效","受击闪烁频率",8,0,16),r("fx.damageLife","特效","伤害数字寿命",.6,0,2),r("fx.damageRise","特效","伤害数字上浮速度",.5,0,2),i("fx.fullCharge","特效","甩满变色")]);n._RF.pop()}}}));
+System.register("chunks:///_virtual/Hud.ts", ['cc', './TuningParams.ts'], function (exports) {
+  var cclegacy, P0_RULES;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      P0_RULES = module.P0_RULES;
+    }],
+    execute: function () {
+      exports('readHud', readHud);
+      cclegacy._RF.push({}, "974e9N4QfpI+rvKUl1isclj", "Hud", undefined);
 
-System.register("chunks:///_virtual/SwordRig.ts",["./rollupPluginModLoBabelHelpers.js","cc","./SwordChain.ts","./Damage.ts","./Whip.ts","./Pet.ts","./VerletRope.ts","./SwordCombat.ts"],(function(t){var e,i,s,n,h,a,o,r,u,l,p,c,d,m,g,f;return{setters:[function(t){e=t.createForOfIteratorHelperLoose,i=t.extends,s=t.createClass},function(t){n=t.cclegacy},function(t){h=t.SwordChain},function(t){a=t.dragDamage,o=t.slotDamage,r=t.contactDamage,u=t.speedTier,l=t.dragAtTier,p=t.baseDamage,c=t.ropeLength},function(t){d=t.Whip},function(t){m=t.Pet},function(t){g=t.VerletRope},function(t){f=t.SwordCombat}],execute:function(){n._RF.push({},"7edd19E/ElDY5X3wIjfY7Ld","SwordRig",void 0);t("SwordRig",function(){function t(t){var e=this;this.ctx=void 0,this.pet=void 0,this.rope=void 0,this.chain=void 0,this.whip=void 0,this.combat=void 0,this.mainPos={x:0,y:0},this.mainVel={x:0,y:0},this.multipliers=new Map,this.unsubs=[],this.attached=!1,this.running=!1,this.state="held",this.landed=!1,this.loopReturning=!1,this.loopReturnElapsed=0,this.loopImmune=0,this.loopImmuneLeft=0,this.loopReturnFrom=[],this.returnElapsed=0,this.internalReturn=!1,this.forcedSpeed=null,this.speedValue=0,this.charged=!1,this.jianyiValue=0,this.comboValue=0,this.enemyScale=1,this.ctx=t,this.pet=new m(t,(function(){return e.W})),this.rope=new g(t),this.chain=new h(t),this.whip=new d(t),this.combat=new f(t)}var n=t.prototype;return n.attach=function(){var t=this;this.attached||(this.attached=!0,this.unsubs.push(this.ctx.events.on("session:start",(function(){return t.reset()}))),this.unsubs.push(this.ctx.events.on("session:end",(function(){t.running=!1,t.pet.stop()}))),this.unsubs.push(this.ctx.events.on("loot:sword",(function(e){var i=e.pos;t.running&&t.chain.enabled&&t.chain.addLoose(i,t.chain.rollGrade(),!1)}))),this.unsubs.push(this.ctx.events.on("debug:command",(function(e){var i=e.cmd,s=e.arg;"setChain"===i&&void 0!==s&&""!==s.trim()&&t.chain.setCount(Number(s)),"forceVtip"===i&&(void 0===s||"off"===s||"auto"===s?t.forcedSpeed=null:""!==s.trim()&&Number.isFinite(Number(s))&&(t.forcedSpeed=Math.max(0,Number(s))))}))))},n.detach=function(){for(var t,i=e(this.unsubs);!(t=i()).done;){(0,t.value)()}this.unsubs.length=0,this.attached=!1},n.reset=function(){this.state="held",this.landed=this.loopReturning=this.internalReturn=!1,this.loopImmune=this.loopImmuneLeft=this.loopReturnElapsed=this.returnElapsed=0,this.forcedSpeed=null,this.speedValue=this.jianyiValue=this.comboValue=0,this.enemyScale=1,this.multipliers.clear(),this.pet.reset(),this.chain.reset(),this.rope.reset(this.pet.pos,this.targetLength,this.ropeSlots),this.chain.place(this.rope),this.copyMain(this.rope.tip,{x:0,y:0}),this.whip.reset(),this.combat.reset(),this.running=!0,this.updateCharge(!1)},n.stepPet=function(t){this.attached&&this.running&&this.pet.fixedUpdate(t)},n.fixedUpdate=function(t){if(!(!this.attached||!this.running||this.pet.hp<=0||t<=0)){this.combat.step(t),this.loopImmuneLeft=Math.max(0,this.loopImmuneLeft-t);for(var i,s=e(this.multipliers);!(i=s()).done;){var n=i.value,h=n[0],u=n[1];u.left-=t,u.left<=0&&this.multipliers.delete(h)}var l=this.mainHeld;if(this.rope.step(t,this.pet.pos,this.targetLength,this.ropeSlots),l?(this.copyMain(this.rope.tip,this.rope.tipVelocity),this.speedValue=this.rope.tipSpeed):this.internalReturn?this.stepMainReturn(t):this.speedValue=0,this.whip.step(t,this.pet.vel,this.pet.maxSpeed,this.mainPos,l)&&this.whipImpulse(t),this.updateCharge(this.mainHeld&&this.vTip+1e-8>=this.ctx.tunables.get("sword.fullChargeMul")*this.ctx.tunables.get("drag.vRef")),l){for(var p,c=this.whip.active?this.ctx.tunables.get("whip.dmgMul"):1,d=e(this.multipliers.values());!(p=d()).done;){c*=p.value.mul}this.hitMain(this.rope.tipBefore,a(this.ctx.tunables,this.vTip)*c,this.whip.active?"whip":"drag")}if(this.chain.step(t,this.pet.pos),this.rope.configure(this.ropeSlots,this.targetLength),this.landed||this.chain.place(this.rope),this.loopReturning)return this.stepLoopReturn(t),void this.chain.clearContacts();if(!this.landed&&this.chain.enabled){for(var m,g=e(this.chain.slots);!(m=g()).done;){var f=m.value,y=o(this.ctx.tunables,f.grades,this.N);f.autoLeft-=t,f.autoLeft<=1e-8&&(f.autoLeft+=this.ctx.tunables.get("chain.autoInterval"),this.combat.circle(f.pos,this.ctx.tunables.get("chain.autoRange"),y,"link_auto","slot:"+f.index,this.ctx.tunables.get("chain.autoInterval"),!0));var x=Math.hypot(f.pos.x-f.previous.x,f.pos.y-f.previous.y)/t;this.combat.segment(f.previous,f.pos,this.ctx.tunables.get("chain.linkRadius"),r(this.ctx.tunables,y,x),"link_contact","slotc:"+f.index,this.ctx.tunables.get("chain.contactCooldown"))}if(this.loopImmuneLeft>1e-8)this.chain.clearContacts();else{var b=this.chain.detectBreak(t,this.pet.pos,this.pet.vel,this.rope);b&&(this.mainHeld&&this.beginMainReturn(),this.chain.breakAt(b.index,b.distance,b.closing),this.rope.configure(this.ropeSlots,this.targetLength),this.chain.place(this.rope))}}else this.chain.clearContacts()}},n.detachMain=function(){var t={pos:i({},this.mainPos),vel:i({},this.mainVel)};return this.setMainState("thrown"),t},n.attachMain=function(){this.internalReturn=!1,this.rope.setMainAttached(!0),this.state="held",this.copyMain(this.rope.tip,this.rope.tipVelocity),this.pet.setMode(this.landed,!1)},n.setMainState=function(t){this.internalReturn=!1,this.state=t,this.chain.clearContacts(),"held"===t?this.attachMain():(this.rope.setMainAttached(!1),this.updateCharge(!1),this.pet.setMode(this.landed,this.emptyHanded))},n.setChainLanded=function(t,e){if(t!==this.landed){this.landed=t,this.loopReturning=!t,this.loopImmuneLeft=0;var s=null!=e?e:this.ctx.tunables.get("loop.postReturnImmune");this.loopImmune=Number.isFinite(s)?Math.max(0,s):0,this.loopReturnElapsed=0,this.loopReturnFrom=this.chain.slots.map((function(t){return i({},t.pos)})),this.chain.clearContacts(),this.rope.configure(this.ropeSlots,this.targetLength),this.pet.setMode(t,this.emptyHanded)}},n.setBreakImmune=function(t){this.chain.setImmune(t)},n.addDragMul=function(t,e,i){Number.isFinite(e)&&Number.isFinite(i)&&e>=0&&i>0&&this.multipliers.set(t,{mul:e,left:i})},n.setEnemyTimeScale=function(t){Number.isFinite(t)&&(this.enemyScale=Math.max(0,Math.min(1,t)))},n.setJianyi=function(t){if(Number.isFinite(t)){var e=this.ctx.tunables.has("jianyi.max")?this.ctx.tunables.get("jianyi.max"):100;this.jianyiValue=Math.max(0,Math.min(e,t))}},n.setCombo=function(t){Number.isFinite(t)&&(this.comboValue=Math.max(0,Math.floor(t)))},n.copyMain=function(t,e){this.mainPos.x=t.x,this.mainPos.y=t.y,this.mainVel.x=e.x,this.mainVel.y=e.y},n.updateCharge=function(t){this.charged!==t&&(this.charged=t,this.ctx.events.emit("sword:fullCharge",{on:t}))},n.whipImpulse=function(t){var e=this.bladeDir,i=-e.y,s=e.x;i*(this.pet.vel.y*this.whip.turnSign)+s*(-this.pet.vel.x*this.whip.turnSign)<0&&(i=-i,s=-s);var n=this.ctx.tunables.get("whip.impulse");this.rope.impulse({x:i*n,y:s*n},t)},n.hitMain=function(t,e,i){var s=this.ctx.tunables,n=s.get("sword.bladeRadius"),h=s.get("drag.hitCooldown"),a="main_return"===i?1:u(s,this.vTip),o=s.get("drag.knockbackK")*this.W*a,r=this.bladeDir,l=this.bladeLength/2,p={x:this.mainPos.x-r.x*l,y:this.mainPos.y-r.y*l},c={x:this.mainPos.x+r.x*l,y:this.mainPos.y+r.y*l};this.combat.segment(p,c,n,e,i,"main",h,o),this.combat.segment(t,this.mainPos,n,e,i,"main",h,o)},n.beginMainReturn=function(){this.returnElapsed=0,this.state="returning",this.rope.setMainAttached(!1),this.internalReturn=!0,this.mainVel.x=this.mainVel.y=this.speedValue=0,this.pet.setMode(this.landed,this.emptyHanded),this.updateCharge(!1)},n.stepMainReturn=function(t){var e=this.ctx.tunables.get("scatter.mainReturnDelay"),s=this.returnElapsed;this.returnElapsed+=t;var n=Math.max(0,this.returnElapsed-e)-Math.max(0,s-e);if(n<=1e-8)this.speedValue=0;else{var h=i({},this.mainPos),a=this.rope.tip,o=a.x-h.x,r=a.y-h.y,u=Math.hypot(o,r),p=this.ctx.tunables.get("scatter.mainReturnSpeed")*n,c=u<=1e-9?1:Math.min(1,p/u),d={x:h.x+o*c,y:h.y+r*c};this.copyMain(d,{x:(d.x-h.x)/n,y:(d.y-h.y)/n}),this.speedValue=Math.hypot(this.mainVel.x,this.mainVel.y),this.hitMain(h,l(this.ctx.tunables,1)*this.ctx.tunables.get("scatter.mainReturnDmgMul"),"main_return"),c>=1&&this.attachMain()}},n.stepLoopReturn=function(t){this.loopReturnElapsed+=t;for(var e=this.ctx.tunables.get("loop.returnTime"),s=e<=0?1:Math.min(1,this.loopReturnElapsed/e),n=0;n<this.chain.slots.length;n++){var h,a=this.chain.slots[n],o=null!=(h=this.loopReturnFrom[n])?h:this.pet.pos;a.pos={x:o.x+(a.pos.x-o.x)*s,y:o.y+(a.pos.y-o.y)*s},a.previous=i({},a.pos)}s>=1-1e-8&&(this.loopReturning=!1,this.chain.place(this.rope),this.loopImmuneLeft=this.loopImmune,this.loopImmune=0)},s(t,[{key:"B",get:function(){return p(this.ctx.tunables)}},{key:"W",get:function(){return this.ctx.tunables.get("sword.W")}},{key:"Lg",get:function(){return this.ctx.tunables.get("sword.Lg")}},{key:"Cv",get:function(){return this.ctx.tunables.get("sword.Cv")}},{key:"N",get:function(){return this.chain.N}},{key:"slots",get:function(){return this.chain.slots.length}},{key:"ropeLength",get:function(){return this.rope.length}},{key:"mainHeld",get:function(){return"held"===this.state}},{key:"mainState",get:function(){return this.state}},{key:"mainVisible",get:function(){return this.mainHeld||this.internalReturn}},{key:"chainVisible",get:function(){return!this.landed&&this.chain.enabled}},{key:"chainLanded",get:function(){return this.landed}},{key:"vTip",get:function(){var t;return null!=(t=this.forcedSpeed)?t:this.speedValue}},{key:"fullCharge",get:function(){return this.charged}},{key:"jianyi",get:function(){return this.jianyiValue}},{key:"combo",get:function(){return this.comboValue}},{key:"enemyTimeScale",get:function(){return this.enemyScale}},{key:"petPos",get:function(){return this.pet.pos}},{key:"petVel",get:function(){return this.pet.vel}},{key:"petMaxSpeed",get:function(){return this.pet.maxSpeed}},{key:"bladeLength",get:function(){return this.ctx.tunables.get("sword.bladeLenBase")+this.ctx.tunables.get("sword.bladeLenPerLg")*this.Lg}},{key:"bladeDir",get:function(){var t=this.rope.points[this.rope.points.length-2];if(!t)return{x:0,y:-1};var e=this.rope.tip.x-t.x,i=this.rope.tip.y-t.y,s=Math.hypot(e,i);return s>1e-9?{x:e/s,y:i/s}:{x:0,y:-1}}},{key:"mode",get:function(){return this.landed?"jianzhen":"held"===this.state?"drag":"thrown"===this.state||"returning"===this.state?"thrown":"empty"}},{key:"emptyHanded",get:function(){return"grounded"===this.state||"returning"===this.state&&!this.internalReturn}},{key:"ropeSlots",get:function(){return this.landed||!this.chain.enabled?0:this.slots}},{key:"targetLength",get:function(){return c(this.ctx.tunables,this.ropeSlots)}}]),t}());n._RF.pop()}}}));
+      /** Null means the owning gameplay module has not provided its service yet. */
+      function readHud(ctx) {
+        var _director$elapsed, _director$danger, _director$alive, _player$hp, _player$maxHp, _player$state, _player$maxSpeed, _rig$vTip, _rig$fullCharge, _rig$ink, _rig$jianzhenRemainin, _rig$N, _rig$slots, _rig$ropeLength, _rig$mode, _rig$jianyi, _rig$combo, _rig$enemyTimeScale;
+        var rig = ctx.services.has('swordRig') ? ctx.services.get('swordRig') : null;
+        var director = ctx.services.has('director') ? ctx.services.get('director') : null;
+        var player = ctx.services.has('player') ? ctx.services.get('player') : null;
+        return {
+          seed: ctx.session.seed,
+          paramsHash: ctx.tunables.hash().slice(0, P0_RULES.hashLength),
+          elapsed: (_director$elapsed = director == null ? void 0 : director.elapsed) != null ? _director$elapsed : ctx.loop.simTime,
+          danger: (_director$danger = director == null ? void 0 : director.danger) != null ? _director$danger : null,
+          alive: (_director$alive = director == null ? void 0 : director.alive) != null ? _director$alive : null,
+          hp: (_player$hp = player == null ? void 0 : player.hp) != null ? _player$hp : null,
+          maxHp: (_player$maxHp = player == null ? void 0 : player.maxHp) != null ? _player$maxHp : null,
+          state: (_player$state = player == null ? void 0 : player.state) != null ? _player$state : null,
+          speed: player ? Math.hypot(player.vel.x, player.vel.y) : null,
+          maxSpeed: (_player$maxSpeed = player == null ? void 0 : player.maxSpeed) != null ? _player$maxSpeed : null,
+          vTip: (_rig$vTip = rig == null ? void 0 : rig.vTip) != null ? _rig$vTip : null,
+          fullCharge: (_rig$fullCharge = rig == null ? void 0 : rig.fullCharge) != null ? _rig$fullCharge : null,
+          vDead: ctx.tunables.has('drag.vDead') ? ctx.tunables.get('drag.vDead') : null,
+          vRef: ctx.tunables.has('drag.vRef') ? ctx.tunables.get('drag.vRef') : null,
+          fullChargeSpeed: ctx.tunables.has('sword.fullChargeMul') && ctx.tunables.has('drag.vRef') ? ctx.tunables.get('sword.fullChargeMul') * ctx.tunables.get('drag.vRef') : null,
+          ink: (_rig$ink = rig == null ? void 0 : rig.ink) != null ? _rig$ink : null,
+          arrayRemaining: (_rig$jianzhenRemainin = rig == null ? void 0 : rig.jianzhenRemaining) != null ? _rig$jianzhenRemainin : null,
+          N: (_rig$N = rig == null ? void 0 : rig.N) != null ? _rig$N : null,
+          slots: (_rig$slots = rig == null ? void 0 : rig.slots) != null ? _rig$slots : null,
+          ropeLength: (_rig$ropeLength = rig == null ? void 0 : rig.ropeLength) != null ? _rig$ropeLength : null,
+          mode: (_rig$mode = rig == null ? void 0 : rig.mode) != null ? _rig$mode : null,
+          jianyi: (_rig$jianyi = rig == null ? void 0 : rig.jianyi) != null ? _rig$jianyi : null,
+          combo: (_rig$combo = rig == null ? void 0 : rig.combo) != null ? _rig$combo : null,
+          enemyTimeScale: (_rig$enemyTimeScale = rig == null ? void 0 : rig.enemyTimeScale) != null ? _rig$enemyTimeScale : null
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/SwordRigHooks.ts",["cc"],(function(){var e;return{setters:[function(o){e=o.cclegacy}],execute:function(){e._RF.push({},"fe0ffi7VSFLxqrQIRmq6D5H","SwordRigHooks",void 0),e._RF.pop()}}}));
+System.register("chunks:///_virtual/index.ts", ['cc', './SystemOrder.ts', './ThrowController.ts', './ThrowParams.ts', './ThrowView.ts'], function (exports) {
+  var cclegacy, SystemOrder, ThrowController, THROW_PARAMS, mountThrowView;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      ThrowController = module.ThrowController;
+    }, function (module) {
+      THROW_PARAMS = module.THROW_PARAMS;
+    }, function (module) {
+      mountThrowView = module.mountThrowView;
+    }],
+    execute: function () {
+      exports('installThrow', installThrow);
+      cclegacy._RF.push({}, "166efzLXk9B/Z9wiePXU2YG", "index", undefined);
+      function installThrow(rig) {
+        var ctx = rig.ctx;
+        ctx.tunables.define(THROW_PARAMS);
+        var controller = new ThrowController(rig);
+        var draw = null;
+        // FixedLoop sorts by order; stable equal-order registration runs after sword.rig.
+        ctx.loop.addSystem({
+          id: 'sword.throw',
+          order: SystemOrder.Sword,
+          fixedUpdate: function fixedUpdate(dt) {
+            return controller.fixedUpdate(dt);
+          },
+          render: function render() {
+            if (!draw) draw = mountThrowView(rig, controller);
+            draw == null || draw();
+          }
+        });
+        ctx.events.on('session:start', function () {
+          return controller.reset();
+        });
+        ctx.events.on('session:end', function () {
+          return controller.stop();
+        });
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/SwordView.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var t,o,i,a,r,n,l,s,h,d,c;return{setters:[function(e){t=e.inheritsLoose,o=e.createForOfIteratorHelperLoose},function(e){i=e.cclegacy,a=e._decorator,r=e.Color,n=e.Node,l=e.Graphics,s=e.view,h=e.UITransform,d=e.Label,c=e.Component}],execute:function(){var g;e("mountSwordView",(function(e){var t=e.ctx.layers.get("rig");if("function"!=typeof t.addChild)return null;var o=new n("SwordRig");o.layer=t.layer,o.addComponent(h).setAnchorPoint(0,0),t.addChild(o);var i=o.addComponent(w);return i.bind(e),function(){return i.draw()}})),i._RF.push({},"21e9dkzRk9B8L4SjAyLTdrj","SwordView",void 0);var x=a.ccclass,v=new r(225,232,240),f=new r(255,156,48),u=new r(130,170,230),y=new r(100,235,235),m=new r(255,225,100),p=[new r(165,175,190),new r(205,215,230),v],w=e("SwordView",x("SwordGreyboxView")(g=function(e){function i(){for(var t,o=arguments.length,i=new Array(o),a=0;a<o;a++)i[a]=arguments[a];return(t=e.call.apply(e,[this].concat(i))||this).rig=null,t.graphics=null,t.hud=null,t.stacks=[],t.damage=[],t}t(i,e);var a=i.prototype;return a.bind=function(e){this.rig=e;var t=new n("Geometry");t.layer=this.node.layer,this.node.addChild(t),this.graphics=t.addComponent(l),this.hud=T(e.ctx.layers.get("debug"),"SwordTelemetry",18,680,64);for(var o=0;o<12;o++)this.stacks.push(T(this.node,"Stack"+o,14,70,24));for(var i=0;i<Math.floor(e.ctx.tunables.get("fx.damageMax"));i++)this.damage.push(T(this.node,"Damage"+i,16,190,26))},a.onEnable=function(){var e;null==(e=this.rig)||e.attach()},a.onDisable=function(){var e;null==(e=this.rig)||e.detach()},a.onDestroy=function(){var e,t;null==(e=this.rig)||e.detach(),null==(t=this.hud)||t.node.destroy(),this.rig=null},a.draw=function(){var e=this.rig,t=this.graphics;if(e&&t&&this.enabledInHierarchy){var i=e.ctx.toPx,a=Math.abs(i({x:1,y:0}).x-i({x:0,y:0}).x),r=e.ctx.tunables,n=e.fullCharge&&r.getBool("fx.fullCharge");t.clear(),t.lineWidth=1,t.strokeColor=u;var l=e.rope.points,h=i(l[0]);t.moveTo(h.x,h.y);for(var d=1;d<l.length;d++){var c=i(l[d]);t.lineTo(c.x,c.y)}t.stroke(),t.fillColor=v;var g=i(e.petPos);if(!e.pet.damageImmune||Math.floor(e.ctx.loop.simTime*r.get("fx.petBlinkHz")*2)%2==0){t.circle(g.x,g.y,e.pet.radius*a),t.fill();var x=Math.hypot(e.petVel.x,e.petVel.y),w=x>1e-8?e.petVel.x/x:0,k=x>1e-8?e.petVel.y/x:-1,b=e.pet.radius*a;t.fillColor=u,t.moveTo(g.x+w*b,g.y+k*b),t.lineTo(g.x-k*b/2,g.y+w*b/2),t.lineTo(g.x+k*b/2,g.y-w*b/2),t.lineTo(g.x+w*b,g.y+k*b),t.fill()}if(t.lineWidth=Math.max(1,.025*a),t.strokeColor=n?f:v,e.mainVisible){var C=i(e.mainPos),M=Math.hypot(e.mainVel.x,e.mainVel.y);if(r.getBool("fx.trail")&&M>1e-8){var V=e.vTip*r.get("fx.trailTime")*a;t.moveTo(C.x,C.y),t.lineTo(C.x-e.mainVel.x/M*V,C.y-e.mainVel.y/M*V),t.stroke()}var P=e.bladeDir,S=e.bladeLength*a/2,L=r.get("sword.bladeRadius")*a;t.lineWidth=2*L,t.moveTo(C.x-P.x*S,C.y-P.y*S),t.lineTo(C.x+P.x*S,C.y+P.y*S),t.stroke(),t.fillColor=n?f:v;for(var H=0,F=[-1,1];H<F.length;H++){var R=F[H];t.circle(C.x+P.x*S*R,C.y+P.y*S*R,L),t.fill()}if(t.lineWidth=Math.max(1,.025*a),e.whip.active&&e.mainHeld){t.strokeColor=v;for(var z=Math.atan2(P.y,P.x),B=0;B<=16;B++){var D=z+(B/16-.5)*r.get("whip.turnDeg")*Math.PI/180,W=C.x+Math.cos(D)*e.bladeLength*a,I=C.y+Math.sin(D)*e.bladeLength*a;0===B?t.moveTo(W,I):t.lineTo(W,I)}t.stroke()}else e.mainHeld&&e.vTip<r.get("drag.vDead")&&(t.strokeColor=m,this.sword(t,e.mainPos,L,{x:-P.y,y:P.x}))}for(var _=0;_<this.stacks.length;_++){var j=this.stacks[_],A=e.chain.slots[_];if(j.node.active=e.chainVisible&&void 0!==A&&A.grades.length>1,A&&e.chainVisible){t.strokeColor=p[A.grades.length-1],t.lineWidth=Math.max(1,.025*a*A.grades.length),this.link(t,A.pos,r.get("chain.linkRadius")*a),j.string="×"+A.grades.length;var G=i(A.pos);j.node.setPosition(Math.min(10*a-70,Math.max(0,G.x+12)),Math.min(15*a-12,Math.max(12,G.y+12)),0)}}for(var N,E=o(e.chain.loose);!(N=E()).done;){var O=N.value,U=r.get(O.left<=r.get("fx.scatterFastTime")?"fx.scatterFastBlinkHz":"fx.scatterBlinkHz");if(!O.recovered||Math.floor(O.left*U*2)%2!=0){t.strokeColor=O.recovered?f:u;var q=i(O.pos),J=r.get("chain.linkRadius")*a;t.lineWidth=1,t.moveTo(q.x,q.y-J),t.lineTo(q.x,q.y+J),t.stroke()}}for(var K=Math.floor(r.get("fx.damageMax"));this.damage.length<K;)this.damage.push(T(this.node,"Damage"+this.damage.length,16,190,26));for(var Q=0;Q<this.damage.length;Q++){var X=this.damage[Q],Y=e.combat.labels[Q];if(X.node.active=void 0!==Y&&Q<K,Y){X.string=Y.amount.toFixed(1)+" "+Y.source,X.color="whip"===Y.source?m:"loop"===Y.source?y:v;var Z=i(Y.pos);X.node.setPosition(Z.x,Z.y+(r.get("fx.damageLife")-Y.left)*r.get("fx.damageRise")*a,0)}}if(this.hud){var $=s.getVisibleSize();this.hud.node.setPosition(-$.width/2+12,$.height/2-38,0),this.hud.string="HP "+e.pet.hp+"/"+e.pet.maxHp+"  v_tip "+e.vTip.toFixed(2)+"u/s  N/slots "+e.N+"/"+e.slots+"\nL "+e.ropeLength.toFixed(2)+"u  "+e.mode+"  剑意 "+e.jianyi.toFixed(0)+"  combo "+e.combo,this.hud.color=n?f:v}}},a.link=function(e,t,o){var i=this.rig;if(i){var a=i.ctx.toPx(t);e.moveTo(a.x,a.y-o),e.lineTo(a.x+o,a.y),e.lineTo(a.x,a.y+o),e.lineTo(a.x-o,a.y),e.lineTo(a.x,a.y-o),e.stroke()}},a.sword=function(e,t,o,i){var a=this.rig;if(a){var r=a.ctx.toPx(t),n=Math.hypot(i.x,i.y),l=n>1e-6?i.x/n:0,s=n>1e-6?i.y/n:1;e.moveTo(r.x-l*o,r.y-s*o),e.lineTo(r.x+l*o,r.y+s*o),e.moveTo(r.x-s*o*.5,r.y+l*o*.5),e.lineTo(r.x+s*o*.5,r.y-l*o*.5),e.stroke()}},i}(c))||g);function T(e,t,o,i,a){var r=new n(t);r.layer=e.layer;var l=r.addComponent(h);l.setContentSize(i,a),l.setAnchorPoint(0,.5),e.addChild(r);var s=r.addComponent(d);return s.fontSize=o,s.lineHeight=o+4,s.color=v,s}i._RF.pop()}}}));
+System.register("chunks:///_virtual/index2.ts", ['cc', './FloatingJoystick.ts', './InputParams.ts', './InputSystem.ts', './JoystickView.ts'], function (exports) {
+  var cclegacy, FloatingJoystick, INPUT_PARAMS, InputSystem, mountJoystick;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      FloatingJoystick = module.FloatingJoystick;
+    }, function (module) {
+      INPUT_PARAMS = module.INPUT_PARAMS;
+    }, function (module) {
+      InputSystem = module.InputSystem;
+    }, function (module) {
+      mountJoystick = module.mountJoystick;
+    }],
+    execute: function () {
+      exports('install', install);
+      cclegacy._RF.push({}, "23d1bZtW9xA16rLTPUaSXg6", "index", undefined);
 
-System.register("chunks:///_virtual/SystemOrder.ts",["cc"],(function(e){var t;return{setters:[function(e){t=e.cclegacy}],execute:function(){t._RF.push({},"34877iqKttPza4MBVHB/9Du","SystemOrder",void 0);e("SystemOrder",{StepProbe:50,Input:100,Pet:200,Enemy:300,Sword:400,EnemyResolve:500,Session:800,Tuning:900});t._RF.pop()}}}));
+      /** Replace the fallback before App checks service identity and mounts debug input. */
+      function install(ctx) {
+        ctx.tunables.define(INPUT_PARAMS);
+        var source = new FloatingJoystick();
+        ctx.services.provide('input', source);
+        var system = new InputSystem(ctx, source, function () {
+          return view == null ? void 0 : view.redraw();
+        });
+        var view = mountJoystick(ctx, source, system);
+        ctx.loop.addSystem(system);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Telemetry.ts",["./rollupPluginModLoBabelHelpers.js","cc","./events.ts","./Hud.ts","./Storage.ts","./TuningParams.ts"],(function(t){var n,e,s,r,a,i,u,o,h;return{setters:[function(t){n=t.createForOfIteratorHelperLoose,e=t.extends,s=t.createClass},function(t){r=t.cclegacy},function(t){a=t.GameEvent},function(t){i=t.readHud},function(t){u=t.isRecord},function(t){o=t.P0_RULES,h=t.TIME_EPSILON}],execute:function(){t({emptyDamage:m,groupedDamage:function(t){return[t.drag,t.whip,t.link_auto+t.link_contact,t.throw_out+t.throw_back,t.loop,t.main_return+t.claw]},percentile:p}),r._RF.push({},"fc7a1Q4U/9NT59OzrDPJL7B","Telemetry",void 0);var l="yuedie.tuning.telemetry.v1",c=t("DAMAGE_SOURCES",["drag","whip","link_auto","link_contact","throw_out","throw_back","main_return","loop","claw"]);t("DAMAGE_GROUPS",["拖剑","鞭响","链剑","飞剑","剑阵","其他"]);function m(){return{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0}}function p(t,n){if(0===t.length)return null;var e=t.slice().sort((function(t,n){return t-n}));return e[Math.max(0,Math.ceil(e.length*n)-1)]}var d={"tuning:changed":"param_change","sword:whip":"whip","jianzhen:loop":"loop_closed","jianzhen:rejectedLoop":"loop_rejected","jianzhen:start":"jianzhen_start","jianzhen:end":"jianzhen_end","jianzhen:hit":"jianzhen_hit","throw:start":"throw_start","throw:cancel":"throw_cancel","throw:catch":"catch","throw:miss":"miss","chain:pickup":"chain_pickup","chain:break":"chain_break","chain:scatterExpired":"chain_scatter_expired","player:damaged":"player_damaged"};t("Telemetry",function(){function t(t,e){this.store=void 0,this.ctx=void 0,this.archives=[],this.run=null,this.resultRecent={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},this.resultLines=null,this.unsubs=[],this.debugNext=!1,this.normalNext=!1,this.started=!1,this.wallTime=0,this.frameHistory=[],this.frameCount=0,this.frameSeconds=0,this.result=null,this.ctx=t,this.store=e;var s=e.read(l);if(Array.isArray(s)){for(var r,a=n(s);!(r=a()).done;){var i=r.value;if(Array.isArray(i)){for(var h,c=[],m=n(i);!(h=m()).done;){var p=h.value;if("string"==typeof p)try{var d=JSON.parse(p);u(d)&&1===d.v&&"string"==typeof d.type&&"string"==typeof d.sid&&"number"==typeof d.t&&"string"==typeof d.ph?c.push(p):e.error="日志格式不符合 P0 §10，已跳过（旧草稿格式不自动转换）"}catch(t){e.error="部分日志损坏，已跳过"}}c.length>0&&this.archives.push(c)}}this.archives=this.archives.slice(-o.retainedSessions)}}var r=t.prototype;return r.attach=function(){var t=this;if(!(this.unsubs.length>0)){var n=this.ctx.events;this.unsubs.push(n.on("session:start",(function(n){return t.begin(n)}))),this.unsubs.push(n.on("session:end",(function(n){var e;(null==(e=t.run)?void 0:e.summary.sid)===n.sid&&t.finish(n.reason,n.duration)}))),this.unsubs.push(n.on("enemy:damaged",(function(n){var e=t.run;e&&(e.summary.damage[n.source]+=n.amount,e.summary.totalDamage+=n.amount,e.bucket[n.source]+=n.amount,e.bucketTotal+=n.amount,e.recent.push({t:t.ctx.loop.simTime,source:n.source,amount:n.amount}),t.record("enemy:damaged",n))}))),this.unsubs.push(n.on("enemy:died",(function(n){t.run&&(t.run.summary.kills+=1,t.run.bucketKills[n.source]+=1),t.record("enemy:died",n)}))),this.unsubs.push(n.on("debug:command",(function(n){var e;t.record("debug:command",n),"restart"!==n.cmd||null!=(e=t.run)&&e.summary.debugRestart||(t.debugNext=!0)}))),this.unsubs.push(n.on("player:damaged",(function(n){t.run&&(t.run.lastDamage={byKind:n.byKind,state:n.state})}))),this.unsubs.push(n.on("sword:whip",(function(){t.run&&null===t.run.summary.firstWhipTime&&(t.run.summary.firstWhipTime=t.ctx.loop.simTime)}))),this.unsubs.push(n.on("chain:changed",(function(n){t.run&&(t.run.summary.maxN=Math.max(t.run.summary.maxN,n.N))}))),this.unsubs.push(n.on("chain:pickup",(function(n){t.run&&(t.run.summary.maxN=Math.max(t.run.summary.maxN,n.N),n.recovered&&(t.run.summary.recoveredSwords+=1))}))),this.unsubs.push(n.on("chain:break",(function(){t.run&&(t.run.summary.chainBreaks+=1)}))),this.unsubs.push(n.on("chain:scatterExpired",(function(n){t.run&&(t.run.summary.expiredSwords+=n.count)}))),this.unsubs.push(n.on("throw:start",(function(n){t.run&&(t.run.summary.throwAttempts+=1,(n.joyMag<o.throwJoyMin||n.magDrop300>o.throwDropMax)&&(t.run.summary.suspiciousThrows+=1))}))),this.unsubs.push(n.on("throw:cancel",(function(){t.run&&(t.run.summary.throwAttempts+=1,t.run.summary.throwCancels+=1)}))),this.unsubs.push(n.on("throw:catch",(function(n){t.run&&("perfect"===n.kind?t.run.summary.perfectCatches+=1:t.run.summary.normalCatches+=1)}))),this.unsubs.push(n.on("throw:miss",(function(){t.run&&(t.run.summary.misses+=1)}))),this.unsubs.push(n.on("jianzhen:start",(function(n){t.run&&(t.run.summary.jianzhenCount+=1,t.run.summary.maxN=Math.max(t.run.summary.maxN,n.N),t.run.arrayClosed=!1,t.run.arrayEmpty=n.enemiesNear<3,t.run.arrayEmpty&&(t.run.summary.emptyStarts+=1))}))),this.unsubs.push(n.on("jianzhen:loop",(function(n){t.run&&(t.run.summary.loops.push({area:n.area,n:n.n}),t.run.arrayClosed||(t.run.summary.closedJianzhen+=1),t.run.arrayClosed=!0)}))),this.unsubs.push(n.on("jianzhen:hit",(function(){t.run&&(t.run.summary.jianzhenHits+=1)}))),this.unsubs.push(n.on("jianzhen:end",(function(n){t.run&&n.emptyStart!==t.run.arrayEmpty&&(t.run.summary.emptyStarts+=n.emptyStart?1:-1)})));for(var s=function(){var s=i[r],u=a[s];if("session:start"===u||"session:end"===u||"enemy:damaged"===u||"enemy:died"===u||"debug:command"===u)return 1;t.unsubs.push(n.on(u,(function(n){var s,r="jianzhen:loop"===u?e({},n,{ink:null}):n;t.record(null!=(s=d[u])?s:u,r)})))},r=0,i=Object.keys(a);r<i.length;r++)s()}},r.detach=function(){this.flush();for(var t,e=n(this.unsubs);!(t=e()).done;){(0,t.value)()}this.unsubs=[]},r.frame=function(t){var n=this;!Number.isFinite(t)||t<=0||!this.run||(this.wallTime+=t,this.frameCount+=1,this.frameSeconds+=t,this.frameHistory.push({t:this.wallTime,dt:t}),this.frameHistory=this.frameHistory.filter((function(t){return t.t>n.wallTime-o.fpsWindow})),this.run.frames.push(t))},r.fps=function(){return{fpsAvg:this.frameSeconds>0?this.frameCount/this.frameSeconds:null,fpsMin:this.frameHistory.length?1/Math.max.apply(null,this.frameHistory.map((function(t){return t.dt}))):null}},r.fixedUpdate=function(t){var n=this.run;if(n){n.elapsed=Math.max(n.elapsed,this.ctx.loop.simTime+t);var e=i(this.ctx);if(null!==e.vTip&&n.vTips.push(e.vTip),null!==e.N&&(n.summary.maxN=Math.max(n.summary.maxN,e.N)),n.elapsed-n.bucketStart>=o.damagePeriod-h&&this.flushBucket(n.elapsed),n.elapsed-n.sampleStart>=o.samplePeriod-h){this.append("vtip_10s",n.elapsed,{p50:p(n.vTips,.5),p90:p(n.vTips,.9),max:n.vTips.length?Math.max.apply(null,n.vTips):null});var s=n.frames.reduce((function(t,n){return t+n}),0);this.append("perf_10s",n.elapsed,{fpsAvg:s>0?n.frames.length/s:null,fpsMin:n.frames.length?1/Math.max.apply(null,n.frames):null,alive:e.alive,N:e.N}),n.vTips=[],n.frames=[],n.sampleStart=n.elapsed}this.pruneRecent()}},r.flush=function(){this.store.write(l,this.archives)},r.exportJsonLines=function(){for(var t,e=[],s=n(this.archives);!(t=s()).done;)for(var r,a=t.value,i=n(a);!(r=i()).done;){var u=r.value;e.push(u)}if(this.run)for(var o,h=n(this.run.lines);!(o=h()).done;){var l=o.value;e.push(l)}return e.length>0?e.join("\n")+"\n":""},r.clear=function(){this.archives=[],this.run=null,this.result=null,this.resultLines=null,this.resultRecent={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},this.flush()},r.resultChoice=function(t){this.result&&this.resultLines&&(this.resultLines.push(this.line("result_choice",this.result.duration,{choice:t},this.result)),this.flush())},r.damage=function(t){var s,r,a,i;if(void 0===t&&(t=!1),!t)return e({},null!=(s=null!=(r=null==(a=this.run)?void 0:a.summary.damage)?r:null==(i=this.result)?void 0:i.damage)?s:{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0});if(!this.run)return e({},this.resultRecent);this.pruneRecent();for(var u,o={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},h=n(null!=(l=null==(c=this.run)?void 0:c.recent)?l:[]);!(u=h()).done;){var l,c,m=u.value;o[m.source]+=m.amount}return o},r.expectDebugRestart=function(){this.debugNext=!0,this.normalNext=!1},r.expectNormalRetry=function(){this.normalNext=!0,this.debugNext=!1},r.totals=function(){for(var t,e={sessions:0,damage:0,kills:0},s=n(this.archives);!(t=s()).done;)for(var r,a=t.value,i=n(a);!(r=i()).done;){var o=r.value,h=JSON.parse(o);if(u(h)&&"session_end"===h.type&&u(h.summary)){var l=h.summary;!0===l.eligible&&!1===l.debugRestart&&"number"==typeof l.totalDamage&&"number"==typeof l.kills&&(e.sessions+=1,e.damage+=l.totalDamage,e.kills+=l.kills)}}return e},r.begin=function(t){var n,e=this.debugNext||this.started&&!this.normalNext;this.run&&this.finish("restart",this.run.elapsed),this.run={summary:{sid:t.sid,seed:this.ctx.session.seed,paramsHash:t.paramsHash,debugRestart:e,eligible:!1,reason:"",duration:0,damage:{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},shares:{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},totalDamage:0,kills:0,counts:{},loops:[],jianzhenCount:0,closedJianzhen:0,closedRate:0,emptyStarts:0,emptyRate:0,jianzhenHits:0,throwAttempts:0,throwCancels:0,suspiciousThrows:0,perfectCatches:0,normalCatches:0,misses:0,mistakenThrowRate:0,chainBreaks:0,recoveredSwords:0,expiredSwords:0,maxN:null!=(n=i(this.ctx).N)?n:0,firstWhipTime:null,death:null},lines:[],bucket:{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},bucketKills:{drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},bucketTotal:0,bucketStart:0,elapsed:0,sampleStart:0,vTips:[],frames:[],arrayClosed:!1,arrayEmpty:!1,lastDamage:null,recent:[]},this.debugNext=!1,this.normalNext=!1,this.started=!0,this.result=null,this.resultLines=null,this.resultRecent={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},this.frameCount=0,this.frameSeconds=0,this.wallTime=0,this.frameHistory=[],this.record("session_start",{seed:this.ctx.session.seed,params:this.ctx.tunables.snapshot(),screen:"undefined"==typeof window?{w:null,h:null,dpr:null}:{w:window.innerWidth,h:window.innerHeight,dpr:window.devicePixelRatio},ua:"undefined"==typeof navigator?"":navigator.userAgent})},r.record=function(t,n){var e;this.run&&(this.run.elapsed=Math.max(this.run.elapsed,this.ctx.loop.simTime),this.run.summary.counts[t]=(null!=(e=this.run.summary.counts[t])?e:0)+1,this.append(t,this.run.elapsed,n))},r.line=function(t,n,s,r){return JSON.stringify(e({},s,{v:1,sid:r.sid,t:Number(n.toFixed(o.timeDigits)),type:t,ph:this.ctx.tunables.hash(),debugRestart:r.debugRestart}))},r.append=function(t,n,e){this.run&&this.run.lines.push(this.line(t,n,e,this.run.summary))},r.pruneRecent=function(){var t=this;this.run&&(this.run.recent=this.run.recent.filter((function(n){return n.t>t.runElapsed()-o.damageWindow+h})))},r.runElapsed=function(){var t,n;return Math.max(null!=(t=null==(n=this.run)?void 0:n.elapsed)?t:0,this.ctx.loop.simTime)},r.flushBucket=function(t){var n=this.run;n&&((t>n.bucketStart+h||0!==n.bucketTotal)&&this.append("dmg_1s",t,{from:n.bucketStart,to:t,duration:t-n.bucketStart,bySource:n.bucket,killsBySource:n.bucketKills,totalDamage:n.bucketTotal}),n.bucket={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},n.bucketKills={drag:0,whip:0,link_auto:0,link_contact:0,throw_out:0,throw_back:0,main_return:0,loop:0,claw:0},n.bucketTotal=0,n.bucketStart=t)},r.finish=function(t,n){var e=this.run;if(e){this.flushBucket(Math.max(n,e.elapsed));var s=e.summary;s.duration=n,s.reason=t,s.eligible=!s.debugRestart&&"restart"!==t;for(var r=0,a=c;r<a.length;r++){var i=a[r];s.shares[i]=s.totalDamage>0?s.damage[i]/s.totalDamage:0}s.mistakenThrowRate=s.throwAttempts>0?(s.throwCancels+s.suspiciousThrows)/s.throwAttempts:0,s.closedRate=s.jianzhenCount>0?s.closedJianzhen/s.jianzhenCount:0,s.emptyRate=s.jianzhenCount>0?s.emptyStarts/s.jianzhenCount:0,s.death="died"===t?e.lastDamage:null,this.append("session_end",n,{reason:t,duration:n,summary:s}),this.archives.push(e.lines),this.archives=this.archives.slice(-o.retainedSessions),this.resultRecent=this.damage(!0),this.result="restart"===t?null:s,this.resultLines="restart"===t?null:e.lines,this.run=null,this.flush()}},s(t,[{key:"debugRestart",get:function(){var t,n,e,s;return null!=(t=null!=(n=null==(e=this.run)?void 0:e.summary.debugRestart)?n:null==(s=this.result)?void 0:s.debugRestart)&&t}}]),t}());r._RF.pop()}}}));
+System.register("chunks:///_virtual/index3.ts", ['cc', './EnemyModule.ts', './EnemyView.ts'], function (exports) {
+  var cclegacy, EnemyModule, mountEnemyView;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      EnemyModule = module.EnemyModule;
+    }, function (module) {
+      mountEnemyView = module.mountEnemyView;
+    }],
+    execute: function () {
+      exports('install', install);
+      cclegacy._RF.push({}, "3ec1aIAdwNIypeDajmhb7ih", "index", undefined);
+      function install(ctx) {
+        var module = new EnemyModule(ctx);
+        module.install();
+        mountEnemyView(ctx, module);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/ThrowController.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Vec2.ts","./ThrowFormulas.ts"],(function(i){var t,s,e,h,a,r,n,o,g,c,u,d,p;return{setters:[function(i){t=i.extends,s=i.createForOfIteratorHelperLoose,e=i.createClass},function(i){h=i.cclegacy},function(i){a=i.vNormalize,r=i.vDist,n=i.vSub,o=i.vDot},function(i){g=i.throwDistance,c=i.arcAmplitude,u=i.catchKind,d=i.throwDamage,p=i.clawDamage}],execute:function(){h._RF.push({},"932efWRPB5JF5j3PMFGoEEi","ThrowController",void 0);var l=2*Math.PI,m=1e-10,v=Math.PI/180;i("ThrowController",function(){function i(i){this.phase="idle",this.running=!1,this.pos={x:0,y:0},this.heading={x:0,y:0},this.origin={x:0,y:0},this.axis={x:0,y:0},this.distance=0,this.theta=0,this.spin=0,this.elapsed=0,this.passedPet=!1,this.pending=null,this.aim=null,this.launchCombo=0,this.launchVtip=0,this.outHits=new Set,this.backHits=new Set,this.enemies=[],this.rig=void 0,this.rig=i}var h=i.prototype;return h.reset=function(){this.phase="idle",this.pending=this.aim=null,this.elapsed=this.theta=this.spin=this.distance=this.launchCombo=this.launchVtip=0,this.passedPet=!1,this.pos=t({},this.rig.petPos),this.origin=t({},this.pos),this.heading=this.axis={x:0,y:0},this.outHits.clear(),this.backHits.clear(),this.enemies.length=0,this.rig.setCombo(0),this.running=!0},h.stop=function(){this.running=!1,this.aim=null},h.fixedUpdate=function(i){if(this.running&&Number.isFinite(i)&&!(i<=0)){var t=this.rig.ctx,s=t.services,e=t.tunables;s.has("player")&&s.get("player").hp<=0||("pending"===this.phase?e.getBool("mech.throw")&&this.rig.mainHeld?s.has("input")&&s.get("input").frame.pressedThisTick?(this.idle(),this.rig.ctx.events.emit("throw:cancel",{reason:"retouch"})):(this.elapsed+=i,this.elapsed+m>=e.get("throw.confirmDelay")&&this.launch()):this.idle():"idle"===this.phase?this.checkRelease(i):(this.spin=(this.spin+l*i)%(2*Math.PI),this.pos=this.rig.ctx.arena.clamp(this.pos,this.radius),"out"===this.phase?this.flyOut(i):"back"===this.phase?this.flyBack(i):(this.claw(),"grounded"===this.phase?this.grounded(i):this.autoReturn(i))),this.updateAim())}},h.checkRelease=function(i){var s=this.rig.ctx,e=s.services,h=s.tunables;if(h.getBool("mech.throw")&&this.rig.mainHeld&&e.has("input")&&e.has("swordRig")){var r=e.get("input"),n=e.get("swordRig");if(r.frame.releasedThisTick&&n.fullCharge&&!(r.minMag(h.get("throw.minMagWindow"))<h.get("throw.minMag"))){var o=a(r.avgDir(h.get("throw.dirWindow")));0===o.x&&0===o.y||(this.pending={vTip:n.vTip,dir:o,joyMag:r.minMag(i),magDrop300:r.magDrop(.3,r.frame.time-i),dist:g(h,n.vTip,this.rig.W),origin:t({},this.rig.petPos)},this.phase="pending",this.elapsed=0,h.get("throw.confirmDelay")<=0&&this.launch())}}},h.updateAim=function(){var i=this.rig.ctx,s=i.services,e=i.tunables;if(this.aim=null,e.getBool("mech.throw")&&e.getBool("throw.aimLine")&&this.rig.mainHeld)if("pending"===this.phase&&this.pending)this.aim={origin:t({},this.pending.origin),dir:t({},this.pending.dir),dist:this.pending.dist};else if("idle"===this.phase&&s.has("input")&&s.has("swordRig")){var h=s.get("input"),r=s.get("swordRig");if(r.fullCharge&&h.frame.touching&&!(h.frame.mag<e.get("throw.minMag"))){var n=a(h.avgDir(e.get("throw.dirWindow")));0===n.x&&0===n.y||(this.aim={origin:t({},this.rig.petPos),dir:n,dist:g(e,r.vTip,this.rig.W)})}}},h.launch=function(){var i=this.pending;if(i){var s=this.rig.ctx,e=this.rig.detachMain().pos;this.pos=s.arena.clamp(e,this.radius),this.origin=t({},this.pos),this.axis=t({},i.dir),this.heading=t({},this.axis),this.launchVtip=i.vTip,this.distance=g(s.tunables,i.vTip,this.rig.W),this.launchCombo=s.services.has("swordRig")?s.services.get("swordRig").combo:0,this.outHits.clear(),this.backHits.clear(),this.theta=this.elapsed=0,this.passedPet=!1,this.phase="out",this.pending=null,this.aim=null,s.events.emit("throw:start",{vTip:i.vTip,joyMag:i.joyMag,magDrop300:i.magDrop300,dir:t({},this.axis),dist:this.distance}),this.distance<=0&&this.beginBack()}},h.curve=function(i){var t=this.distance*i/Math.PI,s=c(this.rig.ctx.tunables,this.rig.Cv,this.distance)*(1-Math.cos(i))/2;return{x:this.origin.x+this.axis.x*t-this.axis.y*s,y:this.origin.y+this.axis.y*t+this.axis.x*s}},h.flyOut=function(i){var s=this.rig.ctx.tunables;if(this.distance=g(s,this.launchVtip,this.rig.W),this.distance<=0)return this.beginBack(),void this.flyBack(i);for(var e=s.get("throw.speed"),h=e*i;h>m&&"out"===this.phase;){var o=Math.min(Math.PI,this.theta+v),c=this.curve(this.theta),u=this.curve(o),d=r(c,u),p=o;if(d>h){for(var l=this.theta,f=o,x=0;x<32;x++){var y=(l+f)/2;r(c,this.curve(y))>h?f=y:l=y}p=(l+f)/2,u=this.curve(p),d=r(c,u)}this.theta=p;var w=n(u,c),b=t({},this.pos),M={x:b.x+w.x,y:b.y+w.y},P=a(w);this.heading=P;var k=this.move(M);this.damage(b,"out",P),h=Math.max(0,h-d),k?(this.phase="back",this.passedPet=!1):this.theta>=Math.PI-m&&this.beginBack(),d<=m&&"out"===this.phase&&(this.theta=o)}"back"===this.phase&&h>m&&this.flyBack(h/e)},h.move=function(i){var t=this.rig.ctx.arena.clamp(i,this.radius),s=t.x!==i.x,e=t.y!==i.y;return this.pos=t,s&&(this.heading.x=-this.heading.x),e&&(this.heading.y=-this.heading.y),s||e},h.beginBack=function(){this.phase="back",this.passedPet=!1,this.heading=a(n(this.rig.petPos,this.pos))},h.flyBack=function(i){if(!this.tryCatch()){var s=this.rig.ctx.tunables,e=a(n(this.rig.petPos,this.pos)),h=Math.atan2(this.heading.x*e.y-this.heading.y*e.x,o(this.heading,e)),g=s.get("throw.returnTurn")*Math.PI/180*i,c=Math.max(-g,Math.min(g,h)),u=Math.cos(c),d=Math.sin(c);this.heading={x:this.heading.x*u-this.heading.y*d,y:this.heading.x*d+this.heading.y*u};var p=t({},this.pos),l=t({},this.heading);if(this.move({x:p.x+l.x*s.get("throw.speed")*i,y:p.y+l.y*s.get("throw.speed")*i}),this.damage(p,"back",l),!this.tryCatch()){var m=o(this.heading,n(this.rig.petPos,this.pos))<=0;if(m&&(this.passedPet=!0),this.passedPet&&m&&r(this.pos,this.rig.petPos)>=s.get("throw.missPassDist")){var v=this.combo;this.rig.setCombo(0),this.rig.setMainState("grounded"),this.phase="grounded",this.elapsed=0,this.rig.ctx.events.emit("throw:miss",{comboLost:v})}}}},h.tryCatch=function(){var i=this.rig.ctx.tunables,s=n(this.pos,this.rig.petPos);if(!this.inCatchRange())return!1;var e=u(i,this.rig.petVel,s,this.rig.petMaxSpeed),h=this.combo;return"perfect"===e.kind&&(h=Math.min(h+1,Math.floor(i.get("throw.comboMax"))),this.rig.setCombo(h),this.rig.addDragMul("throw.yujin",1+i.get("throw.yujinMul"),i.get("throw.yujinDur"))),this.rig.ctx.events.emit("throw:catch",t({},e,{combo:h})),this.rig.attachMain(),this.idle(),!0},h.damage=function(i,e,h){var a=this.rig.ctx,r=a.services,n=a.tunables;if(r.has("enemies")){var o=r.get("enemies"),g="out"===e?this.outHits:this.backHits;this.enemies.length=0,o.querySegment(i,this.pos,this.radius,this.enemies);for(var c,u=s(this.enemies);!(c=u()).done;){var p=c.value;if(p.alive&&!g.has(p.id)){g.add(p.id);var l="out"===e?"throw_out":"throw_back";o.hit(p.id,{source:l,hitKey:l,cooldown:0,dir:t({},h),amount:d(n,this.rig.B,this.rig.W,this.launchCombo)})}}}},h.claw=function(){var i=this.rig.ctx,e=i.services,h=i.tunables;if(e.has("enemies")&&e.has("player")){var r=e.get("enemies");this.enemies.length=0,r.queryCircle(t({},this.rig.petPos),e.get("player").radius,this.enemies);for(var o,g=s(this.enemies);!(o=g()).done;){var c=o.value;c.alive&&r.hit(c.id,{source:"claw",hitKey:"claw",cooldown:.25,amount:p(h,this.rig.B),dir:a(n(c.pos,this.rig.petPos))})}}},h.grounded=function(i){var t=this.rig.ctx.tunables;this.touchingPet()?this.recover("pickup"):(this.elapsed+=i,this.elapsed+m>=t.get("throw.autoReturn")&&(this.phase="autoReturn",this.rig.setMainState("returning")))},h.autoReturn=function(i){if(this.inCatchRange())this.recover("auto");else{var t=this.rig.ctx.tunables,s=r(this.pos,this.rig.petPos);this.heading=a(n(this.rig.petPos,this.pos));var e=Math.min(s,t.get("throw.speed")*i);this.pos=this.rig.ctx.arena.clamp({x:this.pos.x+this.heading.x*e,y:this.pos.y+this.heading.y*e},this.radius),this.inCatchRange()&&this.recover("auto")}},h.touchingPet=function(){var i=this.rig.ctx.services;return i.has("player")&&r(this.pos,this.rig.petPos)<=i.get("player").radius+this.radius},h.inCatchRange=function(){return r(this.pos,this.rig.petPos)<=this.rig.ctx.tunables.get("throw.catchRadius")||this.touchingPet()},h.recover=function(i){this.rig.attachMain(),this.idle(),this.rig.ctx.events.emit("throw:recovered",{how:i})},h.idle=function(){this.phase="idle",this.pending=this.aim=null,this.elapsed=0},e(i,[{key:"snapshot",get:function(){var i=this.aim;return{phase:this.phase,pos:t({},this.pos),spin:this.spin,aim:i?{origin:t({},i.origin),dir:t({},i.dir),dist:i.dist}:null,groundedFlash:"grounded"===this.phase&&Math.floor(4*this.elapsed*2)%2==0}}},{key:"radius",get:function(){var i=this.rig.ctx.tunables;return(i.get("sword.bladeLenBase")+i.get("sword.bladeLenPerLg")*this.rig.Lg)/2}},{key:"combo",get:function(){var i=this.rig.ctx.services;return i.has("swordRig")?i.get("swordRig").combo:0}}]),i}());h._RF.pop()}}}));
+System.register("chunks:///_virtual/index4.ts", ['cc', './SystemOrder.ts', './LoopController.ts', './LoopParams.ts', './LoopView.ts'], function (exports) {
+  var cclegacy, SystemOrder, LoopController, registerLoopParams, mountLoopView;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      LoopController = module.LoopController;
+    }, function (module) {
+      registerLoopParams = module.registerLoopParams;
+    }, function (module) {
+      mountLoopView = module.mountLoopView;
+    }],
+    execute: function () {
+      exports('installLoop', installLoop);
+      cclegacy._RF.push({}, "b4a77gLg5xDiIrCkmxW4xmH", "index", undefined);
+      function installLoop(rig) {
+        registerLoopParams(rig.ctx.tunables);
+        var controller = new LoopController(rig);
+        controller.attach();
+        var draw = null;
+        rig.ctx.loop.addSystem({
+          id: 'sword.loop',
+          order: SystemOrder.Sword,
+          fixedUpdate: function fixedUpdate(dt) {
+            return controller.fixedUpdate(dt);
+          },
+          render: function render() {
+            if (!draw) draw = mountLoopView(controller);
+            draw == null || draw();
+          }
+        });
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/ThrowFormulas.ts",["cc","./Vec2.ts"],(function(t){var e,r,n,o;return{setters:[function(t){e=t.cclegacy},function(t){r=t.vDot,n=t.vNormalize,o=t.vLen}],execute:function(){function c(t,e){return Math.max(-1,Math.min(1,r(n(t),n(e))))}t({arcAmplitude:function(t,e,r){return t.get("throw.arcPerCv")*e*r},catchKind:function(t,e,r,n){var a=c(e,r),i=n>0?o(e)/n:0;return{cos:a,speedFrac:i,kind:a>=t.get("throw.perfectCos")&&i>=t.get("throw.perfectSpeedFrac")?"perfect":"normal"}},clawDamage:function(t,e){return e*t.get("throw.clawMul")},directionAngleDeg:function(t,e){var r=n(t),a=n(e);return 0===o(r)||0===o(a)?0:180*Math.acos(c(r,a))/Math.PI},directionCos:c,throwDamage:function(t,e,r,n){return e*(t.get("throw.dmgBase")+t.get("throw.dmgPerW")*r)*(1+t.get("throw.comboK")*n)},throwDistance:function(t,e,r){return Math.max(0,Math.min(t.get("throw.distBase")+t.get("throw.distPerVtip")*e,t.get("throw.distCap"))*(1-t.get("throw.distWeightK")*(r-2)))}}),e._RF.push({},"c68fe2Ym0NKmb6eDIj0F5dX","ThrowFormulas",void 0),e._RF.pop()}}}));
+System.register("chunks:///_virtual/index5.ts", ['cc', './TuningView.ts'], function (exports) {
+  var cclegacy, mountTuning;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      mountTuning = module.mountTuning;
+    }],
+    execute: function () {
+      exports('install', install);
+      cclegacy._RF.push({}, "c71b43zd+ZLC7aWcPJK4kG5", "index", undefined);
 
-System.register("chunks:///_virtual/ThrowParams.ts",["cc"],(function(r){var t;return{setters:[function(r){t=r.cclegacy}],execute:function(){function o(r,t,o,e,h){return{key:r,group:"掷剑",label:t,kind:"number",default:o,min:e,max:h}}function e(r,t){return{key:r,group:"掷剑",label:t,kind:"bool",default:1}}t._RF.push({},"b0d0eFSxxpK3pTAc8pBw6cE","ThrowParams",void 0);r("THROW_PARAMS",[e("mech.throw","掷剑机制开关"),o("throw.minMag","松手前最低摇杆幅度",.8,0,1),o("throw.minMagWindow","幅度检查窗口（s）",.15,0,.5),o("throw.confirmDelay","延迟确认（s）【默认·待试玩】",.12,0,.3),o("throw.dirWindow","方向平均窗口（s）",.1,0,.3),e("throw.aimLine","方向指示线"),o("throw.speed","飞行速度（u/s）",10,4,25),o("throw.distBase","飞出距离基数",2,0,5),o("throw.distPerVtip","每 u/s 剑尖速度",.4,0,1),o("throw.distCap","飞出距离上限（u）",7,2,12),o("throw.distWeightK","每点剑重（相对 2）距离变化",.1,0,.3),o("throw.arcPerCv","每点弧度的侧向偏移比例",.25,0,.6),o("throw.returnTurn","回程最大转向（°/s）",360,90,1080),o("throw.dmgBase","飞剑伤害系数",.8,0,3),o("throw.dmgPerW","飞剑伤害系数/W",.2,0,1),o("throw.comboK","每层连击加成",.25,0,1),o("throw.comboMax","连击上限",10,1,30),o("throw.catchRadius","接剑半径（u）",.7,.3,1.5),o("throw.perfectCos","完美接剑余弦门槛",.6,0,1),o("throw.perfectSpeedFrac","完美接剑最低速度比例",.5,0,1),o("throw.yujinMul","余劲加成",.3,0,1),o("throw.yujinDur","余劲时长（s）",3,0,10),o("throw.missPassDist","漏接判定距离（u）",1.5,.5,4),o("throw.autoReturn","漏接后自动飞回（s）",3,.5,10),o("throw.clawMul","空手爪击（× B）",.2,0,1)]);t._RF.pop()}}}));
+      /** Core installs this after gameplay modules have registered their parameters. */
+      function install(ctx) {
+        mountTuning(ctx);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/ThrowView.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(r){var o,n,e,i,t,a,s,l;return{setters:[function(r){o=r.inheritsLoose},function(r){n=r.cclegacy,e=r._decorator,i=r.Color,t=r.Graphics,a=r.Node,s=r.UITransform,l=r.Component}],execute:function(){var c;r("mountThrowView",(function(r,o){var n=r.ctx.layers.get("rig");if("function"!=typeof n.addChild)return null;var e=new a("SwordThrow");e.layer=n.layer,e.addComponent(s).setAnchorPoint(0,0),n.addChild(e);var i=e.addComponent(p);return i.bind(r,o),function(){return i.draw()}})),n._RF.push({},"2246eRdFOFAM6SMaUusyADX","ThrowView",void 0);var d=e.ccclass,h=new i(255,156,48),u=new i(165,175,190),y=new i(255,255,255),p=r("ThrowView",d("ThrowGreyboxView")(c=function(r){function n(){for(var o,n=arguments.length,e=new Array(n),i=0;i<n;i++)e[i]=arguments[i];return(o=r.call.apply(r,[this].concat(e))||this).rig=null,o.controller=null,o.graphics=null,o}o(n,r);var e=n.prototype;return e.bind=function(r,o){this.rig=r,this.controller=o,this.graphics=this.node.addComponent(t)},e.draw=function(){var r=this.rig,o=this.controller,n=this.graphics;if(r&&o&&n&&this.enabledInHierarchy){var e=o.snapshot,i=r.ctx.toPx,t=Math.abs(i({x:1,y:0}).x-i({x:0,y:0}).x);n.clear(),n.lineWidth=Math.max(1,.025*t),n.strokeColor=h;var a=e.aim;if(a){for(var s=0;s<a.dist;s+=.25){var l=Math.min(a.dist,s+.15),c=i({x:a.origin.x+a.dir.x*s,y:a.origin.y+a.dir.y*s}),d=i({x:a.origin.x+a.dir.x*l,y:a.origin.y+a.dir.y*l});n.moveTo(c.x,c.y),n.lineTo(d.x,d.y)}n.stroke()}if("idle"!==e.phase&&"pending"!==e.phase){var p=i(e.pos),x=r.ctx.tunables,g=(x.get("sword.bladeLenBase")+x.get("sword.bladeLenPerLg")*r.Lg)/2*t,w=Math.cos(e.spin)*g,f=Math.sin(e.spin)*g;n.strokeColor=e.groundedFlash?y:u,n.moveTo(p.x-w,p.y-f),n.lineTo(p.x+w,p.y+f),n.moveTo(p.x+f,p.y-w),n.lineTo(p.x-f,p.y+w),e.groundedFlash&&n.circle(p.x,p.y,g),n.stroke()}}},n}(l))||c);n._RF.pop()}}}));
+System.register("chunks:///_virtual/index6.ts", ['cc', './SystemOrder.ts', './SwordRig.ts', './SwordParams.ts', './index.ts', './index4.ts', './SwordView.ts'], function (exports) {
+  var cclegacy, SystemOrder, SwordRig, SWORD_PARAMS, installThrow, installLoop, mountSwordView;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      SwordRig = module.SwordRig;
+    }, function (module) {
+      SWORD_PARAMS = module.SWORD_PARAMS;
+    }, function (module) {
+      installThrow = module.installThrow;
+    }, function (module) {
+      installLoop = module.installLoop;
+    }, function (module) {
+      mountSwordView = module.mountSwordView;
+    }],
+    execute: function () {
+      exports('install', install);
+      cclegacy._RF.push({}, "d3d8ekPleNKubDgcXeZKpqc", "index", undefined);
+      function install(ctx) {
+        ctx.tunables.define(SWORD_PARAMS);
+        var rig = new SwordRig(ctx);
+        ctx.services.provide('player', rig.pet);
+        ctx.services.provide('swordRig', rig);
+        rig.attach();
+        var draw = null;
+        ctx.loop.addSystem({
+          id: 'sword.pet',
+          order: SystemOrder.Pet,
+          fixedUpdate: function fixedUpdate(dt) {
+            return rig.stepPet(dt);
+          }
+        });
+        ctx.loop.addSystem({
+          id: 'sword.rig',
+          order: SystemOrder.Sword,
+          fixedUpdate: function fixedUpdate(dt) {
+            return rig.fixedUpdate(dt);
+          },
+          render: function render() {
+            if (!draw) draw = mountSwordView(rig);
+            draw == null || draw();
+          }
+        });
+        // Same-order systems registered by extensions follow rope, drag/whip and chain.
+        installThrow(rig);
+        installLoop(rig);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Tunables.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var t,n;return{setters:[function(e){t=e.createForOfIteratorHelperLoose},function(e){n=e.cclegacy}],execute:function(){e("hashValues",s),n._RF.push({},"97245/G1A1BSKOC8+qwlLjh","Tunables",void 0);var r=/^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;e("Tunables",function(){function e(e){this.defs=new Map,this.values=new Map,this.order=[],this.aliases=new Map,this.listeners=new Map,this.anyListeners=new Set,this.emit=void 0,this.emit=e}var n=e.prototype;return n.registerAlias=function(e,t){if(!e||!t)throw new Error("tunable alias needs both keys");this.aliases.set(e,t)},n.define=function(e){for(var n,r=t(e);!(n=r()).done;){var s=a(i(n.value)),o=this.defs.get(s.key);if(this.defs.set(s.key,s),o){var u;console.warn('[tunables] redefining "'+s.key+'"');var l=null!=(u=this.values.get(s.key))?u:s.default;this.values.set(s.key,this.clamp(s,l))}else this.order.push(s.key),this.values.set(s.key,this.clamp(s,s.default))}},n.has=function(e){return this.defs.has(e)},n.get=function(e){var t;if(!this.defs.has(e))throw new Error("Unknown tunable: "+e);return null!=(t=this.values.get(e))?t:0},n.getBool=function(e){return 0!==this.get(e)},n.set=function(e,t){var n,r=this.defs.get(e);if(!r)throw new Error("Unknown tunable: "+e);var s=null!=(n=this.values.get(e))?n:r.default,i=this.clamp(r,t);i!==s&&(this.values.set(e,i),this.emitChange(e,s,i))},n.onChange=function(e,t){var n=this;if("*"===e)return this.anyListeners.add(t),function(){n.anyListeners.delete(t)};var r=this.listeners.get(e);return r||(r=new Set,this.listeners.set(e,r)),r.add(t),function(){r.delete(t)}},n.all=function(){for(var e,n=[],r=t(this.order);!(e=r()).done;){var s=e.value,i=this.defs.get(s);i&&n.push(a(i))}return n},n.snapshot=function(){for(var e,n={},r=t(this.order);!(e=r()).done;){var s,i=e.value;n[i]=null!=(s=this.values.get(i))?s:0}return n},n.load=function(e){for(var t=0,n=Object.keys(e);t<n.length;t++){var r,s=n[t],i=e[s],a=null!=(r=this.aliases.get(s))?r:s;this.defs.has(a)?this.set(a,i):console.warn('[tunables] ignoring unknown key "'+s+'"')}},n.hash=function(){return s(this.snapshot())},n.resetAll=function(){for(var e,n=t(this.order);!(e=n()).done;){var r=e.value,s=this.defs.get(r);s&&this.set(r,s.default)}},n.clamp=function(e,t){var n=t;if(Number.isFinite(n)||(n=e.default),"bool"===e.kind)return n>=.5?1:0;if("enum"===e.kind){var r,s,i=Math.max(0,(null!=(r=null==(s=e.options)?void 0:s.length)?r:1)-1),a=Math.round(n);return a<0?0:a>i?i:a}return void 0!==e.min&&(n=Math.max(e.min,n)),void 0!==e.max&&(n=Math.min(e.max,n)),n},n.emitChange=function(e,t,n){var r;null==(r=this.emit)||r.call(this,e,t,n);var s=this.listeners.get(e);if(s)for(var i=0,a=Array.from(s);i<a.length;i++){(0,a[i])(e,n)}for(var o=0,u=Array.from(this.anyListeners);o<u.length;o++){(0,u[o])(e,n)}},e}());function s(e){for(var n,r=Object.keys(e).sort(),s=2166136261,i=function(e){for(var t=0;t<e.length;t++)s^=e.charCodeAt(t),s=Math.imul(s,16777619)},a=t(r);!(n=a()).done;){var o=n.value;i(o),i("="),i(String(e[o])),i(";")}for(var u=(s>>>0).toString(16);u.length<8;)u="0"+u;return u}function i(e){if(!r.test(e.key))throw new Error('Tunable key "'+e.key+'" must look like "module.name"');if("number"!==e.kind&&"bool"!==e.kind&&"enum"!==e.kind)throw new Error('Tunable "'+e.key+'" has unknown kind');if(!Number.isFinite(e.default))throw new Error('Tunable "'+e.key+'" default must be finite');if("enum"===e.kind&&(!e.options||0===e.options.length))throw new Error('Enum tunable "'+e.key+'" needs options');return e}function a(e){return{key:e.key,group:e.group,label:e.label,kind:e.kind,default:e.default,min:e.min,max:e.max,step:e.step,options:e.options?e.options.slice():void 0,restart:e.restart,note:e.note}}n._RF.pop()}}}));
+System.register("chunks:///_virtual/index7.ts", ['cc', './Vec2.ts', './Geom2.ts', './SpatialHash.ts', './events.ts', './TypedEventBus.ts', './Tunables.ts', './Rng.ts', './SystemOrder.ts', './FixedLoop.ts', './StepProbe.ts', './Session.ts', './SessionWatch.ts', './Arena.ts', './ScreenLayout.ts', './Layers.ts', './ServiceRegistry.ts', './FxDriver.ts', './DebugInputSource.ts', './Modules.ts', './App.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      var _setter = {};
+      _setter.vAdd = module.vAdd;
+      _setter.vCopy = module.vCopy;
+      _setter.vDist = module.vDist;
+      _setter.vDistSq = module.vDistSq;
+      _setter.vDot = module.vDot;
+      _setter.vLen = module.vLen;
+      _setter.vLenSq = module.vLenSq;
+      _setter.vLerp = module.vLerp;
+      _setter.vNormalize = module.vNormalize;
+      _setter.vScale = module.vScale;
+      _setter.vSet = module.vSet;
+      _setter.vSub = module.vSub;
+      _setter.vec2 = module.vec2;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.circleIntersectsSegment = module.circleIntersectsSegment;
+      _setter.pointSegmentDistance = module.pointSegmentDistance;
+      _setter.segmentIntersection = module.segmentIntersection;
+      exports(_setter);
+    }, function (module) {
+      exports('SpatialHash', module.SpatialHash);
+    }, function (module) {
+      exports('GameEvent', module.GameEvent);
+    }, function (module) {
+      exports('TypedEventBus', module.TypedEventBus);
+    }, function (module) {
+      var _setter = {};
+      _setter.Tunables = module.Tunables;
+      _setter.hashValues = module.hashValues;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.RngStream = module.RngStream;
+      _setter.createSessionRng = module.createSessionRng;
+      _setter.deriveStreamSeed = module.deriveStreamSeed;
+      _setter.mulberry32 = module.mulberry32;
+      exports(_setter);
+    }, function (module) {
+      exports('SystemOrder', module.SystemOrder);
+    }, function (module) {
+      var _setter = {};
+      _setter.FIXED_DT = module.FIXED_DT;
+      _setter.FIXED_HZ = module.FIXED_HZ;
+      _setter.FixedLoop = module.FixedLoop;
+      _setter.MAX_STEPS_PER_FRAME = module.MAX_STEPS_PER_FRAME;
+      exports(_setter);
+    }, function (module) {
+      exports('StepProbe', module.StepProbe);
+    }, function (module) {
+      var _setter = {};
+      _setter.Session = module.Session;
+      _setter.nextSessionId = module.nextSessionId;
+      exports(_setter);
+    }, function (module) {
+      exports('createSessionWatch', module.createSessionWatch);
+    }, function (module) {
+      var _setter = {};
+      _setter.ARENA_HEIGHT = module.ARENA_HEIGHT;
+      _setter.ARENA_WIDTH = module.ARENA_WIDTH;
+      _setter.arenaClamp = module.arenaClamp;
+      _setter.arenaContains = module.arenaContains;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.DESIGN_HEIGHT = module.DESIGN_HEIGHT;
+      _setter.DESIGN_WIDTH = module.DESIGN_WIDTH;
+      _setter.UNIT_PX = module.UNIT_PX;
+      _setter.arenaToPx = module.arenaToPx;
+      _setter.intersectRect = module.intersectRect;
+      _setter.layoutScreen = module.layoutScreen;
+      _setter.rectInside = module.rectInside;
+      exports(_setter);
+    }, function (module) {
+      exports('LAYER_NAMES', module.LAYER_NAMES);
+    }, function (module) {
+      exports('ServiceRegistry', module.ServiceRegistry);
+    }, function (module) {
+      exports('FxDriver', module.FxDriver);
+    }, function (module) {
+      var _setter = {};
+      _setter.DebugInputSource = module.DebugInputSource;
+      _setter.INPUT_HISTORY_SECONDS = module.INPUT_HISTORY_SECONDS;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.installModules = module.installModules;
+      _setter.moduleInstalls = module.moduleInstalls;
+      exports(_setter);
+    }, function (module) {
+      exports('createApp', module.createApp);
+    }, function (module) {
+      exports('CoreArenaView', module.CoreArenaView);
+    }, function (module) {
+      exports('CoreBootstrap', module.CoreBootstrap);
+    }, function (module) {
+      exports('CoreDebugInput', module.CoreDebugInput);
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "dd841DFjSxDAKu5MeMvO3wE", "index", undefined);
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/TuningController.ts",["cc","./SystemOrder.ts","./Presets.ts","./Storage.ts","./Telemetry.ts","./TuningParams.ts"],(function(t){var e,i,n,s,r,c;return{setters:[function(t){e=t.cclegacy},function(t){i=t.SystemOrder},function(t){n=t.Presets},function(t){s=t.StoredJson},function(t){r=t.Telemetry},function(t){c=t.TUNING_PARAMS}],execute:function(){e._RF.push({},"3bd53zk7XBMeoB/OIxWFZWC","TuningController",void 0);t("TuningController",function(){function t(t,e){void 0===e&&(e=null),this.id="tuning",this.order=i.Tuning,this.ctx=void 0,this.presets=void 0,this.telemetry=void 0,this.active=!1,this.draw=null,this.ctx=t,t.tunables.define(c),this.presets=new n(t.tunables,new s(e)),this.telemetry=new r(t,new s(e))}var e=t.prototype;return e.attach=function(){this.active||(this.active=!0,this.telemetry.attach())},e.detach=function(){this.active&&(this.active=!1,this.telemetry.detach())},e.setView=function(t){this.draw=t},e.fixedUpdate=function(t){this.active&&this.telemetry.fixedUpdate(t)},e.render=function(){var t;this.active&&(null==(t=this.draw)||t.call(this))},e.command=function(t,e){"restart"===t&&this.telemetry.expectDebugRestart(),this.ctx.events.emit("debug:command",void 0===e?{cmd:t}:{cmd:t,arg:e})},e.quit=function(){this.telemetry.resultChoice("quit")},e.retry=function(){this.telemetry.result&&(this.telemetry.resultChoice("again"),this.telemetry.expectNormalRetry(),this.ctx.session.restart())},t}());e._RF.pop()}}}));
+System.register("chunks:///_virtual/InputHistory.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './InputParams.ts'], function (exports) {
+  var _extends, _createForOfIteratorHelperLoose, cclegacy, HISTORY_SECONDS, INPUT_DEFAULTS;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      HISTORY_SECONDS = module.HISTORY_SECONDS;
+      INPUT_DEFAULTS = module.INPUT_DEFAULTS;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "53ff65b7iFMfYgWnkFK5+YA", "InputHistory", undefined);
 
-System.register("chunks:///_virtual/TuningParams.ts",["cc"],(function(e){var n;return{setters:[function(e){n=e.cclegacy}],execute:function(){n._RF.push({},"9f593JvbMhHP7a9oWzfGdyU","TuningParams",void 0);e("P0_RULES",{damageWindow:30,fpsWindow:5,samplePeriod:10,damagePeriod:1,retainedSessions:30,timeDigits:2,hashLength:6,throwJoyMin:.5,throwDropMax:.3,chainShortcuts:[0,8,16],sheepShortcut:20}),e("TIME_EPSILON",1e-8),e("TUNING_PARAMS",[{key:"tuning.hud",group:"调试",label:"调试 HUD",kind:"bool",default:1},{key:"tuning.refresh",group:"调试",label:"界面刷新间隔",kind:"number",default:.1,min:0,max:1,step:.01},{key:"tuning.pageRows",group:"调试",label:"每页参数行数",kind:"number",default:6,min:1,max:6,step:1},{key:"tuning.chainArg",group:"调试",label:"调试链剑数",kind:"number",default:10,min:0,max:36,step:1},{key:"tuning.speedArg",group:"调试",label:"调试剑尖速度",kind:"number",default:25,min:0,max:100,step:.1},{key:"tuning.spawnKind",group:"调试",label:"调试刷怪种类",kind:"enum",default:0,options:["blob","sheep","boar"]},{key:"tuning.spawnCount",group:"调试",label:"调试刷怪数量",kind:"number",default:1,min:1,max:80,step:1}]);n._RF.pop()}}}));
+      /** Plain snapshots only; neither pointer events nor consumers can mutate history. */
+      var InputHistory = exports('InputHistory', /*#__PURE__*/function () {
+        function InputHistory() {
+          this.samples = [];
+          this.directionEpsilon = INPUT_DEFAULTS.directionEpsilon;
+        }
+        var _proto = InputHistory.prototype;
+        _proto.setDirectionEpsilon = function setDirectionEpsilon(value) {
+          this.directionEpsilon = value;
+        };
+        _proto.record = function record(frame) {
+          var last = this.samples[this.samples.length - 1];
+          if (last && frame.time < last.time) this.clear();
+          var row = _extends({}, frame, {
+            dir: _extends({}, frame.dir)
+          });
+          var tail = this.samples[this.samples.length - 1];
+          // Hit-stop samples the same simulation instant repeatedly, without growing history.
+          if (tail && tail.time === frame.time) this.samples[this.samples.length - 1] = row;else this.samples.push(row);
+          var cutoff = frame.time - HISTORY_SECONDS;
+          while (this.samples.length > 0 && this.samples[0].time < cutoff) this.samples.shift();
+        };
+        _proto.clear = function clear() {
+          this.samples.length = 0;
+        };
+        _proto.avgDir = function avgDir(windowS, endTime) {
+          var x = 0;
+          var y = 0;
+          for (var _iterator = _createForOfIteratorHelperLoose(this.windowRows(windowS, endTime)), _step; !(_step = _iterator()).done;) {
+            var row = _step.value;
+            x += row.dir.x;
+            y += row.dir.y;
+          }
+          // P0 §4.2: normalized average; equal sample weights follow core's DebugInputSource.
+          var length = Math.hypot(x, y);
+          return length <= this.directionEpsilon ? {
+            x: 0,
+            y: 0
+          } : {
+            x: x / length,
+            y: y / length
+          };
+        };
+        _proto.minMag = function minMag(windowS, endTime) {
+          var rows = this.windowRows(windowS, endTime);
+          if (rows.length === 0) return 0;
+          var min = 1;
+          for (var _iterator2 = _createForOfIteratorHelperLoose(rows), _step2; !(_step2 = _iterator2()).done;) {
+            var row = _step2.value;
+            min = Math.min(min, row.mag);
+          }
+          return min;
+        };
+        _proto.magDrop = function magDrop(windowS, endTime) {
+          // P0 §4.2: window peak minus endpoint magnitude, without clamping the result.
+          var rows = this.windowRows(windowS, endTime);
+          if (rows.length === 0) return 0;
+          var peak = 0;
+          for (var _iterator3 = _createForOfIteratorHelperLoose(rows), _step3; !(_step3 = _iterator3()).done;) {
+            var _row = _step3.value;
+            peak = Math.max(peak, _row.mag);
+          }
+          for (var i = this.samples.length - 1; i >= 0; i--) {
+            var row = this.samples[i];
+            if (row.time <= endTime) return peak - row.mag;
+          }
+          return 0;
+        };
+        _proto.windowRows = function windowRows(windowS, endTime) {
+          if (!(windowS > 0) || !Number.isFinite(windowS) || !Number.isFinite(endTime)) return [];
+          var start = endTime - Math.min(windowS, HISTORY_SECONDS);
+          // P0 §6.1 retains 0.5s; follow core's held-only, end-exclusive query convention.
+          return this.samples.filter(function (row) {
+            return row.touching && row.time >= start && row.time < endTime;
+          });
+        };
+        return InputHistory;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/TuningView.ts",["./rollupPluginModLoBabelHelpers.js","cc","./Hud.ts","./Presets.ts","./Telemetry.ts","./TuningParams.ts","./ScreenLayout.ts","./TuningController.ts","./Widgets.ts"],(function(t){var e,n,i,s,r,o,a,l,h,u,c,d,p,g,f,v,m,b,y,w,R,S,x,T,k,N,L;return{setters:[function(t){e=t.inheritsLoose,n=t.createForOfIteratorHelperLoose},function(t){i=t.cclegacy,s=t._decorator,r=t.sys,o=t.view,a=t.screen,l=t.EditBox,h=t.Label,u=t.Component,c=t.Color,d=t.BlockInputEvents},function(t){p=t.readHud},function(t){g=t.applyPlayMode,f=t.parameterGroups},function(t){v=t.groupedDamage,m=t.DAMAGE_GROUPS,b=t.DAMAGE_SOURCES},function(t){y=t.P0_RULES},function(t){w=t.layoutScreen},function(t){R=t.TuningController},function(t){S=t.edit,x=t.exportText,T=t.label,k=t.slider,N=t.button,L=t.box}],execute:function(){t("mountTuning",(function(t){var e=new R(t,r.localStorage);t.loop.addSystem(e);var n=t.layers.get("debug");if("function"!=typeof n.addChild)return e.attach(),e;return new E(e,n,t.layers.get("hud")).enable(),e})),i._RF.push({},"e0168dBxFFD/plfyryTv3uz","TuningView",void 0);var D=t("TuningLifecycle",function(t){function n(){for(var e,n=arguments.length,i=new Array(n),s=0;s<n;s++)i[s]=arguments[s];return(e=t.call.apply(t,[this].concat(i))||this).owner=null,e}e(n,t);var i=n.prototype;return i.update=function(t){var e;null==(e=this.owner)||e.controller.telemetry.frame(t)},i.onEnable=function(){var t;null==(t=this.owner)||t.enable()},i.onDisable=function(){var t;null==(t=this.owner)||t.disable()},i.onDestroy=function(){var t;null==(t=this.owner)||t.destroy(),this.owner=null},n}(u));s.ccclass("TuningLifecycle")(D);var E=t("TuningView",function(){function t(t,e,n){var i=this;this.controller=void 0,this.root=void 0,this.hudRoot=void 0,this.panel=void 0,this.rowsRoot=void 0,this.resultRoot=void 0,this.transferRoot=void 0,this.hudLabel=void 0,this.damageLabel=void 0,this.statusLabel=void 0,this.pageLabel=void 0,this.barRoot=void 0,this.bars=[],this.recentBars=[],this.gear=void 0,this.debugEnabled="undefined"==typeof DEBUG_TUNING||DEBUG_TUNING,this.tipFill=void 0,this.tipTicks=[],this.tipLabel=void 0,this.sliders=new Map,this.commandFields=new Map,this.values=new Map,this.editing=new Set,this.captions=new Map,this.collapsed=new Set,this.presetName=null,this.transfer=null,this.search="",this.page=0,this.registrySignature="",this.lastResult="",this.dismissedResult="",this.status="",this.enabled=!1,this.destroyed=!1,this.renderTime=0,this.flush=function(){i.controller.telemetry.flush()},this.controller=t,this.root=L(e,"Tuning",0,0,0,0),this.hudRoot=L(n,"TuningHUD",0,0,0,0),this.hudLabel=T(this.hudRoot,"",-30,23,600,50,10),this.hudLabel&&(this.hudLabel.lineHeight=11),this.damageLabel=T(this.hudRoot,"",0,-42,670,16,9),this.barRoot=L(this.hudRoot,"DamageShare",0,-20,0,0);var s=L(this.hudRoot,"TipSpeed",-230,-5,200,6,new c(48,69,92));this.tipFill=L(s,"SpeedFill",0,0,1,6,new c(230,150,70));for(var r=0,o=["vDead","vRef","fullCharge"];r<o.length;r++){var a=o[r];this.tipTicks.push(L(s,a,0,0,1,10,new c(240,240,240)))}this.tipLabel=T(this.hudRoot,"",100,-5,440,16,10);for(var l=0;l<m.length;l++)this.bars.push(L(this.barRoot,m[l],0,0,1,8,new c(70+19*l,190-11*l,100+16*l)));for(var h=0;h<m.length;h++)this.recentBars.push(L(this.barRoot,"Recent"+m[h],0,-12,1,8,new c(70+19*h,190-11*h,100+16*h)));this.gear=N(this.root,"⚙",310,590,60,(function(){return i.togglePanel()})),this.gear.active=this.debugEnabled,this.panel=L(this.root,"TuningPanel",0,-30,690,1110,new c(27,35,48,253)),this.panel.addComponent(d),T(this.panel,"调参 / 试玩",-140,510,350,40,28),N(this.panel,"关闭",275,510,100,(function(){return i.togglePanel()})),S(this.panel,"","搜索参数、分组、说明",0,450,640,(function(t){i.search=t,i.page=0,i.rebuildRows()}),44,!1,!0),N(this.panel,"只开拖剑",-165,394,310,(function(){return i.playMode(!1)})),N(this.panel,"全部机制",165,394,310,(function(){return i.playMode(!0)})),this.presetName=S(this.panel,"","预设名",-210,338,220,(function(){})),N(this.panel,"保存",-30,338,110,(function(){return i.action((function(){var e,n;return t.presets.save(null!=(e=null==(n=i.presetName)?void 0:n.string)?e:"")?"预设已保存；刷新后可加载":t.presets.store.error}))})),N(this.panel,"加载",95,338,110,(function(){return i.action((function(){var e,n,s=t.presets.load(null!=(e=null==(n=i.presetName)?void 0:n.string)?e:"");return i.rebuildRows(),s}))})),N(this.panel,"切换",220,338,110,(function(){var e=t.presets.names();if(i.presetName&&0!==e.length){var n=e.indexOf(i.presetName.string);i.presetName.string=e[(n+1)%e.length],i.status="预设 "+(n+2>e.length?1:n+2)+"/"+e.length+"；点加载应用"}else i.status="暂无已保存预设"})),N(this.panel,"导出 JSON",-215,282,200,(function(){return i.showTransfer(t.presets.exportJson(),!1)})),N(this.panel,"导入 JSON",0,282,200,(function(){return i.showTransfer("",!0)})),N(this.panel,"导出埋点",215,282,200,(function(){return i.showTransfer(t.telemetry.exportJsonLines(),!1,!0)})),N(this.panel,"调试重开",-215,226,200,(function(){return t.command("restart")})),N(this.panel,"填满剑意",0,226,200,(function(){return t.command("fillJianyi")})),N(this.panel,"清空敌人",215,226,200,(function(){return t.command("clearEnemies")})),this.commandField("tuning.chainArg","链剑数",-265),N(this.panel,"设链剑",-140,170,130,(function(){return i.numericCommand("setChain",String(t.ctx.tunables.get("tuning.chainArg")))})),this.commandField("tuning.speedArg","剑尖速度",65),N(this.panel,"设速度",205,170,150,(function(){return i.numericCommand("forceVtip",String(t.ctx.tunables.get("tuning.speedArg")))})),N(this.panel,"刷怪种类",-215,114,200,(function(){var e=t.ctx.tunables;e.set("tuning.spawnKind",(e.get("tuning.spawnKind")+1)%3),i.status="刷怪种类："+["blob","sheep","boar"][e.get("tuning.spawnKind")]})),N(this.panel,"生成怪物",0,114,200,(function(){return t.command("spawn",["blob","sheep","boar"][t.ctx.tunables.get("tuning.spawnKind")]+" "+Math.floor(t.ctx.tunables.get("tuning.spawnCount")))})),N(this.panel,"恢复默认",215,114,200,(function(){t.ctx.tunables.resetAll(),i.status="已恢复默认；标 * 项需重开",i.rebuildRows()})),N(this.panel,"删除预设",-240,64,150,(function(){return i.action((function(){var e,n;return t.presets.delete(null!=(e=null==(n=i.presetName)?void 0:n.string)?e:"")?"预设已删除":t.presets.store.error}))})),N(this.panel,"清空埋点",-80,64,150,(function(){t.telemetry.clear(),i.status="埋点已清空；下局重新记录"})),N(this.panel,"刷20只羊",80,64,150,(function(){return t.command("spawn","sheep "+y.sheepShortcut)}));for(var u=function(){var e=y.chainShortcuts[p];N(i.panel,"N="+e,190+52*p,64,48,(function(){return t.command("setChain",String(e))}))},p=0;p<y.chainShortcuts.length;p++)u();this.rowsRoot=L(this.panel,"Parameters",0,0,0,0),N(this.panel,"上一页",-215,-410,190,(function(){i.page-=1,i.rebuildRows()})),N(this.panel,"下一页",215,-410,190,(function(){i.page+=1,i.rebuildRows()})),this.pageLabel=T(this.panel,"",0,-410,220),this.statusLabel=T(this.panel,"",0,-492,640,100,18),this.transferRoot=L(this.panel,"JsonTransfer",0,-150,670,740,new c(27,35,48)),T(this.transferRoot,"JSON 传输 · 可选择复制 / 粘贴",0,320,620),this.transfer=S(this.transferRoot,"","粘贴完整 JSON",0,30,620,(function(){}),510,!0),N(this.transferRoot,"应用导入",-160,-300,280,(function(){return i.action((function(){var e,n,s=t.presets.importJson(null!=(e=null==(n=i.transfer)?void 0:n.string)?e:"");return i.transferRoot.active=!1,i.rebuildRows(),s}))})),N(this.transferRoot,"返回",160,-300,280,(function(){i.transferRoot.active=!1})),this.transferRoot.active=!1,this.resultRoot=L(this.root,"Result",0,0,680,840,new c(27,35,48,253)),this.resultRoot.addComponent(d),this.resultRoot.active=!1,this.panel.active=!1;var g=this.root.addComponent(D);g&&(g.owner=this),this.rebuildRows(),this.resize()}var e=t.prototype;return e.enable=function(){var t=this;this.enabled||this.destroyed||(this.enabled=!0,this.hudRoot.active=!0,this.controller.attach(),this.controller.setView((function(){return t.render()})),o.on("canvas-resize",this.resize,this),"undefined"!=typeof window&&window.addEventListener("pagehide",this.flush),this.resize())},e.disable=function(){this.enabled&&(this.enabled=!1,o.off("canvas-resize",this.resize,this),"undefined"!=typeof window&&window.removeEventListener("pagehide",this.flush),this.controller.detach(),this.controller.setView(null),this.hudRoot.active=!1)},e.destroy=function(){this.destroyed||(this.disable(),this.destroyed=!0,this.hudRoot.destroy())},e.resize=function(){var t=o.getVisibleSize(),e=Math.min(t.width/720,t.height/1280);this.root.setScale(e,e,1),this.hudRoot.setScale(e,e,1);var n=r.getSafeAreaRect(),i=a.windowSize,s=i.width>0?t.width/i.width:1,l=i.height>0?t.height/i.height:1,h=w(t.width,t.height,{x:n.x*s,y:n.y*l,width:n.width*s,height:n.height*l}).hud;this.gear.setScale(Math.max(1,44/(60*e)),Math.max(1,44/(44*e)),1),this.hudRoot.setPosition(h.x+h.width/2-t.width/2,h.y+h.height/2-t.height/2,0),this.gear.setPosition((h.x+h.width-30-t.width/2)/e,(h.y+h.height/2-t.height/2)/e,0)},e.togglePanel=function(){this.panel.active=!this.panel.active,this.panel.active?(this.resultRoot.active=!1,this.rebuildRows()):this.controller.telemetry.result&&this.controller.telemetry.result.sid!==this.dismissedResult&&(this.resultRoot.active=!0)},e.action=function(t){try{this.status=t()}catch(t){this.status=t instanceof Error?t.message:"操作失败"}},e.commandField=function(t,e,n){var i=this,s=S(this.panel,String(this.controller.ctx.tunables.get(t)),e,n,170,105,(function(e){return i.setCommandArg(t,e)}));s&&(this.commandFields.set(t,s),s.node.on(l.EventType.EDITING_DID_BEGAN,(function(){return i.editing.add(t)})),s.node.on(l.EventType.EDITING_DID_ENDED,(function(){return i.editing.delete(t)})))},e.setCommandArg=function(t,e){var n=Number(e);!e.trim()||!Number.isFinite(n)||n<0?this.status="请输入非负有限数值":this.controller.ctx.tunables.set(t,"tuning.chainArg"===t?Math.floor(n):n)},e.numericCommand=function(t,e){var n=Number(e);!e.trim()||!Number.isFinite(n)||n<0?this.status="请输入非负有限数值":this.controller.command(t,String("setChain"===t?Math.floor(n):n))},e.playMode=function(t){var e=g(this.controller.ctx.tunables,t);this.status=e.length>0?"已切换 "+e.length+" 个机制开关；标 * 项需重开":"玩法模块尚未注册 mech.chain / mech.throw / mech.loop",this.rebuildRows()},e.showTransfer=function(t,e,n){var i=this;void 0===n&&(n=!1),this.transferRoot.active=!0,this.transfer&&(this.transfer.string=t),e?this.status="粘贴完整 JSON 后点应用导入":x(t,n?"p0_telemetry_"+(new Date).toISOString().slice(0,10)+".jsonl":"preset.json",n?"application/x-ndjson":"application/json").then((function(t){i.status=t}))},e.rebuildRows=function(){for(var t=this,e=0,i=[].concat(this.rowsRoot.children);e<i.length;e++){var s=i[e];s.removeFromParent(),s.destroy()}this.values.clear(),this.sliders.clear(),this.editing.clear(),this.captions.clear();for(var r,o=[],a=f(this.controller.ctx.tunables,this.search,this.collapsed),l=n(a);!(r=l()).done;){var h=r.value;if(o.push({group:h.name,collapsed:h.collapsed}),!h.collapsed)for(var u,c=n(h.defs);!(u=c()).done;){var d=u.value;o.push({def:d})}}var p=Math.floor(this.controller.ctx.tunables.get("tuning.pageRows")),g=Math.max(1,Math.ceil(o.length/p));this.page=Math.max(0,Math.min(g-1,this.page)),this.pageLabel&&(this.pageLabel.string=this.page+1+" / "+g);for(var v=function(){var e=o[t.page*p+m];if(!e)return 1;var n=10-m*(408/p);"group"in e?N(t.rowsRoot,(e.collapsed?"▸":"▾")+" "+e.group,0,n,640,(function(){t.collapsed.has(e.group)?t.collapsed.delete(e.group):t.collapsed.add(e.group),t.rebuildRows()})):t.parameter(e.def,n)},m=0;m<p&&!v();m++);0===o.length&&T(this.rowsRoot,"没有匹配的参数",0,-100,640)},e.parameter=function(t,e){var n,i,s,r=this,o=this.controller.ctx.tunables,a=o.get(t.key);T(this.rowsRoot,t.label+(t.restart?" 重开生效":""),-175,e+11,285,28,19);var u="number"===t.kind?" ["+(null!=(n=t.min)?n:"—")+", "+(null!=(i=t.max)?i:"—")+"]":"";if(T(this.rowsRoot,""+t.key+u+" "+(null!=(s=t.note)?s:""),-175,e-19,285,27,13),"number"===t.kind){var c=S(this.rowsRoot,String(a),t.label,125,e+10,145,(function(e){var n=Number(e);e.trim()&&Number.isFinite(n)?o.set(t.key,n):r.status="请输入有限数字",c&&(c.string=String(o.get(t.key)))}),28);if(c&&(this.values.set(t.key,c),c.node.on(l.EventType.EDITING_DID_BEGAN,(function(){return r.editing.add(t.key)})),c.node.on(l.EventType.EDITING_DID_ENDED,(function(){return r.editing.delete(t.key)}))),void 0!==t.min&&void 0!==t.max&&t.max>t.min){var d=t.min,p=t.max,g=k(this.rowsRoot,"Slider:"+t.key,125,e-18,145,(a-d)/(p-d),(function(e){var n=d+e*(p-d);o.set(t.key,t.step?d+Math.round((n-d)/t.step)*t.step:n)}));g&&this.sliders.set(t.key,g)}N(this.rowsRoot,"默认",270,e,84,(function(){return o.set(t.key,t.default)}))}else if("bool"===t.kind){var f,v=null==(f=N(this.rowsRoot,"",180,e,260,(function(){return o.set(t.key,1-o.get(t.key))})).children.find((function(t){return null!==t.getComponent(h)})))?void 0:f.getComponent(h);v&&this.captions.set(t.key,v)}else for(var m,b=null!=(m=t.options)?m:[],y=260/Math.max(1,b.length),w=function(n){var i,s=null==(i=N(r.rowsRoot,b[n],50+y*(n+.5),e,y,(function(){o.set(t.key,n),r.rebuildRows()})).children.find((function(t){return null!==t.getComponent(h)})))?void 0:i.getComponent(h);s&&r.captions.set(t.key+":"+n,s)},R=0;R<b.length;R++)w(R)},e.render=function(){var t,e,i=this,s=Date.now();if(!(s-this.renderTime<1e3*this.controller.ctx.tunables.get("tuning.refresh"))){this.renderTime=s;var r=this.controller.ctx,o=p(r),a=this.controller.telemetry.fps(),l=function(t){return null===t?"—":String("number"==typeof t?Math.round(100*t)/100:t)};this.hudRoot.active=this.debugEnabled&&r.tunables.getBool("tuning.hud")&&!this.panel.active&&!this.resultRoot.active,this.hudLabel&&(this.hudLabel.string=["seed "+o.seed+" · #"+o.paramsHash+" · "+(this.controller.telemetry.debugRestart?"调试局（不计统计）":"正常局"),"FPS "+l(a.fpsAvg)+" / 5s低 "+l(a.fpsMin)+" · 时间 "+l(o.elapsed)+"  危险 "+l(o.danger)+"  敌人 "+l(o.alive)+"  HP "+l(o.hp)+"/"+l(o.maxHp),"vTip "+l(o.vTip)+" 满充 "+l(o.fullCharge)+"  N "+l(o.N)+" 槽 "+l(o.slots)+" 绳 "+l(o.ropeLength),"剑意 "+l(o.jianyi)+"  连击 "+l(o.combo)+"  墨量 "+l(o.ink)+"  剑阵剩余 "+l(o.arrayRemaining)].join("\n"));var h=[o.vDead,o.vRef,o.fullChargeSpeed],u=Math.max.apply(null,[null!=(t=o.vTip)?t:0].concat(h.map((function(t){return null!=t?t:0})))),c=u>0?200*(null!=(e=o.vTip)?e:0)/u:0;this.tipFill.active=c>0,this.tipFill.setScale(c,1,1),this.tipFill.setPosition(c/2-100,0,0);for(var d=0;d<h.length;d++){var g=this.tipTicks[d],f=h[d];g&&(g.active=null!==f&&u>0,g.setPosition((u>0?200*(null!=f?f:0)/u:0)-100,0,0))}this.tipLabel&&(this.tipLabel.string="vDead "+l(o.vDead)+" / vRef "+l(o.vRef)+" / 甩满 "+l(o.fullChargeSpeed));var y=this.controller.telemetry.damage(),w=v(y),R=v(this.controller.telemetry.damage(!0)),S=w.reduce((function(t,e){return t+e}),0),x=function(t,e,n){for(var i=e.reduce((function(t,e){return t+e}),0),s=-330,r=0;r<e.length;r++){var o=i>0?660*e[r]/i:0,a=t[r];a&&(a.active=o>0,a.setScale(o,1,1),a.setPosition(s+o/2,n,0)),s+=o}};x(this.bars,w,0),x(this.recentBars,R,-12),this.damageLabel&&(this.damageLabel.string="累计 "+l(S)+" / 最近30秒 "+l(R.reduce((function(t,e){return t+e}),0))+" · "+m.map((function(t,e){return t+" "+(S>0?(100*w[e]/S).toFixed(1):"0")+"%"})).join(" / "));var k=r.tunables.all(),L=JSON.stringify(k)+":"+r.tunables.get("tuning.pageRows");if(L!==this.registrySignature&&(this.registrySignature=L,this.rebuildRows()),this.panel.active){for(var D=0,E=Array.from(this.commandFields.entries());D<E.length;D++){var F=E[D],C=F[0],M=F[1];this.editing.has(C)||(M.string=String(r.tunables.get(C)))}for(var P,_=n(k);!(P=_()).done;){var A,I,B=P.value,G=this.sliders.get(B.key);G&&void 0!==B.min&&void 0!==B.max&&B.max>B.min&&(G.progress=(r.tunables.get(B.key)-B.min)/(B.max-B.min));var J=this.values.get(B.key);if(J&&!this.editing.has(B.key)&&(J.string=String(r.tunables.get(B.key))),"enum"===B.kind)for(var O,z=null!=(O=B.options)?O:[],H=0;H<z.length;H++){var j=this.captions.get(B.key+":"+H);j&&(j.string=z[H]+(r.tunables.get(B.key)===H?" ✓":""))}var U=this.captions.get(B.key);U&&(U.string="bool"===B.kind?r.tunables.getBool(B.key)?"开 ✓":"关":null!=(A=null==(I=B.options)?void 0:I[r.tunables.get(B.key)])?A:"—")}}this.statusLabel&&(this.statusLabel.string=this.status+"\n#"+r.tunables.hash()+" · "+k.length+" 参数\n"+(this.controller.presets.store.error||this.controller.telemetry.store.error));var V=this.controller.telemetry.result;if(!V)return this.resultRoot.active=!1,void(this.lastResult="");if(V.sid!==this.lastResult&&V.sid!==this.dismissedResult){this.lastResult=V.sid,this.panel.active=!1,this.resultRoot.active=!0;for(var K=0,q=[].concat(this.resultRoot.children);K<q.length;K++){var W=q[K];W.removeFromParent(),W.destroy()}T(this.resultRoot,V.debugRestart?"调试局结束 · 不计统计":"本局结束",0,350,620,50,30);var Q=this.controller.telemetry.totals();T(this.resultRoot,["seed "+r.session.seed+" · #"+V.paramsHash+" · "+V.reason,"时长 "+V.duration.toFixed(2)+" 秒 · 击杀 "+V.kills+" · 总伤害 "+V.totalDamage.toFixed(2),"闭合圈 "+V.loops.length+" · 完美接剑 "+V.perfectCatches+" · 断链 "+V.chainBreaks].concat(b.map((function(t){return t+": "+V.damage[t].toFixed(2)+" ("+(100*V.shares[t]).toFixed(1)+"%)"})),["有效局 "+Q.sessions+" · 累计击杀 "+Q.kills+" · 累计伤害 "+Q.damage.toFixed(2)]).join("\n"),0,30,620,510,22),N(this.resultRoot,"再来一局",-160,-340,290,(function(){return i.controller.retry()})),N(this.resultRoot,"结束",160,-340,290,(function(){i.controller.quit(),i.dismissedResult=V.sid,i.resultRoot.active=!1}))}}},t}());i._RF.pop()}}}));
+System.register("chunks:///_virtual/InputParams.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "349e1FmvANJfYI7XNt97wI9", "InputParams", undefined);
+      // P0 §3 and §6.1: fixed unit conversion and history retention, not tuning knobs.
+      var INPUT_PIXELS_PER_UNIT = exports('INPUT_PIXELS_PER_UNIT', 72);
+      var HISTORY_SECONDS = exports('HISTORY_SECONDS', 0.5);
+      var INPUT_DEFAULTS = exports('INPUT_DEFAULTS', {
+        joyRadius: 1.2,
+        deadZone: 0.08,
+        followCenter: 1,
+        // Product: retain the existing cancellation tolerance; default awaits playtesting.
+        directionEpsilon: 1e-8
+      });
 
-System.register("chunks:///_virtual/TypedEventBus.ts",["cc"],(function(e){var t;return{setters:[function(e){t=e.cclegacy}],execute:function(){t._RF.push({},"4f6a3X/SatMcqH51xbhsKqa","TypedEventBus",void 0);e("TypedEventBus",function(){function e(){this.listeners=new Map}var t=e.prototype;return t.on=function(e,t){var n=this.listeners.get(e);n||(n=new Set,this.listeners.set(e,n));var r=t;return n.add(r),function(){n.delete(r)}},t.off=function(e,t){var n=this.listeners.get(e);n&&n.delete(t)},t.emit=function(e,t){var n=this.listeners.get(e);if(n&&0!==n.size)for(var r=0,s=Array.from(n);r<s.length;r++){var i=s[r];try{i(t)}catch(t){console.error('[events] listener for "'+e+'" threw',t)}}},t.listenerCount=function(e){var t,n;return null!=(t=null==(n=this.listeners.get(e))?void 0:n.size)?t:0},t.clear=function(){this.listeners.clear()},e}());t._RF.pop()}}}));
+      // Display constants only. Preserve the greybox appearance outside the tuning registry.
+      var JOYSTICK_STYLE = exports('JOYSTICK_STYLE', {
+        ringWidth: 3,
+        thumbRadius: 8,
+        colorR: 230,
+        colorG: 238,
+        colorB: 255,
+        ringAlpha: 120,
+        thumbAlpha: 180
+      });
+      var INPUT_PARAMS = exports('INPUT_PARAMS', [{
+        key: 'input.joyRadius',
+        group: '输入',
+        label: '摇杆半径',
+        kind: 'number',
+        // P0 未定义，自选默认值: UI step only; default and bounds are P0 §6.1.
+        "default": INPUT_DEFAULTS.joyRadius,
+        min: 0.5,
+        max: 3,
+        step: 0.1,
+        note: '竞技场单位；下一模拟步生效'
+      }, {
+        key: 'input.deadZone',
+        group: '输入',
+        label: '摇杆死区',
+        kind: 'number',
+        // P0 未定义，自选默认值: UI step only; default and bounds are P0 §6.1.
+        "default": INPUT_DEFAULTS.deadZone,
+        min: 0,
+        max: 0.3,
+        step: 0.01
+      }, {
+        key: 'input.followCenter',
+        group: '输入',
+        label: '中心跟随',
+        kind: 'bool',
+        "default": INPUT_DEFAULTS.followCenter
+      },
+      // Product: this gameplay threshold stays tunable; its default awaits playtesting.
+      {
+        key: 'input.directionEpsilon',
+        group: '输入额外参数',
+        label: '方向抵消阈值【默认·待试玩】',
+        kind: 'number',
+        "default": INPUT_DEFAULTS.directionEpsilon,
+        min: 0,
+        step: 1e-8,
+        note: '【默认·待试玩】方向和长度不超过阈值时返回零向量；下一模拟步生效'
+      }]);
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Vec2.ts",["cc"],(function(n){var t;return{setters:[function(n){t=n.cclegacy}],execute:function(){function r(n,t){return void 0===n&&(n=0),void 0===t&&(t=0),{x:n,y:t}}n({vAdd:function(n,t,u){void 0===u&&(u=r());return u.x=n.x+t.x,u.y=n.y+t.y,u},vCopy:function(n,t){return n.x=t.x,n.y=t.y,n},vDist:function(n,t){return Math.hypot(n.x-t.x,n.y-t.y)},vDistSq:function(n,t){var r=n.x-t.x,u=n.y-t.y;return r*r+u*u},vDot:function(n,t){return n.x*t.x+n.y*t.y},vLen:function(n){return Math.hypot(n.x,n.y)},vLenSq:function(n){return n.x*n.x+n.y*n.y},vLerp:function(n,t,u,y){void 0===y&&(y=r());return y.x=n.x+(t.x-n.x)*u,y.y=n.y+(t.y-n.y)*u,y},vNormalize:function(n,t){void 0===t&&(t=r());var u=Math.hypot(n.x,n.y);if(u<=1e-12)return t.x=0,t.y=0,t;return t.x=n.x/u,t.y=n.y/u,t},vScale:function(n,t,u){void 0===u&&(u=r());return u.x=n.x*t,u.y=n.y*t,u},vSet:function(n,t,r){return n.x=t,n.y=r,n},vSub:function(n,t,u){void 0===u&&(u=r());return u.x=n.x-t.x,u.y=n.y-t.y,u},vec2:r}),t._RF.push({},"7259cbKwcdAlqyLjOMXJ3+b","Vec2",void 0),t._RF.pop()}}}));
+System.register("chunks:///_virtual/InputSystem.ts", ['cc', './SystemOrder.ts'], function (exports) {
+  var cclegacy, SystemOrder;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "88940kuQUFAZ6oFWRoosWzu", "InputSystem", undefined);
+      var InputSystem = exports('InputSystem', /*#__PURE__*/function () {
+        function InputSystem(ctx, source, draw) {
+          this.id = 'input.joystick';
+          this.order = SystemOrder.Input;
+          this.sid = void 0;
+          this.ctx = void 0;
+          this.source = void 0;
+          this.draw = void 0;
+          this.offSession = null;
+          this.ctx = ctx;
+          this.source = source;
+          this.draw = draw;
+          this.sid = ctx.session.sid;
+          this.refreshConfig();
+          this.attach();
+        }
+        var _proto = InputSystem.prototype;
+        _proto.fixedUpdate = function fixedUpdate(_dt) {
+          this.syncSession();
+          this.refreshConfig();
+          this.source.fixedUpdate(this.ctx.loop.simTime);
+        };
+        _proto.attach = function attach() {
+          var _this = this;
+          this.syncSession();
+          if (this.offSession) return;
+          this.offSession = this.ctx.events.on('session:start', function () {
+            _this.sid = _this.ctx.session.sid;
+            _this.source.beginSession();
+          });
+        };
+        _proto.detach = function detach() {
+          var _this$offSession;
+          (_this$offSession = this.offSession) == null || _this$offSession.call(this);
+          this.offSession = null;
+        };
+        _proto.syncSession = function syncSession() {
+          if (this.sid !== this.ctx.session.sid) {
+            this.sid = this.ctx.session.sid;
+            this.source.beginSession();
+          }
+        };
+        _proto.render = function render() {
+          this.draw();
+        };
+        _proto.refreshConfig = function refreshConfig() {
+          var zero = this.ctx.toPx({
+            x: 0,
+            y: 0
+          });
+          var unit = this.ctx.toPx({
+            x: 1,
+            y: 0
+          });
+          this.source.setConfig({
+            radiusPx: this.ctx.tunables.get('input.joyRadius') * Math.hypot(unit.x - zero.x, unit.y - zero.y),
+            deadZone: this.ctx.tunables.get('input.deadZone'),
+            followCenter: this.ctx.tunables.getBool('input.followCenter'),
+            directionEpsilon: this.ctx.tunables.get('input.directionEpsilon')
+          });
+        };
+        return InputSystem;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/VerletRope.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var i,s;return{setters:[function(t){i=t.createClass},function(t){s=t.cclegacy}],execute:function(){s._RF.push({},"6c95ef8IaxBXKtau359qndj","VerletRope",void 0);t("VerletRope",function(){function t(t){this.points=[],this.tipBefore={x:0,y:0},this.tipVelocity={x:0,y:0},this.length=0,this.tipSpeed=0,this.mainAttached=!0,this.topologyChanged=!1,this.speeds=[],this.target=0,this.fromLength=0,this.transition=0,this.fromSegments=[],this.ctx=void 0,this.ctx=t,this.points.push(this.particle({x:0,y:0}),this.particle({x:0,y:0}))}var s=t.prototype;return s.reset=function(t,i,s){void 0===s&&(s=0),this.mainAttached=!0,this.topologyChanged=!1,this.length=this.target=this.fromLength=i,this.points.length=0;for(var e=0;e<s+2;e++)this.points.push(this.particle(this.ctx.arena.clamp({x:t.x,y:t.y-i*e/(s+1)},this.radius(e,s))));this.transition=this.ctx.tunables.get("rope.transitionTime"),this.fromSegments=[],this.speeds=[],this.tipSpeed=0,this.setMasses(),this.tipBefore.x=this.tip.x,this.tipBefore.y=this.tip.y,this.tipVelocity.x=this.tipVelocity.y=0},s.setMainAttached=function(t){if(t!==this.mainAttached){if(t){var i=this.tip,s=this.particle(i);s.oldX=i.oldX,s.oldY=i.oldY,this.points.push(s)}else this.points.pop();this.mainAttached=t,this.topologyChanged=!0,this.setMasses()}},s.configure=function(t,i){var s=Math.max(0,Math.min(12,Math.floor(t))),e=this.topologyChanged;this.topologyChanged=!1;var h=this.mainAttached?2:1;if(this.points.length!==s+h){for(var n,o=this.tip,a=this.points.length-h,r=this.points[Math.min(s,a)],p=this.points.slice(0,Math.min(s,a)+1),l=a;l<s;l++){var c=this.mainAttached?(l-a+1)/(s-a+1):0,d=this.particle({x:r.x+(o.x-r.x)*c,y:r.y+(o.y-r.y)*c});d.oldX=r.oldX+(o.oldX-r.oldX)*c,d.oldY=r.oldY+(o.oldY-r.oldY)*c,p.push(d)}this.points.length=0,(n=this.points).push.apply(n,p),this.mainAttached&&this.points.push(o),e=!0}if(e||Math.abs(i-this.target)>1e-8){this.fromLength=this.length,this.target=i,this.transition=0,this.fromSegments=[];for(var y=1;y<this.points.length;y++){var u=this.points[y-1],g=this.points[y];this.fromSegments.push(Math.hypot(g.x-u.x,g.y-u.y))}}this.setMasses()},s.step=function(t,i,s,e){if(void 0===e&&(e=this.points.length-(this.mainAttached?2:1)),!(t<=0)){this.configure(e,s);var h=this.ctx.tunables.get("rope.transitionTime");this.transition+=t;var n=h<=0?1:Math.min(1,this.transition/h);this.length=this.fromLength+(this.target-this.fromLength)*n,this.tipBefore.x=this.tip.x,this.tipBefore.y=this.tip.y;for(var o=1-this.ctx.tunables.get("rope.damping"),a=1;a<this.points.length;a++){var r=this.points[a];r.beforeX=r.x,r.beforeY=r.y;var p=(r.x-r.oldX)*o,l=(r.y-r.oldY)*o;r.oldX=r.x,r.oldY=r.y,r.x+=p,r.y+=l}var c=this.points[0];c.x=c.oldX=i.x,c.y=c.oldY=i.y;for(var d=this.target/(e+1),y=Math.round(this.ctx.tunables.get("rope.iterations")),u=0;u<y;u++){for(var g=1;g<this.points.length;g++){var x,f=null!=(x=this.fromSegments[g-1])?x:d;this.constrain(g,f+(d-f)*n)}for(var m=1;m<this.points.length;m++)this.clamp(this.points[m],this.radius(m,e))}this.tipVelocity.x=(this.tip.x-this.tipBefore.x)/t,this.tipVelocity.y=(this.tip.y-this.tipBefore.y)/t,this.speeds.push(Math.hypot(this.tipVelocity.x,this.tipVelocity.y));for(var v=Math.round(this.ctx.tunables.get("rope.tipFrames"));this.speeds.length>v;)this.speeds.shift();this.tipSpeed=this.speeds.reduce((function(t,i){return t+i}),0)/this.speeds.length}},s.impulse=function(t,i){this.tip.oldX-=t.x*i,this.tip.oldY-=t.y*i},s.distanceTo=function(t){for(var i=0,s=1;s<=t&&s<this.points.length;s++){var e=this.points[s-1],h=this.points[s];i+=Math.hypot(h.x-e.x,h.y-e.y)}return i},s.particle=function(t){return{x:t.x,y:t.y,oldX:t.x,oldY:t.y,beforeX:t.x,beforeY:t.y,mass:0}},s.radius=function(t,i){return this.ctx.tunables.get(0===t?"pet.radius":this.mainAttached&&t===i+1?"sword.bladeRadius":"chain.linkRadius")},s.setMasses=function(){for(var t=0;t<this.points.length;t++)this.points[t].mass=0===t?1/0:this.mainAttached&&t===this.points.length-1?this.ctx.tunables.get("sword.W")*this.ctx.tunables.get("rope.mainMassPerW"):this.ctx.tunables.get("rope.linkMass")},s.constrain=function(t,i){var s=this.points[t-1],e=this.points[t],h=e.x-s.x,n=e.y-s.y,o=Math.hypot(h,n);if(o<1e-9){if(i<=1e-9)return;var a=this.points[Math.max(0,t-2)],r=s.x-a.x,p=s.y-a.y,l=Math.hypot(r,p),c=l>1e-9?r/l:0,d=l>1e-9?p/l:-1,y=1/s.mass,u=1/e.mass;return s.x-=c*i*y/(y+u),s.y-=d*i*y/(y+u),e.x+=c*i*u/(y+u),void(e.y+=d*i*u/(y+u))}var g=1/s.mass,x=1/e.mass,f=(o-i)/o/(g+x);s.x+=h*f*g,s.y+=n*f*g,e.x-=h*f*x,e.y-=n*f*x},s.clamp=function(t,i){var s=this.ctx.arena.clamp(t,i),e=this.ctx.tunables.get("rope.wallBounce");s.x!==t.x&&(t.oldX=s.x+(t.x-t.oldX)*e),s.y!==t.y&&(t.oldY=s.y+(t.y-t.oldY)*e),t.x=s.x,t.y=s.y},i(t,[{key:"hasMain",get:function(){return this.mainAttached}},{key:"tip",get:function(){return this.points[this.points.length-1]}},{key:"segmentLength",get:function(){return this.length/(this.points.length-(this.mainAttached?1:0))}}]),t}());s._RF.pop()}}}));
+System.register("chunks:///_virtual/JoystickView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './InputParams.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Input, Graphics, input, view, Color, Button, UITransform, Node, EventMouse, Component, JOYSTICK_STYLE;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Input = module.Input;
+      Graphics = module.Graphics;
+      input = module.input;
+      view = module.view;
+      Color = module.Color;
+      Button = module.Button;
+      UITransform = module.UITransform;
+      Node = module.Node;
+      EventMouse = module.EventMouse;
+      Component = module.Component;
+    }, function (module) {
+      JOYSTICK_STYLE = module.JOYSTICK_STYLE;
+    }],
+    execute: function () {
+      exports('mountJoystick', mountJoystick);
+      var _dec, _class;
+      cclegacy._RF.push({}, "00a2bWGRqRIZoxZBQ+Acj+G", "JoystickView", undefined);
+      var ccclass = _decorator.ccclass;
+      var MOUSE_ID = -1;
+      var POINTER_EVENTS = [Input.EventType.TOUCH_START, Input.EventType.TOUCH_MOVE, Input.EventType.TOUCH_END, Input.EventType.TOUCH_CANCEL, Input.EventType.MOUSE_DOWN, Input.EventType.MOUSE_MOVE, Input.EventType.MOUSE_UP];
 
-System.register("chunks:///_virtual/Whip.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(t){var e,i,s,h;return{setters:[function(t){e=t.createForOfIteratorHelperLoose,i=t.extends,s=t.createClass},function(t){h=t.cclegacy}],execute:function(){h._RF.push({},"d01b1e9UMtGEJUOHWptZHdR","Whip",void 0);t("Whip",function(){function t(t){this.headings=[],this.clock=0,this.cooldown=0,this.activeLeft=0,this.angle=0,this.turnSign=1,this.lastRaw=null,this.ctx=void 0,this.ctx=t}var h=t.prototype;return h.reset=function(){this.headings.length=0,this.clock=this.cooldown=this.activeLeft=this.angle=0,this.lastRaw=null},h.turn=function(t){for(var i,s=0,h=e(this.headings);!(i=h()).done;){var a=i.value;this.clock-a.time<=t+1e-8&&(s=Math.max(s,Math.abs(this.angle-a.angle)))}return 180*s/Math.PI},h.step=function(t,e,s,h,a){this.clock+=t,this.cooldown=Math.max(0,this.cooldown-t),this.activeLeft=Math.max(0,this.activeLeft-t);for(var n=this.ctx.tunables.get("whip.window");this.headings.length>0&&this.clock-this.headings[0].time>n+1e-8;)this.headings.shift();0===this.headings.length&&(this.lastRaw=null);var o=Math.hypot(e.x,e.y);if(s<=0||o<=1e-8||o<s*this.ctx.tunables.get("whip.minSpeedFrac"))return!1;var c=Math.atan2(e.y,e.x);if(null!==this.lastRaw){for(var l=c-this.lastRaw;l>Math.PI;)l-=2*Math.PI;for(;l<-Math.PI;)l+=2*Math.PI;this.angle+=l}this.lastRaw=c,this.headings.push({time:this.clock,angle:this.angle});var r=this.turn(n);if(!a||this.cooldown>1e-8||r+1e-8<this.ctx.tunables.get("whip.turnDeg"))return!1;var u=this.headings[0];return this.turnSign=u&&this.angle<u.angle?-1:1,this.cooldown=this.ctx.tunables.get("whip.cooldown"),this.activeLeft=this.ctx.tunables.get("whip.duration"),this.ctx.events.emit("sword:whip",{pos:i({},h),turnDeg:r,speed:o}),this.ctx.tunables.getBool("fx.hitstop")&&this.ctx.events.emit("fx:hitstop",{frames:this.ctx.tunables.get("fx.hitstopFrames")}),this.ctx.tunables.getBool("fx.shake")&&this.ctx.events.emit("fx:shake",{amp:this.ctx.tunables.get("fx.shakeAmp"),dur:this.ctx.tunables.get("fx.shakeDur")}),!0},s(t,[{key:"active",get:function(){return this.activeLeft>1e-8}}]),t}());h._RF.pop()}}}));
+      /** UI adapter only. Capture also receives UI touches that Cocos swallows before global input. */
+      var JoystickView = exports('JoystickView', (_dec = ccclass('InputJoystickView'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(JoystickView, _Component);
+        function JoystickView() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.ctx = null;
+          _this.source = null;
+          _this.system = null;
+          _this.graphics = null;
+          _this.captureRoot = null;
+          _this.bound = false;
+          _this.sawTouch = false;
+          _this.mouseDown = false;
+          _this.onTouchStart = function (event) {
+            var _this$source;
+            _this.sawTouch = true;
+            if (!event.touch || _this.overButton(event)) return;
+            var p = event.getUILocation();
+            (_this$source = _this.source) == null || _this$source.pointerDown(event.touch.getID(), p.x, p.y);
+            _this.redraw();
+          };
+          _this.onTouchMove = function (event) {
+            var _this$source2;
+            if (!event.touch) return;
+            var p = event.getUILocation();
+            (_this$source2 = _this.source) == null || _this$source2.pointerMove(event.touch.getID(), p.x, p.y);
+            _this.redraw();
+          };
+          _this.onTouchEnd = function (event) {
+            var _this$source3;
+            if (event.touch) (_this$source3 = _this.source) == null || _this$source3.pointerUp(event.touch.getID());
+            _this.redraw();
+          };
+          _this.onMouseDown = function (event) {
+            var _this$source4;
+            if (_this.sawTouch || event.getButton() !== EventMouse.BUTTON_LEFT || _this.overButton(event)) return;
+            _this.mouseDown = true;
+            var p = event.getUILocation();
+            (_this$source4 = _this.source) == null || _this$source4.pointerDown(MOUSE_ID, p.x, p.y);
+            _this.redraw();
+          };
+          _this.onMouseMove = function (event) {
+            var _this$source5;
+            if (_this.sawTouch || !_this.mouseDown) return;
+            var p = event.getUILocation();
+            (_this$source5 = _this.source) == null || _this$source5.pointerMove(MOUSE_ID, p.x, p.y);
+            _this.redraw();
+          };
+          _this.onMouseUp = function (event) {
+            var _this$source6;
+            if (!_this.mouseDown || event.getButton() !== EventMouse.BUTTON_LEFT) return;
+            _this.mouseDown = false;
+            (_this$source6 = _this.source) == null || _this$source6.pointerUp(MOUSE_ID);
+            _this.redraw();
+          };
+          _this.handlers = [_this.onTouchStart, _this.onTouchMove, _this.onTouchEnd, _this.onTouchEnd, _this.onMouseDown, _this.onMouseMove, _this.onMouseUp];
+          return _this;
+        }
+        var _proto = JoystickView.prototype;
+        _proto.configure = function configure(ctx, source, system) {
+          var _this$getComponent;
+          this.ctx = ctx;
+          this.source = source;
+          this.system = system;
+          this.graphics = (_this$getComponent = this.getComponent(Graphics)) != null ? _this$getComponent : this.addComponent(Graphics);
+          this.captureRoot = ctx.layers.get('hud').parent;
+          if (this.enabledInHierarchy) this.bind();
+        };
+        _proto.onEnable = function onEnable() {
+          this.bind();
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$system, _this$source7, _this$graphics;
+          if (this.bound) {
+            for (var i = 0; i < POINTER_EVENTS.length; i++) {
+              var _this$captureRoot;
+              input.off(POINTER_EVENTS[i], this.handlers[i], this);
+              (_this$captureRoot = this.captureRoot) == null || _this$captureRoot.off(POINTER_EVENTS[i], this.handlers[i], this, true);
+            }
+            this.bound = false;
+          }
+          this.mouseDown = false;
+          (_this$system = this.system) == null || _this$system.detach();
+          (_this$source7 = this.source) == null || _this$source7.reset();
+          (_this$graphics = this.graphics) == null || _this$graphics.clear();
+        };
+        _proto.onDestroy = function onDestroy() {
+          this.onDisable();
+          this.ctx = null;
+          this.source = null;
+          this.system = null;
+          this.graphics = null;
+          this.captureRoot = null;
+        };
+        _proto.redraw = function redraw() {
+          var graphics = this.graphics;
+          var source = this.source;
+          var ctx = this.ctx;
+          if (!graphics || !source || !ctx || !this.enabledInHierarchy) return;
+          graphics.clear();
+          if (!source.touching) return;
+          var visible = view.getVisibleSize();
+          var cx = source.center.x - visible.width / 2;
+          var cy = source.center.y - visible.height / 2;
+          var r = JOYSTICK_STYLE.colorR,
+            g = JOYSTICK_STYLE.colorG,
+            b = JOYSTICK_STYLE.colorB,
+            ringWidth = JOYSTICK_STYLE.ringWidth,
+            ringAlpha = JOYSTICK_STYLE.ringAlpha,
+            thumbAlpha = JOYSTICK_STYLE.thumbAlpha,
+            thumbRadius = JOYSTICK_STYLE.thumbRadius;
+          graphics.lineWidth = ringWidth;
+          graphics.strokeColor = new Color(r, g, b, ringAlpha);
+          graphics.circle(cx, cy, source.radiusPx);
+          graphics.stroke();
+          graphics.fillColor = new Color(r, g, b, thumbAlpha);
+          graphics.circle(source.pointer.x - visible.width / 2, source.pointer.y - visible.height / 2, thumbRadius);
+          graphics.fill();
+        };
+        _proto.bind = function bind() {
+          var _this$system2;
+          if (this.bound || !this.ctx || !this.source) return;
+          (_this$system2 = this.system) == null || _this$system2.attach();
+          this.bound = true;
+          for (var i = 0; i < POINTER_EVENTS.length; i++) {
+            var _this$captureRoot2;
+            input.on(POINTER_EVENTS[i], this.handlers[i], this);
+            (_this$captureRoot2 = this.captureRoot) == null || _this$captureRoot2.on(POINTER_EVENTS[i], this.handlers[i], this, true);
+          }
+        };
+        _proto.overButton = function overButton(event) {
+          if (!this.ctx) return false;
+          // No tuning-button tag exists in core. Reserve enabled Buttons in HUD/debug;
+          // ordinary HUD labels and the thumb strip remain joystick surfaces.
+          for (var _iterator = _createForOfIteratorHelperLoose(['hud', 'debug']), _step; !(_step = _iterator()).done;) {
+            var name = _step.value;
+            var buttons = this.ctx.layers.get(name).getComponentsInChildren(Button);
+            for (var _iterator2 = _createForOfIteratorHelperLoose(buttons), _step2; !(_step2 = _iterator2()).done;) {
+              var button = _step2.value;
+              if (!button.enabledInHierarchy || !button.interactable) continue;
+              var transform = button.node.getComponent(UITransform);
+              if (transform != null && transform.hitTest(event.getLocation())) return true;
+            }
+          }
+          return false;
+        };
+        return JoystickView;
+      }(Component)) || _class));
+      function mountJoystick(ctx, source, system) {
+        var _node$addComponent;
+        var parent = ctx.layers.get('debug');
+        if (!parent.isValid) return null;
+        var node = new Node('InputJoystick');
+        node.layer = parent.layer;
+        (_node$addComponent = node.addComponent(UITransform)) == null || _node$addComponent.setAnchorPoint(0, 0);
+        parent.addChild(node);
+        var component = node.addComponent(JoystickView);
+        if (!component) {
+          node.destroy();
+          return null;
+        }
+        component.configure(ctx, source, system);
+        return component;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
-System.register("chunks:///_virtual/Widgets.ts",["./rollupPluginModLoBabelHelpers.js","cc"],(function(e){var n,t,r,o,a,l,i,u,d,c,p,s;return{setters:[function(e){n=e.asyncToGenerator,t=e.regeneratorRuntime},function(e){r=e.cclegacy,o=e.Node,a=e.UITransform,l=e.Graphics,i=e.Label,u=e.Color,d=e.BlockInputEvents,c=e.EditBox,p=e.Slider,s=e.Sprite}],execute:function(){function v(e,n,t,r,i,u,d){var c=new o(n);c.layer=e.layer,e.addChild(c),c.setPosition(t,r,0);var p=c.addComponent(a);if(p&&p.setContentSize(i,u),d){var s=v(c,"Background",0,0,i,u).addComponent(l);s&&(s.fillColor=d,s.rect(-i/2,-u/2,i,u),s.fill())}return c}function f(e,n,t,r,o,l,d){var c,p,s;e.node.layer=null!=(c=null==(p=e.node.parent)?void 0:p.layer)?c:e.node.layer,e.node.setPosition(t,r,0);var v=null!=(s=e.node.getComponent(a))?s:e.node.addComponent(a);return v&&v.setContentSize(o,l),e.fontSize=d,e.lineHeight=d+6,e.color=new u(232,237,245),e.overflow=i.Overflow.CLAMP,e.enableWrapText=!0,e.string=n,e}function b(e,n,t,r,o,a,l){void 0===a&&(a=36),void 0===l&&(l=22);var u=v(e,"Text",t,r,o,a).addComponent(i);return u?f(u,n,t,r,o,a,l):null}function g(e,n,t){if("undefined"==typeof document||"undefined"==typeof URL||"undefined"==typeof Blob)return!1;var r=URL.createObjectURL(new Blob([e],{type:t})),o=document.createElement("a");return o.href=r,o.download=n,document.body.appendChild(o),o.click(),o.remove(),setTimeout((function(){return URL.revokeObjectURL(r)}),1e3),!0}function m(){return(m=n(t().mark((function e(n,r,o){return t().wrap((function(e){for(;;)switch(e.prev=e.next){case 0:if(e.prev=0,!g(n,r,o)){e.next=3;break}return e.abrupt("return","已请求下载；也可从文本框复制");case 3:e.next=7;break;case 5:e.prev=5,e.t0=e.catch(0);case 7:if(e.prev=7,"undefined"==typeof navigator||!navigator.clipboard){e.next=12;break}return e.next=11,navigator.clipboard.writeText(n);case 11:return e.abrupt("return","已复制到剪贴板");case 12:e.next=16;break;case 14:e.prev=14,e.t1=e.catch(7);case 16:return console.log(n),e.abrupt("return","已输出到 console；也可从文本框复制");case 18:case"end":return e.stop()}}),e,null,[[0,5],[7,14]])})))).apply(this,arguments)}e({box:v,button:function(e,n,t,r,a,l){var c=v(e,n,t,r,a,44,new u(48,69,92));c.addComponent(d);var p=b(c,n,0,0,a-8,36,20);p&&(p.horizontalAlign=i.HorizontalAlign.CENTER);return c.on(o.EventType.TOUCH_END,l),c},download:g,edit:function(e,n,t,r,o,a,l,i,p,s){var g,m;void 0===i&&(i=44);void 0===p&&(p=!1);void 0===s&&(s=!1);var C=v(e,t,r,o,a,i,new u(19,27,39));C.addComponent(d);var y=C.addComponent(c);if(!y)return null;var h=null!=(g=y.textLabel)?g:b(C,"",0,0,a-16,i-8,19),E=null!=(m=y.placeholderLabel)?m:b(C,t,0,0,a-16,i-8,19);return y.textLabel=h?f(h,"",0,0,a-16,i-8,19):null,y.placeholderLabel=E?f(E,t,0,0,a-16,i-8,19):null,y.inputMode=p?c.InputMode.ANY:c.InputMode.SINGLE_LINE,y.inputFlag=c.InputFlag.DEFAULT,y.maxLength=-1,y.string=n,y.placeholder=t,C.on(s?c.EventType.TEXT_CHANGED:c.EventType.EDITING_DID_ENDED,(function(){return l(y.string)})),y},exportText:function(e,n,t){return m.apply(this,arguments)},label:b,slider:function(e,n,t,r,o,a,l){var i=v(e,n,t,r,o,16,new u(48,69,92));i.addComponent(d);var c=i.addComponent(p);if(!c)return null;var f=v(i,"Handle",0,0,16,24,new u(190,210,230));return c.handle=f.addComponent(s),c.progress=a,i.on("slide",(function(){return l(c.progress)})),c}}),r._RF.push({},"b9878IPiVRJ3oE8BDlsCs6l","Widgets",void 0),r._RF.pop()}}}));
+System.register("chunks:///_virtual/Layers.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "e835fbj7glBCpPAfOmMcfVc", "Layers", undefined);
+      var LAYER_NAMES = exports('LAYER_NAMES', ['arena', 'trail', 'enemies', 'rig', 'fx', 'hud', 'debug']);
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/LoopController.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './geom.ts', './LoopParams.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy, distance, findClosure, trimOldest, douglasPeucker, pointInPolygon, capsuleContact, interpolate, trailLength, inkBudget, loopDamage;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      distance = module.distance;
+      findClosure = module.findClosure;
+      trimOldest = module.trimOldest;
+      douglasPeucker = module.douglasPeucker;
+      pointInPolygon = module.pointInPolygon;
+      capsuleContact = module.capsuleContact;
+      interpolate = module.interpolate;
+      trailLength = module.trailLength;
+    }, function (module) {
+      inkBudget = module.inkBudget;
+      loopDamage = module.loopDamage;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "8c9f1jPaPxNS5RB/5+1uleq", "LoopController", undefined);
+      /** Pure fixed-step rules. View owns Cocos nodes and lifecycle wiring. */
+      var LoopController = exports('LoopController', /*#__PURE__*/function () {
+        function LoopController(rig) {
+          this.rig = void 0;
+          this.ctx = void 0;
+          this.phase = 'normal';
+          this.jianyi = 0;
+          this.ink = 0;
+          this.inkRaw = 0;
+          this.duration = 0;
+          this.elapsed = 0;
+          this.loops = 0;
+          this.points = [];
+          this.flashPolygon = [];
+          this.flashCount = 0;
+          this.flashLeft = 0;
+          this.unsubs = [];
+          this.attached = false;
+          this.running = false;
+          this.time = 0;
+          this.warningElapsed = 0;
+          this.returnElapsed = 0;
+          this.sinceSample = 0;
+          this.hitUntil = 0;
+          this.samples = [];
+          this.liveHead = false;
+          this.previous = {
+            x: 0,
+            y: 0
+          };
+          this.hitGains = [];
+          this.linkGains = [];
+          this.boarPositions = new Map();
+          this.emptyStart = true;
+          this.serial = 0;
+          this.rig = rig;
+          this.ctx = rig.ctx;
+        }
+        var _proto = LoopController.prototype;
+        _proto.attach = function attach() {
+          var _this = this;
+          if (this.attached) return;
+          this.attached = true;
+          var events = this.ctx.events;
+          this.unsubs.push(events.on('session:start', function () {
+            return _this.reset();
+          }));
+          this.unsubs.push(events.on('session:end', function () {
+            return _this.stop();
+          }));
+          this.unsubs.push(events.on('player:died', function () {
+            return _this.stop();
+          }));
+          this.unsubs.push(events.on('enemy:damaged', function (e) {
+            if (e.amount > 0 && (e.source === 'drag' || e.source === 'whip')) _this.gain(_this.p('jianyi.hit'), _this.hitGains, _this.p('jianyi.hitCap'));
+          }));
+          this.unsubs.push(events.on('enemy:died', function (e) {
+            if (e.source === 'link_auto' || e.source === 'link_contact') _this.gain(_this.p('jianyi.linkKill'), _this.linkGains, _this.p('jianyi.linkCap'));else _this.gain(_this.p(e.source === 'whip' ? 'jianyi.whipKill' : 'jianyi.kill'));
+          }));
+          this.unsubs.push(events.on('throw:catch', function (e) {
+            if (e.kind === 'perfect') _this.gain(_this.p('jianyi.perfectCatch'));
+          }));
+          this.unsubs.push(events.on('player:damaged', function () {
+            return _this.onHit();
+          }));
+          this.unsubs.push(events.on('debug:command', function (_ref) {
+            var cmd = _ref.cmd;
+            if (cmd === 'fillJianyi' && _this.canGain()) {
+              _this.setJianyi(_this.p('jianyi.max'));
+              _this.maybeWarn();
+            }
+          }));
+        };
+        _proto.detach = function detach() {
+          for (var _iterator = _createForOfIteratorHelperLoose(this.unsubs), _step; !(_step = _iterator()).done;) {
+            var off = _step.value;
+            off();
+          }
+          this.unsubs.length = 0;
+          this.attached = false;
+        };
+        _proto.reset = function reset() {
+          // SwordRig resets first on session:start; do not start a return animation here.
+          this.phase = 'normal';
+          this.running = true;
+          this.time = this.elapsed = this.warningElapsed = this.returnElapsed = this.sinceSample = this.hitUntil = 0;
+          this.ink = this.inkRaw = this.duration = this.loops = this.serial = 0;
+          this.samples = this.points = [];
+          this.liveHead = false;
+          this.flashPolygon = [];
+          this.flashLeft = this.flashCount = 0;
+          this.hitGains.length = this.linkGains.length = 0;
+          this.boarPositions.clear();
+          this.previous = _extends({}, this.rig.petPos);
+          this.setJianyi(0);
+          this.rig.setJianzhenInfo(null, null);
+          this.rig.setEnemyTimeScale(1);
+        };
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          if (!this.attached || !this.running || dt <= 0) return;
+          this.time += dt;
+          this.flashLeft = Math.max(0, this.flashLeft - dt);
+          if (!this.ctx.tunables.getBool('mech.loop')) {
+            if (this.phase === 'drawing') this.end(true);
+            if (this.phase === 'warning') this.phase = 'normal';
+            this.setJianyi(0);
+            this.hitGains.length = this.linkGains.length = 0;
+          }
+          if (this.phase === 'returning') {
+            this.returnElapsed += dt;
+            if (this.returnElapsed + 1e-9 >= this.p('loop.returnTime')) this.phase = 'normal';
+            return;
+          }
+          if (!this.ctx.tunables.getBool('mech.loop')) return;
+          if (this.phase === 'normal') {
+            this.maybeWarn();
+            return;
+          }
+          if (this.phase === 'warning') {
+            this.warningElapsed += dt;
+            if (this.warningElapsed + 1e-9 >= this.p('loop.warnTime')) this.begin();
+            return;
+          }
+          this.elapsed += dt;
+          this.refreshBudget();
+          this.rig.setJianzhenInfo(this.ink, this.remaining);
+          this.rig.setEnemyTimeScale(this.p('loop.bulletTime'));
+          if (this.elapsed + 1e-9 >= this.duration) {
+            this.end(false);
+            return;
+          }
+          var now = _extends({}, this.rig.petPos);
+          this.sinceSample += dt;
+          // Fixed samples plus one replaceable live head. Include this step's movement
+          // BEFORE trimming/cutting/closure, even between the 0.05s sample ticks.
+          if (this.liveHead) this.samples.pop();
+          var sampleDue = this.sinceSample + 1e-9 >= this.p('loop.sampleInterval');
+          if (sampleDue) this.sinceSample %= this.p('loop.sampleInterval');
+          var last = this.samples[this.samples.length - 1];
+          this.liveHead = false;
+          if (!last || distance(last, now) > 1e-9) {
+            this.samples.push(_extends({}, now, {
+              time: this.time
+            }));
+            this.liveHead = !sampleDue;
+          }
+          // Clip before detecting closure, so expired tails cannot close.
+          this.rebuild();
+          this.cutByBoars();
+          var closed = findClosure(this.points, this.previous, now, this.time, this.p('loop.closeAge'), this.p('loop.closeTol'));
+          var consumed = false;
+          if (closed) {
+            if (closed.area < this.p('loop.minArea')) this.ctx.events.emit('jianzhen:rejectedLoop', {
+              area: closed.area
+            });else {
+              this.slash(closed);
+              consumed = true;
+            }
+          }
+          if (consumed) this.restartTrail(now);
+          this.previous = now;
+        };
+        _proto.p = function p(key) {
+          return this.ctx.tunables.get(key);
+        };
+        _proto.canGain = function canGain() {
+          return this.running && this.attached && this.phase === 'normal' && this.ctx.tunables.getBool('mech.loop');
+        };
+        _proto.setJianyi = function setJianyi(value) {
+          this.jianyi = Math.max(0, Math.min(this.p('jianyi.max'), value));
+          this.rig.setJianyi(this.jianyi);
+        };
+        _proto.gain = function gain(amount, bucket, cap) {
+          if (cap === void 0) {
+            cap = 0;
+          }
+          if (!this.canGain()) return;
+          if (bucket) {
+            // A sliding simulation-second window avoids double credit at second boundaries.
+            var now = this.ctx.loop.simTime;
+            while (bucket.length > 0 && bucket[0].time <= now - 1 + 1e-9) bucket.shift();
+            var used = 0;
+            for (var _iterator2 = _createForOfIteratorHelperLoose(bucket), _step2; !(_step2 = _iterator2()).done;) {
+              var entry = _step2.value;
+              used += entry.amount;
+            }
+            amount = Math.max(0, Math.min(amount, cap - used));
+            if (amount > 0) bucket.push({
+              time: now,
+              amount: amount
+            });
+          }
+          this.setJianyi(this.jianyi + amount * this.p('jianyi.globalMul'));
+          this.maybeWarn();
+        };
+        _proto.maybeWarn = function maybeWarn() {
+          if (!this.canGain() || this.jianyi < this.p('jianyi.max')) return;
+          this.phase = 'warning';
+          this.warningElapsed = 0;
+          this.ctx.events.emit('jianzhen:warn', {});
+        };
+        _proto.refreshBudget = function refreshBudget() {
+          var budget = inkBudget(this.ctx.tunables, this.rig.N, this.rig.Lg, this.rig.mainHeld);
+          this.ink = budget.ink;
+          this.inkRaw = budget.raw;
+          this.duration = budget.duration;
+        };
+        _proto.begin = function begin() {
+          this.phase = 'drawing';
+          this.elapsed = this.loops = 0;
+          this.hitUntil = 0;
+          this.setJianyi(0);
+          this.refreshBudget();
+          this.rig.setChainLanded(true);
+          this.rig.setJianzhenInfo(this.ink, this.remaining);
+          this.rig.setEnemyTimeScale(this.p('loop.bulletTime'));
+          this.boarPositions.clear();
+          this.restartTrail(this.rig.petPos);
+          this.previous = _extends({}, this.rig.petPos);
+          var near = [];
+          if (this.ctx.services.has('enemies')) this.ctx.services.get('enemies').queryCircle(_extends({}, this.rig.petPos), 4, near); // P0 §11.
+          var enemiesNear = near.filter(function (enemy) {
+            return enemy.alive;
+          }).length;
+          this.emptyStart = enemiesNear < 3;
+          this.ctx.events.emit('jianzhen:start', {
+            ink: this.ink,
+            inkRaw: this.inkRaw,
+            duration: this.duration,
+            N: this.rig.N,
+            enemiesNear: enemiesNear
+          });
+        };
+        _proto.restartTrail = function restartTrail(pos) {
+          this.samples = [_extends({}, pos, {
+            time: this.time
+          })];
+          this.points = this.samples.slice();
+          this.sinceSample = 0;
+          this.liveHead = false;
+        };
+        _proto.rebuild = function rebuild() {
+          this.samples = trimOldest(this.samples, Math.max(0, this.length - this.ink));
+          var max = Math.floor(this.p('loop.maxPoints'));
+          if (this.samples.length > max) this.samples = this.samples.slice(-max);
+          if (this.samples.length <= 1) this.liveHead = false;
+          // Simplify original bounded samples, never repeatedly simplify an approximation.
+          this.points = douglasPeucker(this.samples, this.p('loop.dpEpsilon'));
+        };
+        _proto.slash = function slash(closed) {
+          var candidates = [];
+          var polygon = closed.polygon;
+          var minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+          for (var _iterator3 = _createForOfIteratorHelperLoose(polygon), _step3; !(_step3 = _iterator3()).done;) {
+            var p = _step3.value;
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+          }
+          var enemies = this.ctx.services.has('enemies') ? this.ctx.services.get('enemies') : null;
+          if (enemies) enemies.queryAABB(minX, minY, maxX, maxY, candidates);
+          var seen = new Set();
+          var inside = candidates.filter(function (enemy) {
+            if (!enemy.alive || seen.has(enemy.id) || !pointInPolygon(enemy.pos, polygon)) return false;
+            seen.add(enemy.id);
+            return true;
+          });
+          var n = inside.length;
+          var amount = loopDamage(this.ctx.tunables, this.rig.B, n, closed.area);
+          var hitKey = "loop:" + ++this.serial;
+          var totalDamage = 0;
+          var kills = 0;
+          for (var _iterator4 = _createForOfIteratorHelperLoose(inside), _step4; !(_step4 = _iterator4()).done;) {
+            var enemy = _step4.value;
+            if (!enemies) break;
+            // Unique key per closure needs no additional per-target cooldown.
+            var result = enemies.hit(enemy.id, {
+              source: 'loop',
+              amount: amount,
+              hitKey: hitKey,
+              cooldown: 0
+            });
+            if (result.applied) {
+              totalDamage += result.dealt;
+              if (result.killed) kills++;
+            }
+          }
+          this.loops++;
+          this.flashPolygon = polygon.map(function (p) {
+            return {
+              x: p.x,
+              y: p.y
+            };
+          });
+          this.flashCount = n;
+          this.flashLeft = this.p('loop.flashTime');
+          if (this.ctx.tunables.getBool('fx.hitstop')) this.ctx.events.emit('fx:hitstop', {
+            frames: this.p('loop.hitstopFrames')
+          });
+          this.ctx.events.emit('jianzhen:loop', {
+            area: closed.area,
+            n: n,
+            totalDamage: totalDamage,
+            kills: kills,
+            points: polygon.length,
+            ink: this.ink
+          });
+        };
+        _proto.onHit = function onHit() {
+          if (!this.running || this.phase !== 'drawing' || this.time + 1e-9 < this.hitUntil) return;
+          this.hitUntil = this.time + this.p('loop.hitProtect');
+          var mode = this.p('loop.hitMode');
+          var inkLost = mode === 0 ? this.length * this.p('loop.hitInkLoss') : this.length;
+          this.samples = trimOldest(this.samples, inkLost);
+          this.rebuild();
+          this.ctx.events.emit('jianzhen:hit', {
+            mode: mode,
+            inkLost: inkLost
+          });
+          if (mode === 1) {
+            this.setJianyi(this.p('loop.hitRefund') * this.p('jianyi.max'));
+            this.end(true);
+          }
+        };
+        _proto.cutByBoars = function cutByBoars() {
+          if (!this.ctx.services.has('enemies')) return;
+          var boars = this.ctx.services.get('enemies').getChargingBoars();
+          var next = new Map();
+          for (var _iterator5 = _createForOfIteratorHelperLoose(boars), _step5; !(_step5 = _iterator5()).done;) {
+            var _this$boarPositions$g;
+            var boar = _step5.value;
+            var before = (_this$boarPositions$g = this.boarPositions.get(boar.id)) != null ? _this$boarPositions$g : boar.pos;
+            next.set(boar.id, _extends({}, boar.pos));
+            // Enemy owns this parameter. Until installed, its P0 default is true.
+            if (this.ctx.tunables.has('boar.cutsTrail') && !this.ctx.tunables.getBool('boar.cutsTrail')) continue;
+            // Newest contact discards every older crossed segment in one cut.
+            for (var i = this.samples.length - 1; i > 0; i--) {
+              var newer = this.samples[i];
+              var older = this.samples[i - 1];
+              var t = capsuleContact(newer, older, before, boar.pos, boar.radius);
+              if (t === null) continue;
+              var cut = interpolate(newer, older, t);
+              var kept = t <= 1e-9 ? this.samples.slice(i) : [cut].concat(this.samples.slice(i));
+              var inkLost = this.length - trailLength(kept);
+              if (inkLost > 1e-9) {
+                this.samples = kept;
+                this.rebuild();
+                this.ctx.events.emit('jianzhen:cut', {
+                  pos: {
+                    x: cut.x,
+                    y: cut.y
+                  },
+                  inkLost: inkLost
+                });
+              }
+              break;
+            }
+          }
+          this.boarPositions = next;
+        };
+        _proto.end = function end(interrupted) {
+          if (this.phase !== 'drawing') return;
+          this.phase = 'returning';
+          this.returnElapsed = 0;
+          this.samples = this.points = [];
+          this.boarPositions.clear();
+          this.rig.setJianzhenInfo(null, null);
+          this.rig.setEnemyTimeScale(1);
+          // Sole exit-immunity hook. SwordRig starts immunity AFTER its return animation.
+          this.rig.setChainLanded(false, this.p('loop.postReturnImmune'));
+          this.ctx.events.emit('jianzhen:end', {
+            loops: this.loops,
+            interrupted: interrupted,
+            emptyStart: this.emptyStart
+          });
+        };
+        _proto.stop = function stop() {
+          this.end(true);
+          this.running = false;
+          this.phase = 'normal';
+          this.samples = this.points = [];
+          this.flashLeft = 0;
+          this.rig.setJianzhenInfo(null, null);
+          this.rig.setEnemyTimeScale(1);
+        };
+        _createClass(LoopController, [{
+          key: "remaining",
+          get: function get() {
+            return this.phase === 'drawing' ? Math.max(0, this.duration - this.elapsed) : 0;
+          }
+        }, {
+          key: "length",
+          get: function get() {
+            return trailLength(this.samples);
+          }
+        }]);
+        return LoopController;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/LoopParams.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _extends, _createForOfIteratorHelperLoose, cclegacy;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports({
+        inkBudget: inkBudget,
+        loopDamage: loopDamage,
+        registerLoopParams: registerLoopParams
+      });
+      cclegacy._RF.push({}, "22dd4oyh+dMcq0AFX0ARvu5", "LoopParams", undefined);
+      function number(key, label, value, min, max) {
+        return {
+          key: key,
+          group: '剑阵',
+          label: label,
+          kind: 'number',
+          "default": value,
+          min: min,
+          max: max,
+          note: 'P0 §6.5'
+        };
+      }
+
+      /** Literal P0 §6.5 table. Return/immune parameters belong to SwordParams. */
+      var LOOP_PARAMS = exports('LOOP_PARAMS', [{
+        key: 'mech.loop',
+        group: '剑阵',
+        label: '剑阵机制',
+        kind: 'bool',
+        "default": 1
+      }, number('jianyi.max', '剑意上限', 100, 10, 500), number('jianyi.hit', '拖剑命中剑意', 1, 0, 10), number('jianyi.hitCap', '命中每秒剑意上限', 5, 0, 50), number('jianyi.kill', '击杀剑意', 2, 0, 20), number('jianyi.whipKill', '鞭响击杀剑意', 4, 0, 20), number('jianyi.linkKill', '链剑击杀剑意', 0.5, 0, 5), number('jianyi.linkCap', '链剑每秒剑意上限', 2, 0, 20), number('jianyi.perfectCatch', '完美接剑剑意', 12, 0, 50), number('jianyi.globalMul', '剑意总倍率', 1, 0.1, 5), number('loop.warnTime', '预警时长', 1, 0, 3), number('loop.duration', '基础剑阵时长', 6, 2, 15), number('loop.inkBase', '基础墨量', 6, 0, 20), number('loop.inkPerSword', '每把链剑墨量', 0.8, 0, 3), number('loop.inkPerLg', '每点剑长墨量', 0.5, 0, 2), number('loop.inkCap', '墨量上限', 22, 5, 60), number('loop.overflowSecPerU', '超出墨量转时长', 0.15, 0, 1), number('loop.overflowSecCap', '额外时长上限', 3, 0, 10), number('loop.sampleInterval', '剑痕采样间隔', 0.05, 0.01, 0.2), number('loop.dpEpsilon', '剑痕简化容差', 0.05, 0, 0.3), number('loop.maxPoints', '剑痕点数上限', 200, 50, 500), number('loop.closeAge', '可闭合剑痕年龄', 0.3, 0.1, 1), number('loop.closeTol', '闭合容差', 0.3, 0, 1), number('loop.minArea', '最小有效面积', 1.5, 0, 10), number('loop.dmgK', '斩击系数', 6, 0, 30), number('loop.nLogK', '人数对数系数', 0.35, 0, 2), number('loop.areaRef', '面积参考值', 8, 1, 30), number('loop.areaMin', '面积项下限', 0.5, 0, 1), number('loop.areaMax', '面积项上限', 3, 1, 10), number('loop.areaExp', '面积指数', 0.3, 0, 1), {
+        key: 'loop.hitMode',
+        group: '剑阵',
+        label: '受击规则',
+        kind: 'enum',
+        "default": 0,
+        options: ['扣墨', '整段作废']
+      }, number('loop.hitInkLoss', '受击剑痕损失比例', 0.3, 0, 1), number('loop.hitProtect', '扣墨保护时长', 0.5, 0, 2), number('loop.hitRefund', '作废返还剑意比例', 0.4, 0, 1), number('loop.bulletTime', '敌人时间倍率', 0.7, 0.3, 1), number('loop.hitstopFrames', '闭合顿帧', 9, 0, 20),
+      // P0 未定义，自选默认值: presentation timing only.
+      _extends({}, number('loop.flashTime', '闭合闪光时长', 0.4, 0, 2), {
+        note: 'P0未定义持续时间，灰盒自选默认值'
+      })]);
+      function registerLoopParams(params) {
+        for (var _iterator = _createForOfIteratorHelperLoose(LOOP_PARAMS), _step; !(_step = _iterator()).done;) {
+          var def = _step.value;
+          if (!params.has(def.key)) params.define([def]);
+        }
+      }
+
+      /** P0 §6.5; no P1 item multipliers. Recomputed for pickups and main-sword catches. */
+      function inkBudget(p, count, length, held) {
+        var raw = p.get('loop.inkBase') + p.get('loop.inkPerSword') * count + (held ? p.get('loop.inkPerLg') * length : 0);
+        var cap = p.get('loop.inkCap');
+        return {
+          raw: raw,
+          ink: Math.min(raw, cap),
+          duration: p.get('loop.duration') + Math.min(p.get('loop.overflowSecPerU') * Math.max(raw - cap, 0), p.get('loop.overflowSecCap'))
+        };
+      }
+
+      /** P0 §6.5 / GDD §6.5: natural logarithm, per-enemy damage. */
+      function loopDamage(p, base, count, area) {
+        var areaTerm = Math.max(p.get('loop.areaMin'), Math.min(p.get('loop.areaMax'), area / p.get('loop.areaRef')));
+        return base * p.get('loop.dmgK') * (1 + p.get('loop.nLogK') * Math.log(1 + count)) * Math.pow(areaTerm, p.get('loop.areaExp'));
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/LoopView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './geom.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Color, Graphics, Node, UITransform, Label, Component, distance;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      Graphics = module.Graphics;
+      Node = module.Node;
+      UITransform = module.UITransform;
+      Label = module.Label;
+      Component = module.Component;
+    }, function (module) {
+      distance = module.distance;
+    }],
+    execute: function () {
+      exports('mountLoopView', mountLoopView);
+      var _dec, _class;
+      cclegacy._RF.push({}, "a479aEzDStA+psZVgMMGfzP", "LoopView", undefined);
+      var ccclass = _decorator.ccclass;
+      // P0 未定义，自选默认值: greybox styling in pixels/u; no gameplay effects.
+      var STYLE = {
+        spacing: 0.3,
+        blade: 0.24,
+        guard: 0.12,
+        linePx: 2,
+        edgePx: 6,
+        fontPx: 18,
+        hudHeight: 30
+      };
+      var INK = new Color(100, 235, 235);
+      var FLASH = new Color(255, 240, 165);
+      var LoopView = exports('LoopView', (_dec = ccclass('SwordLoopGreyboxView'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(LoopView, _Component);
+        function LoopView() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.controller = null;
+          _this.graphics = null;
+          _this.hud = null;
+          _this.caption = null;
+          return _this;
+        }
+        var _proto = LoopView.prototype;
+        _proto.bind = function bind(controller) {
+          this.controller = controller;
+          this.graphics = child(this.node, 'Geometry').addComponent(Graphics);
+          this.hud = label(controller.ctx.layers.get('hud'), 'LoopStatus');
+          this.caption = label(this.node, 'LoopCaption');
+        };
+        _proto.onEnable = function onEnable() {
+          var _this$controller;
+          (_this$controller = this.controller) == null || _this$controller.attach();
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$controller2;
+          (_this$controller2 = this.controller) == null || _this$controller2.detach();
+        };
+        _proto.onDestroy = function onDestroy() {
+          var _this$controller3, _this$hud;
+          (_this$controller3 = this.controller) == null || _this$controller3.detach();
+          (_this$hud = this.hud) == null || _this$hud.node.destroy();
+          this.controller = null;
+        };
+        _proto.draw = function draw() {
+          var c = this.controller;
+          var g = this.graphics;
+          if (!c || !g || !this.enabledInHierarchy) return;
+          var px = c.ctx.toPx;
+          var scale = Math.abs(px({
+            x: 1,
+            y: 0
+          }).x - px({
+            x: 0,
+            y: 0
+          }).x);
+          g.clear();
+          g.lineWidth = STYLE.linePx;
+          g.strokeColor = INK;
+          var points = c.points;
+          if (c.phase === 'drawing' && points.length > 0) {
+            this.outline(g, points);
+            // Spatially spaced upright blades distinguish the trail from chain diamonds.
+            var offset = 0;
+            for (var i = 1; i < points.length; i++) {
+              var _a = points[i - 1],
+                _b = points[i];
+              var length = distance(_a, _b);
+              if (length <= 1e-9) continue;
+              for (; offset < length; offset += STYLE.spacing) {
+                var t = offset / length;
+                this.blade(g, {
+                  x: _a.x + (_b.x - _a.x) * t,
+                  y: _a.y + (_b.y - _a.y) * t
+                }, scale);
+              }
+              offset -= length;
+            }
+            var last = points[points.length - 1];
+            var a = px(last),
+              b = px(c.rig.petPos);
+            g.moveTo(a.x, a.y);
+            g.lineTo(b.x, b.y);
+            g.stroke();
+          }
+          if (c.phase === 'warning') {
+            g.strokeColor = FLASH;
+            g.lineWidth = STYLE.edgePx;
+            this.outline(g, [{
+              x: 0,
+              y: 0
+            }, {
+              x: 10,
+              y: 0
+            }, {
+              x: 10,
+              y: 15
+            }, {
+              x: 0,
+              y: 15
+            }, {
+              x: 0,
+              y: 0
+            }]);
+          }
+          if (c.flashLeft > 0 && c.flashPolygon.length > 0) {
+            g.strokeColor = FLASH;
+            g.lineWidth = STYLE.linePx;
+            this.outline(g, c.flashPolygon.concat(c.flashPolygon.slice(0, 1)));
+            var x = 0,
+              y = 0;
+            for (var _iterator = _createForOfIteratorHelperLoose(c.flashPolygon), _step; !(_step = _iterator()).done;) {
+              var p = _step.value;
+              x += p.x;
+              y += p.y;
+            }
+            var center = {
+              x: x / c.flashPolygon.length,
+              y: y / c.flashPolygon.length
+            };
+            var progress = Math.max(0, Math.min(1, 1 - c.flashLeft / Math.max(1e-9, c.ctx.tunables.get('loop.flashTime'))));
+            for (var _iterator2 = _createForOfIteratorHelperLoose(c.flashPolygon), _step2; !(_step2 = _iterator2()).done;) {
+              var _p = _step2.value;
+              this.blade(g, {
+                x: _p.x + (center.x - _p.x) * progress,
+                y: _p.y + (center.y - _p.y) * progress
+              }, scale);
+            }
+            if (this.caption) {
+              this.caption.string = "\xD7" + c.flashCount + " \u4E00\u5708\u65A9\uFF01" + (c.flashCount >= 20 ? ' 大满贯' : ''); // GDD §6.5.
+              var pos = px(center);
+              this.caption.node.setPosition(pos.x, pos.y, 0);
+            }
+          }
+          if (this.caption) this.caption.node.active = c.flashLeft > 0;
+          if (this.hud) {
+            // Bottom of the HUD bar, above the arena and below the existing sword HUD.
+            this.hud.node.setPosition(0, 15 * scale / 2 + STYLE.hudHeight / 2, 0);
+            this.hud.string = c.phase === 'drawing' ? "\u58A8\u91CF " + c.length.toFixed(1) + "/" + c.ink.toFixed(1) + "u  \u5269\u4F59 " + c.remaining.toFixed(1) + "s" : c.phase === 'warning' ? '剑意已满 · 剑阵将至' : c.phase === 'returning' ? '剑阵回收中' : "\u5251\u610F " + c.jianyi.toFixed(0) + "/" + c.ctx.tunables.get('jianyi.max');
+          }
+        };
+        _proto.outline = function outline(g, points) {
+          var c = this.controller;
+          if (!c || points.length === 0) return;
+          var first = c.ctx.toPx(points[0]);
+          g.moveTo(first.x, first.y);
+          for (var i = 1; i < points.length; i++) {
+            var p = c.ctx.toPx(points[i]);
+            g.lineTo(p.x, p.y);
+          }
+          g.stroke();
+        };
+        _proto.blade = function blade(g, pos, scale) {
+          var c = this.controller;
+          if (!c) return;
+          var p = c.ctx.toPx(pos);
+          g.moveTo(p.x, p.y);
+          g.lineTo(p.x, p.y + STYLE.blade * scale);
+          g.moveTo(p.x - STYLE.guard * scale / 2, p.y + STYLE.blade * scale / 3);
+          g.lineTo(p.x + STYLE.guard * scale / 2, p.y + STYLE.blade * scale / 3);
+          g.stroke();
+        };
+        return LoopView;
+      }(Component)) || _class));
+      function child(parent, name) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        node.addComponent(UITransform).setAnchorPoint(0, 0);
+        parent.addChild(node);
+        return node;
+      }
+      function label(parent, name) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        var transform = node.addComponent(UITransform);
+        transform.setAnchorPoint(0.5, 0.5);
+        transform.setContentSize(680, STYLE.hudHeight);
+        parent.addChild(node);
+        var result = node.addComponent(Label);
+        result.fontSize = STYLE.fontPx;
+        result.lineHeight = STYLE.fontPx + 4;
+        result.color = INK;
+        return result;
+      }
+      function mountLoopView(controller) {
+        var parent = controller.ctx.layers.get('trail');
+        if (typeof parent.addChild !== 'function') return null;
+        var node = child(parent, 'SwordLoop');
+        var component = node.addComponent(LoopView);
+        component.bind(controller);
+        return function () {
+          return component.draw();
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/main", ['./App.ts', './Arena.ts', './DebugInputSource.ts', './FixedLoop.ts', './FxDriver.ts', './GameContext.ts', './Layers.ts', './Modules.ts', './Rng.ts', './ScreenLayout.ts', './ServiceRegistry.ts', './Session.ts', './SessionWatch.ts', './SpatialHash.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts', './contracts.ts', './events.ts', './index7.ts', './Geom2.ts', './Vec2.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts', './DirectorParams.ts', './EnemyModule.ts', './EnemyParams.ts', './EnemyWorld.ts', './SpawnDirector.ts', './index3.ts', './EnemyView.ts', './FloatingJoystick.ts', './InputHistory.ts', './InputParams.ts', './InputSystem.ts', './index2.ts', './JoystickView.ts', './SwordParams.ts', './SwordChain.ts', './Damage.ts', './Whip.ts', './index6.ts', './LoopController.ts', './LoopParams.ts', './geom.ts', './index4.ts', './LoopView.ts', './Pet.ts', './SwordCombat.ts', './SwordRig.ts', './SwordRigHooks.ts', './VerletRope.ts', './ThrowController.ts', './ThrowFormulas.ts', './ThrowParams.ts', './index.ts', './ThrowView.ts', './SwordView.ts', './Hud.ts', './Presets.ts', './Storage.ts', './Telemetry.ts', './TuningController.ts', './TuningParams.ts', './index5.ts', './TuningView.ts', './Widgets.ts'], function () {
+  return {
+    setters: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    execute: function () {}
+  };
+});
+
+System.register("chunks:///_virtual/Modules.ts", ['cc', './index2.ts', './index6.ts', './index3.ts', './index5.ts'], function (exports) {
+  var cclegacy, install, install$1, install$2, install$3;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      install = module.install;
+    }, function (module) {
+      install$1 = module.install;
+    }, function (module) {
+      install$2 = module.install;
+    }, function (module) {
+      install$3 = module.install;
+    }],
+    execute: function () {
+      exports('installModules', installModules);
+      cclegacy._RF.push({}, "5746dSfdfVIxLu2J1hsZltn", "Modules", undefined);
+
+      /** Startup order. Later tasks fill these functions; core keeps calling them. */
+      var moduleInstalls = exports('moduleInstalls', [install, install$1, install$2, install$3]);
+      function installModules(ctx) {
+        install(ctx);
+        install$1(ctx);
+        install$2(ctx);
+        install$3(ctx);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Pet.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createClass, cclegacy;
+  return {
+    setters: [function (module) {
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "f8b91Usk/lC8b3u3EsgUBMb", "Pet", undefined);
+      var Pet = exports('Pet', /*#__PURE__*/function () {
+        function Pet(ctx, weight) {
+          this.pos = {
+            x: 0,
+            y: 0
+          };
+          this.vel = {
+            x: 0,
+            y: 0
+          };
+          this.previous = {
+            x: 0,
+            y: 0
+          };
+          this.hpValue = 100;
+          this.maxHpValue = 100;
+          this.immune = 0;
+          this.active = false;
+          this.landed = false;
+          this.empty = false;
+          this.ctx = void 0;
+          this.weight = void 0;
+          this.ctx = ctx;
+          this.weight = weight;
+        }
+        var _proto = Pet.prototype;
+        _proto.reset = function reset() {
+          // P0 未定义，自选默认值: start at the arena center.
+          this.pos.x = this.previous.x = this.ctx.arena.width / 2;
+          this.pos.y = this.previous.y = this.ctx.arena.height / 2;
+          this.vel.x = this.vel.y = 0;
+          this.hpValue = this.maxHpValue = this.ctx.tunables.get('pet.maxHp');
+          this.immune = 0;
+          this.landed = this.empty = false;
+          this.active = true;
+        };
+        _proto.stop = function stop() {
+          this.active = false;
+          this.vel.x = this.vel.y = 0;
+        };
+        _proto.setMode = function setMode(landed, empty) {
+          this.landed = landed;
+          this.empty = empty;
+        };
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          if (!this.active || dt <= 0) return;
+          this.immune = Math.max(0, this.immune - dt);
+          this.previous.x = this.pos.x;
+          this.previous.y = this.pos.y;
+          if (this.hp <= 0) return;
+          var input = this.ctx.services.get('input').frame;
+          var mag = Math.max(0, Math.min(1, input.mag));
+          var len = Math.hypot(input.dir.x, input.dir.y);
+          var speed = input.touching && len > 0 ? this.maxSpeed * mag / len : 0;
+          var targetX = input.dir.x * speed;
+          var targetY = input.dir.y * speed;
+          var stopping = Math.hypot(targetX, targetY) < Math.hypot(this.vel.x, this.vel.y);
+          var time = this.ctx.tunables.get(stopping ? 'pet.decelTime' : 'pet.accelTime');
+          // P0 未定义，自选默认值: exponential smoothing, time is its time constant.
+          var alpha = time <= 0 ? 1 : 1 - Math.exp(-dt / time);
+          var vx = this.vel.x + (targetX - this.vel.x) * alpha;
+          var vy = this.vel.y + (targetY - this.vel.y) * alpha;
+          var next = this.ctx.arena.clamp({
+            x: this.pos.x + vx * dt,
+            y: this.pos.y + vy * dt
+          }, this.radius);
+          this.vel.x = (next.x - this.pos.x) / dt;
+          this.vel.y = (next.y - this.pos.y) / dt;
+          this.pos.x = next.x;
+          this.pos.y = next.y;
+        };
+        _proto.isInvulnerable = function isInvulnerable() {
+          return !this.active || this.hp <= 0 || this.immune > 1e-8 || this.ctx.tunables.getBool('pet.godMode');
+        };
+        _proto.applyDamage = function applyDamage(amount, by) {
+          if (!Number.isFinite(amount) || amount <= 0 || this.isInvulnerable()) return false;
+          var applied = Math.min(this.hpValue, amount);
+          this.hpValue -= applied;
+          this.immune = this.ctx.tunables.get('pet.invuln');
+          this.ctx.events.emit('player:damaged', {
+            amount: applied,
+            byKind: by.kind,
+            state: this.state
+          });
+          if (this.hp <= 0) this.ctx.events.emit('player:died', {});
+          return true;
+        };
+        _createClass(Pet, [{
+          key: "radius",
+          get: function get() {
+            return this.ctx.tunables.get('pet.radius');
+          }
+        }, {
+          key: "maxSpeed",
+          get: function get() {
+            return this.ctx.tunables.get('pet.speed') * (1 - this.ctx.tunables.get('pet.weightSlow') * (this.weight() - 1));
+          }
+        }, {
+          key: "hp",
+          get: function get() {
+            return this.hpValue;
+          }
+        }, {
+          key: "maxHp",
+          get: function get() {
+            return this.maxHpValue;
+          }
+        }, {
+          key: "state",
+          get: function get() {
+            return this.hp <= 0 ? 'dead' : this.landed ? 'jianzhen' : this.empty ? 'empty' : 'normal';
+          }
+        }, {
+          key: "damageImmune",
+          get: function get() {
+            return this.immune > 1e-8;
+          }
+        }]);
+        return Pet;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Presets.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Tunables.ts', './Storage.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy, hashValues, isRecord;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      hashValues = module.hashValues;
+    }, function (module) {
+      isRecord = module.isRecord;
+    }],
+    execute: function () {
+      exports({
+        applyPlayMode: applyPlayMode,
+        parameterGroups: parameterGroups
+      });
+      cclegacy._RF.push({}, "6e74dL7TjZBL68Qul10wCpw", "Presets", undefined);
+      var STORAGE_KEY = 'yuedie.tuning.presets.v1';
+
+      // P0 未定义，自选默认值: portable preset schema version 1 and local storage namespace.
+
+      var Presets = exports('Presets', /*#__PURE__*/function () {
+        function Presets(tunables, store) {
+          this.saved = new Map();
+          this.tunables = void 0;
+          this.store = void 0;
+          this.tunables = tunables;
+          this.store = store;
+          var data = store.read(STORAGE_KEY);
+          if (!Array.isArray(data)) return;
+          for (var _iterator = _createForOfIteratorHelperLoose(data), _step; !(_step = _iterator()).done;) {
+            var item = _step.value;
+            try {
+              var preset = parsePreset(item);
+              this.saved.set(preset.name, preset);
+            } catch (_unused) {
+              store.error = '部分预设损坏，已跳过';
+            }
+          }
+        }
+        var _proto = Presets.prototype;
+        _proto.names = function names() {
+          // Cocos Babel loose array spreads do not unpack Map iterators.
+          return Array.from(this.saved.keys()).sort();
+        };
+        _proto.save = function save(name) {
+          var preset = this.capture(name);
+          this.saved.set(preset.name, preset);
+          return this.store.write(STORAGE_KEY, Array.from(this.saved.values()));
+        };
+        _proto["delete"] = function _delete(name) {
+          this.saved["delete"](name);
+          return this.store.write(STORAGE_KEY, Array.from(this.saved.values()));
+        };
+        _proto.load = function load(name) {
+          var preset = this.saved.get(name);
+          if (!preset) throw new Error('未找到预设');
+          return this.apply(preset);
+        };
+        _proto.exportJson = function exportJson(name) {
+          if (name === void 0) {
+            name = '导出预设';
+          }
+          return JSON.stringify(this.capture(name), null, 4);
+        };
+        _proto.importJson = function importJson(text) {
+          // Validate every field before applying anything to the live registry.
+          return this.apply(parsePreset(JSON.parse(text)));
+        };
+        _proto.capture = function capture(name) {
+          var trimmed = name.trim();
+          if (!trimmed) throw new Error('请输入预设名');
+          return {
+            version: 1,
+            name: trimmed,
+            hash: this.tunables.hash(),
+            values: this.tunables.snapshot()
+          };
+        };
+        _proto.apply = function apply(preset) {
+          this.tunables.load(preset.values);
+          return this.tunables.hash() === preset.hash ? "\u5DF2\u5E94\u7528 \xB7 " + preset.hash : "\u5DF2\u5E94\u7528\u517C\u5BB9\u9879\uFF1B\u54C8\u5E0C\u4E0D\u540C\uFF08\u53C2\u6570\u7F3A\u5931\u3001\u65B0\u589E\u6216\u5DF2\u5939\u503C\uFF09\xB7 " + this.tunables.hash();
+        };
+        return Presets;
+      }());
+      function parsePreset(value) {
+        if (!isRecord(value) || value.version !== 1 || typeof value.name !== 'string' || !value.name.trim() || typeof value.hash !== 'string' || !isRecord(value.values)) throw new Error('预设格式无效（需要 version/name/hash/values）');
+        var values = {};
+        for (var _i = 0, _Object$keys = Object.keys(value.values); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
+          var number = value.values[key];
+          if (typeof number !== 'number' || !Number.isFinite(number)) throw new Error("\u53C2\u6570 " + key + " \u5FC5\u987B\u662F\u6709\u9650\u6570\u503C");
+          if (key === '__proto__' || key === 'constructor' || key === 'prototype') throw new Error('预设参数名无效');
+          values[key] = number;
+        }
+        if (hashValues(values) !== value.hash) throw new Error('预设哈希校验失败');
+        return {
+          version: 1,
+          name: value.name.trim(),
+          hash: value.hash,
+          values: values
+        };
+      }
+      function parameterGroups(tunables, search, collapsed) {
+        var groups = new Map();
+        var query = search.trim().toLowerCase();
+        for (var _iterator2 = _createForOfIteratorHelperLoose(tunables.all()), _step2; !(_step2 = _iterator2()).done;) {
+          var _def$note;
+          var def = _step2.value;
+          if (query && [def.key, def.label, def.group, (_def$note = def.note) != null ? _def$note : ''].join(' ').toLowerCase().indexOf(query) < 0) continue;
+          var group = groups.get(def.group);
+          if (!group) {
+            group = {
+              name: def.group,
+              collapsed: !query && collapsed.has(def.group),
+              defs: []
+            };
+            groups.set(def.group, group);
+          }
+          group.defs.push(def);
+        }
+        return Array.from(groups.values());
+      }
+
+      /** P0 §9.1: drag-only disables exactly these three mechanisms. */
+      function applyPlayMode(tunables, all) {
+        var changed = [];
+        for (var _i2 = 0, _arr = ['mech.chain', 'mech.throw', 'mech.loop']; _i2 < _arr.length; _i2++) {
+          var key = _arr[_i2];
+          if (!tunables.has(key)) continue;
+          tunables.set(key, all ? 1 : 0);
+          changed.push(key);
+        }
+        return changed;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Rng.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports({
+        createSessionRng: createSessionRng,
+        deriveStreamSeed: deriveStreamSeed,
+        mulberry32: mulberry32
+      });
+      cclegacy._RF.push({}, "632a9LOHLFGP6hgqN4+0rC9", "Rng", undefined);
+      /** Seeded stream. `next` returns a float in [0, 1). */
+      /** mulberry32. The same seed always yields the same sequence in one JS engine. */
+      function mulberry32(seed) {
+        var a = seed >>> 0;
+        var rng = {
+          next: function next() {
+            a = a + 0x6d2b79f5 >>> 0;
+            var t = Math.imul(a ^ a >>> 15, 1 | a);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+          },
+          nextInt: function nextInt(max) {
+            if (!Number.isInteger(max) || max <= 0) {
+              throw new Error("nextInt max must be a positive integer, got " + max);
+            }
+            return Math.floor(rng.next() * max);
+          },
+          range: function range(min, max) {
+            return min + (max - min) * rng.next();
+          }
+        };
+        return rng;
+      }
+      var RngStream = exports('RngStream', {
+        Spawn: 1,
+        Loot: 2,
+        Fx: 3
+      });
+
+      /** Mix a session seed with a stream id into a non-zero uint32. */
+      function deriveStreamSeed(sessionSeed, streamId) {
+        var x = sessionSeed >>> 0 ^ Math.imul(streamId + 1 >>> 0, 0x9e3779b9);
+        x = Math.imul(x ^ x >>> 16, 0x7feb352d);
+        x = Math.imul(x ^ x >>> 15, 0x846ca68b);
+        x = (x ^ x >>> 16) >>> 0;
+        return x === 0 ? 1 : x;
+      }
+      function createSessionRng(sessionSeed) {
+        return {
+          spawn: mulberry32(deriveStreamSeed(sessionSeed, RngStream.Spawn)),
+          loot: mulberry32(deriveStreamSeed(sessionSeed, RngStream.Loot)),
+          fx: mulberry32(deriveStreamSeed(sessionSeed, RngStream.Fx))
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Arena.ts'], function (exports) {
+  var cclegacy, ARENA_WIDTH, ARENA_HEIGHT;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      ARENA_WIDTH = module.ARENA_WIDTH;
+      ARENA_HEIGHT = module.ARENA_HEIGHT;
+    }],
+    execute: function () {
+      exports({
+        arenaToPx: arenaToPx,
+        intersectRect: intersectRect,
+        layoutScreen: layoutScreen,
+        rectInside: rectInside
+      });
+      cclegacy._RF.push({}, "0a229DPx49BXLhConS4UN/W", "ScreenLayout", undefined);
+      /** Design resolution. Project settings already use Fit Width. */
+      var DESIGN_WIDTH = exports('DESIGN_WIDTH', 720);
+      var DESIGN_HEIGHT = exports('DESIGN_HEIGHT', 1280);
+      /** 1 u = 72 px = 1/10 of the 720-wide design. */
+      var UNIT_PX = exports('UNIT_PX', 72);
+      var DESIGN_TALLNESS = DESIGN_HEIGHT / DESIGN_WIDTH;
+
+      /**
+       * Place the 10×15 u arena inside a visible rect.
+       * Tall screens (16:9, 20:9) fit the arena to the width and give leftover
+       * height to the HUD and the thumb strip. The arena is not scaled up.
+       * Wider screens letterbox on the left and right so the 15 u height still fits
+       * the 16:9 design proportion.
+       * `safeArea` uses the same pixel space as the visible rect, origin bottom-left.
+       */
+      function layoutScreen(visibleWidth, visibleHeight, safeArea) {
+        var width = Math.max(0, visibleWidth);
+        var height = Math.max(0, visibleHeight);
+        var safe = safeArea != null ? safeArea : {
+          x: 0,
+          y: 0,
+          width: width,
+          height: height
+        };
+        var tallEnough = width <= 0 || height / width >= DESIGN_TALLNESS - 1e-6;
+        var fit = tallEnough ? 'width' : 'height';
+        var pxPerUnit = tallEnough ? width / ARENA_WIDTH : height / (DESIGN_HEIGHT / UNIT_PX);
+        var arenaWidthPx = ARENA_WIDTH * pxPerUnit;
+        var arenaHeightPx = ARENA_HEIGHT * pxPerUnit;
+        var sideMargin = Math.max(0, (width - arenaWidthPx) / 2);
+        var verticalRemainder = Math.max(0, height - arenaHeightPx);
+        var arenaOriginX = sideMargin;
+        var arenaOriginY = verticalRemainder / 2;
+        var hud = intersectRect({
+          x: arenaOriginX,
+          y: arenaOriginY + arenaHeightPx,
+          width: arenaWidthPx,
+          height: Math.max(0, height - (arenaOriginY + arenaHeightPx))
+        }, safe);
+        var thumb = intersectRect({
+          x: arenaOriginX,
+          y: 0,
+          width: arenaWidthPx,
+          height: arenaOriginY
+        }, safe);
+        return {
+          fit: fit,
+          pxPerUnit: pxPerUnit,
+          arenaWidthPx: arenaWidthPx,
+          arenaHeightPx: arenaHeightPx,
+          arenaOriginX: arenaOriginX,
+          arenaOriginY: arenaOriginY,
+          hud: hud,
+          thumb: thumb,
+          sideMargin: sideMargin
+        };
+      }
+
+      /** Arena units to visible pixels (origin bottom-left of the visible rect). */
+      function arenaToPx(layout, p) {
+        return {
+          x: layout.arenaOriginX + p.x * layout.pxPerUnit,
+          y: layout.arenaOriginY + p.y * layout.pxPerUnit
+        };
+      }
+      function intersectRect(a, b) {
+        var x0 = Math.max(a.x, b.x);
+        var y0 = Math.max(a.y, b.y);
+        var x1 = Math.min(a.x + a.width, b.x + b.width);
+        var y1 = Math.min(a.y + a.height, b.y + b.height);
+        return {
+          x: x0,
+          y: y0,
+          width: Math.max(0, x1 - x0),
+          height: Math.max(0, y1 - y0)
+        };
+      }
+
+      /** True when `inner` lies entirely inside `outer`. */
+      function rectInside(inner, outer) {
+        return inner.x >= outer.x - 1e-6 && inner.y >= outer.y - 1e-6 && inner.x + inner.width <= outer.x + outer.width + 1e-6 && inner.y + inner.height <= outer.y + outer.height + 1e-6;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ServiceRegistry.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "b09eexTqw5MwaAQHY6bgt3s", "ServiceRegistry", undefined);
+      var ServiceRegistry = exports('ServiceRegistry', /*#__PURE__*/function () {
+        function ServiceRegistry() {
+          this.map = new Map();
+        }
+        var _proto = ServiceRegistry.prototype;
+        _proto.provide = function provide(key, value) {
+          this.map.set(key, value);
+        };
+        _proto.get = function get(key) {
+          var value = this.map.get(key);
+          if (value === undefined) throw new Error("Service not provided: " + key);
+          return value;
+        };
+        _proto.has = function has(key) {
+          return this.map.has(key);
+        };
+        return ServiceRegistry;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Session.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createClass, cclegacy;
+  return {
+    setters: [function (module) {
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports('nextSessionId', nextSessionId);
+      cclegacy._RF.push({}, "18080XCxz9JUbthkgHwpxe7", "Session", undefined);
+      var sessionSerial = 0;
+      function nextSessionId(nowMs) {
+        if (nowMs === void 0) {
+          nowMs = Date.now();
+        }
+        sessionSerial += 1;
+        return "s" + nowMs.toString(36) + "-" + sessionSerial.toString(36);
+      }
+
+      /**
+       * Session state machine. `restart` begins a new session without emitting
+       * `session:end`, so a debug restart does not open the result page.
+       * The enemy director supplies elapsed time; core is what calls `end('timeout')`.
+       */
+      var Session = exports('Session', /*#__PURE__*/function () {
+        function Session(hooks) {
+          if (hooks === void 0) {
+            hooks = {};
+          }
+          this.sidValue = '';
+          this.seedValue = 1;
+          this.runningValue = false;
+          this.startedAt = 0;
+          this.hooks = void 0;
+          this.hooks = hooks;
+        }
+        var _proto = Session.prototype;
+        _proto.start = function start() {
+          var _this$hooks$prepare, _this$hooks, _this$hooks$nowSid, _this$hooks$nowSid2, _this$hooks2, _this$hooks$simTime, _this$hooks$simTime2, _this$hooks3, _this$hooks$onStart, _this$hooks4, _this$hooks$paramsHas, _this$hooks$paramsHas2, _this$hooks5;
+          if (this.runningValue) return;
+          (_this$hooks$prepare = (_this$hooks = this.hooks).prepare) == null || _this$hooks$prepare.call(_this$hooks);
+          this.sidValue = (_this$hooks$nowSid = (_this$hooks$nowSid2 = (_this$hooks2 = this.hooks).nowSid) == null ? void 0 : _this$hooks$nowSid2.call(_this$hooks2)) != null ? _this$hooks$nowSid : nextSessionId();
+          this.seedValue = this.resolveSeed();
+          this.runningValue = true;
+          this.startedAt = (_this$hooks$simTime = (_this$hooks$simTime2 = (_this$hooks3 = this.hooks).simTime) == null ? void 0 : _this$hooks$simTime2.call(_this$hooks3)) != null ? _this$hooks$simTime : 0;
+          (_this$hooks$onStart = (_this$hooks4 = this.hooks).onStart) == null || _this$hooks$onStart.call(_this$hooks4, {
+            sid: this.sidValue,
+            seed: this.seedValue,
+            paramsHash: (_this$hooks$paramsHas = (_this$hooks$paramsHas2 = (_this$hooks5 = this.hooks).paramsHash) == null ? void 0 : _this$hooks$paramsHas2.call(_this$hooks5)) != null ? _this$hooks$paramsHas : ''
+          });
+        };
+        _proto.end = function end(reason) {
+          var _this$hooks$simTime3, _this$hooks$simTime4, _this$hooks6, _this$hooks$onEnd, _this$hooks7;
+          if (!this.runningValue) return;
+          this.runningValue = false;
+          var now = (_this$hooks$simTime3 = (_this$hooks$simTime4 = (_this$hooks6 = this.hooks).simTime) == null ? void 0 : _this$hooks$simTime4.call(_this$hooks6)) != null ? _this$hooks$simTime3 : 0;
+          (_this$hooks$onEnd = (_this$hooks7 = this.hooks).onEnd) == null || _this$hooks$onEnd.call(_this$hooks7, {
+            sid: this.sidValue,
+            reason: reason,
+            duration: Math.max(0, now - this.startedAt)
+          });
+        };
+        _proto.restart = function restart() {
+          this.runningValue = false;
+          this.start();
+        };
+        _proto.resolveSeed = function resolveSeed() {
+          var _this$hooks$resolveSe, _this$hooks$resolveSe2, _this$hooks8, _this$hooks$random, _this$hooks$random2, _this$hooks9;
+          var requested = (_this$hooks$resolveSe = (_this$hooks$resolveSe2 = (_this$hooks8 = this.hooks).resolveSeed) == null ? void 0 : _this$hooks$resolveSe2.call(_this$hooks8)) != null ? _this$hooks$resolveSe : 0;
+          if (requested !== 0 && Number.isFinite(requested)) {
+            var seed = Math.floor(Math.abs(requested));
+            return seed === 0 ? 1 : seed;
+          }
+          var roll = (_this$hooks$random = (_this$hooks$random2 = (_this$hooks9 = this.hooks).random) == null ? void 0 : _this$hooks$random2.call(_this$hooks9)) != null ? _this$hooks$random : Math.random();
+          var span = Math.floor(roll * 999999);
+          return 1 + Math.max(0, Math.min(999998, span));
+        };
+        _createClass(Session, [{
+          key: "sid",
+          get: function get() {
+            return this.sidValue;
+          }
+
+          /** Resolved seed for this session. Never 0 after `start`. */
+        }, {
+          key: "seed",
+          get: function get() {
+            return this.seedValue;
+          }
+        }, {
+          key: "running",
+          get: function get() {
+            return this.runningValue;
+          }
+        }]);
+        return Session;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SessionWatch.ts", ['cc', './SystemOrder.ts'], function (exports) {
+  var cclegacy, SystemOrder;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }],
+    execute: function () {
+      exports('createSessionWatch', createSessionWatch);
+      cclegacy._RF.push({}, "03f40ke0LJOLLgq9Y/5inYa", "SessionWatch", undefined);
+      /** Ends the session once the director clock reaches the configured length. */
+      function createSessionWatch(deps) {
+        return {
+          id: 'core.session',
+          order: SystemOrder.Session,
+          fixedUpdate: function fixedUpdate() {
+            if (!deps.session.running) return;
+            if (!deps.hasDirector()) return;
+            if (deps.endless()) return;
+            if (deps.elapsed() >= deps.length()) deps.session.end('timeout');
+          }
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SpatialHash.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "c32978uLZBNTpuYqsdoK/hd", "SpatialHash", undefined);
+      /**
+       * Uniform grid broadphase. An item that covers several cells is inserted into
+       * each of them and returned once per query.
+       * Callers own `out` and should clear it; the return value is how many items
+       * were appended.
+       */
+      var SpatialHash = exports('SpatialHash', /*#__PURE__*/function () {
+        function SpatialHash(cellSize) {
+          this.cells = new Map();
+          this.cellSize = void 0;
+          if (!(cellSize > 0) || !Number.isFinite(cellSize)) {
+            throw new Error("SpatialHash cellSize must be > 0, got " + cellSize);
+          }
+          this.cellSize = cellSize;
+        }
+        var _proto = SpatialHash.prototype;
+        _proto.clear = function clear() {
+          this.cells.clear();
+        }
+
+        /** Insert a circle (center x,y, radius r) identified by `id`. */;
+        _proto.insert = function insert(id, x, y, r, item) {
+          var entry = {
+            id: id,
+            minX: x - r,
+            minY: y - r,
+            maxX: x + r,
+            maxY: y + r,
+            item: item
+          };
+          var x0 = this.cellOf(entry.minX);
+          var y0 = this.cellOf(entry.minY);
+          var x1 = this.cellOf(entry.maxX);
+          var y1 = this.cellOf(entry.maxY);
+          for (var cy = y0; cy <= y1; cy++) {
+            for (var cx = x0; cx <= x1; cx++) {
+              var key = cx + "," + cy;
+              var bucket = this.cells.get(key);
+              if (!bucket) {
+                bucket = [];
+                this.cells.set(key, bucket);
+              }
+              bucket.push(entry);
+            }
+          }
+        };
+        _proto.queryCircle = function queryCircle(x, y, r, out) {
+          return this.collect(x - r, y - r, x + r, y + r, out, function (entry) {
+            return aabbHitsCircle(entry, x, y, r);
+          });
+        };
+        _proto.queryAABB = function queryAABB(minX, minY, maxX, maxY, out) {
+          return this.collect(minX, minY, maxX, maxY, out, function (entry) {
+            return aabbOverlaps(entry, minX, minY, maxX, maxY);
+          });
+        }
+
+        /** Segment AB thickened by radius r (capsule broadphase). */;
+        _proto.querySegment = function querySegment(ax, ay, bx, by, r, out) {
+          var minX = Math.min(ax, bx) - r;
+          var minY = Math.min(ay, by) - r;
+          var maxX = Math.max(ax, bx) + r;
+          var maxY = Math.max(ay, by) + r;
+          return this.collect(minX, minY, maxX, maxY, out, function (entry) {
+            return segmentHitsAabb(ax, ay, bx, by, entry.minX - r, entry.minY - r, entry.maxX + r, entry.maxY + r);
+          });
+        };
+        _proto.collect = function collect(minX, minY, maxX, maxY, out, keep) {
+          var seen = new Set();
+          var before = out.length;
+          var x0 = this.cellOf(minX);
+          var y0 = this.cellOf(minY);
+          var x1 = this.cellOf(maxX);
+          var y1 = this.cellOf(maxY);
+          for (var cy = y0; cy <= y1; cy++) {
+            for (var cx = x0; cx <= x1; cx++) {
+              var bucket = this.cells.get(cx + "," + cy);
+              if (!bucket) continue;
+              for (var _iterator = _createForOfIteratorHelperLoose(bucket), _step; !(_step = _iterator()).done;) {
+                var _entry = _step.value;
+                if (seen.has(_entry.id)) continue;
+                if (!keep(_entry)) continue;
+                seen.add(_entry.id);
+                out.push(_entry.item);
+              }
+            }
+          }
+          return out.length - before;
+        };
+        _proto.cellOf = function cellOf(v) {
+          return Math.floor(v / this.cellSize);
+        };
+        return SpatialHash;
+      }());
+      function aabbOverlaps(entry, minX, minY, maxX, maxY) {
+        return entry.maxX >= minX && entry.minX <= maxX && entry.maxY >= minY && entry.minY <= maxY;
+      }
+      function aabbHitsCircle(entry, x, y, r) {
+        var cx = Math.max(entry.minX, Math.min(x, entry.maxX));
+        var cy = Math.max(entry.minY, Math.min(y, entry.maxY));
+        var dx = cx - x;
+        var dy = cy - y;
+        return dx * dx + dy * dy <= r * r;
+      }
+
+      /** Liang–Barsky. True when segment AB meets the closed AABB. */
+      function segmentHitsAabb(ax, ay, bx, by, minX, minY, maxX, maxY) {
+        var dx = bx - ax;
+        var dy = by - ay;
+        var tmin = 0;
+        var tmax = 1;
+        var clip = function clip(p, q) {
+          if (Math.abs(p) <= 1e-12) return q >= 0;
+          var t = q / p;
+          if (p < 0) {
+            if (t > tmax) return false;
+            if (t > tmin) tmin = t;
+          } else {
+            if (t < tmin) return false;
+            if (t < tmax) tmax = t;
+          }
+          return tmin <= tmax;
+        };
+        if (!clip(-dx, ax - minX)) return false;
+        if (!clip(dx, maxX - ax)) return false;
+        if (!clip(-dy, ay - minY)) return false;
+        if (!clip(dy, maxY - ay)) return false;
+        return true;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "d7c2cYUMg9D5ZsHLarNGjxy", "SpawnDirector", undefined);
+      var KINDS = ['blob', 'sheep', 'boar'];
+      var SpawnDirector = exports('SpawnDirector', /*#__PURE__*/function () {
+        function SpawnDirector(ctx, world) {
+          this.time = 0;
+          this.nextPurchase = 0;
+          this.previousPurchase = 0;
+          this.budget = 0;
+          this.pending = null;
+          this.generation = 0;
+          this.ctx = void 0;
+          this.world = void 0;
+          this.ctx = ctx;
+          this.world = world;
+        }
+        var _proto = SpawnDirector.prototype;
+        _proto.reset = function reset() {
+          this.generation += 1;
+          this.time = 0;
+          this.budget = 0;
+          this.pending = null;
+          this.previousPurchase = 0;
+          this.nextPurchase = this.ctx.tunables.get('spawn.purchaseInterval');
+        };
+        _proto.stop = function stop() {
+          this.generation += 1;
+        };
+        _proto.update = function update(dt) {
+          if (dt <= 0) return;
+          var target = this.time + dt;
+          var t = this.ctx.tunables;
+          var generation = this.generation;
+          while (target + 1e-9 >= this.nextPurchase) {
+            this.time = this.nextPurchase;
+            // Core owns timeout; never spawn at or beyond its terminal step.
+            if (!t.getBool('session.endless') && this.time + 1e-9 >= t.get('session.length')) break;
+            // P0 §8 rate; P0 未定义，自选默认值: use the right endpoint
+            // of each purchase interval for discrete budget integration.
+            this.budget += (this.time - this.previousPurchase) * t.get('diff.budgetBase') * Math.pow(this.danger, t.get('diff.budgetExp'));
+            this.previousPurchase = this.time;
+            this.buy();
+            if (generation !== this.generation) return;
+            this.nextPurchase += t.get('spawn.purchaseInterval');
+          }
+          this.time = target;
+        };
+        _proto.debugSpawn = function debugSpawn(arg) {
+          // Debug counts are exact individual counts, not automatic sheep groups.
+          var parts = arg === undefined || arg.trim() === '' ? ['blob'] : arg.trim().split(/\s+/);
+          var kind = parts[0];
+          if (kind !== 'blob' && kind !== 'sheep' && kind !== 'boar') return;
+          if (parts.length !== 1 && parts.length !== 2 && parts.length !== 4) return;
+          var count = parts.length >= 2 ? Number(parts[1]) : 1;
+          if (!Number.isInteger(count) || count < 1 || count > this.ctx.tunables.get('enemy.maxAlive')) return;
+          var pos = null;
+          if (parts.length === 4) {
+            var x = Number(parts[2]);
+            var y = Number(parts[3]);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+            pos = {
+              x: x,
+              y: y
+            };
+          }
+          var generation = this.generation;
+          for (var i = 0; i < count && this.alive < Math.floor(this.ctx.tunables.get('enemy.maxAlive')); i++) {
+            var _pos;
+            var point = (_pos = pos) != null ? _pos : this.position(kind);
+            if (!point) return;
+            this.world.spawn(kind, point, this.danger);
+            if (generation !== this.generation) return;
+          }
+        };
+        _proto.buy = function buy() {
+          var t = this.ctx.tunables;
+          var generation = this.generation;
+          while (this.alive < Math.floor(t.get('enemy.maxAlive'))) {
+            if (this.pending && (t.get(this.pending.kind + ".weight") <= 0 || this.time < t.get(this.pending.kind + ".unlockAt"))) this.pending = null;
+            if (!this.pending) this.pending = this.rollPurchase();
+            var purchase = this.pending;
+            if (!purchase) return;
+            var cost = purchase.count * t.get(purchase.kind + ".cost");
+            // P0 未定义，自选默认值: save for the selected purchase;
+            // do not bias weights toward cheap enemies.
+            // Sheep groups are atomic: do not silently truncate at the budget/cap.
+            if (this.budget + 1e-9 < cost || this.alive + purchase.count > Math.floor(t.get('enemy.maxAlive'))) return;
+            var anchor = this.position(purchase.kind);
+            if (!anchor) return; // No legal perimeter point: retain budget.
+            this.budget = Math.max(0, this.budget - cost);
+            this.pending = null;
+            for (var i = 0; i < purchase.count; i++) {
+              var pos = purchase.kind === 'sheep' ? this.groupPosition(anchor) : anchor;
+              this.world.spawn(purchase.kind, pos, this.danger);
+              if (generation !== this.generation) return;
+            }
+          }
+        };
+        _proto.rollPurchase = function rollPurchase() {
+          var _this = this;
+          var t = this.ctx.tunables;
+          var unlocked = KINDS.filter(function (kind) {
+            return _this.time + 1e-9 >= t.get(kind + ".unlockAt") && t.get(kind + ".weight") > 0;
+          });
+          var total = unlocked.reduce(function (sum, kind) {
+            return sum + t.get(kind + ".weight");
+          }, 0);
+          if (total <= 0) return null;
+          var roll = this.ctx.rng.spawn.next() * total;
+          for (var _iterator = _createForOfIteratorHelperLoose(unlocked), _step; !(_step = _iterator()).done;) {
+            var kind = _step.value;
+            roll -= t.get(kind + ".weight");
+            if (roll >= 0) continue;
+            var low = Math.floor(Math.min(t.get('sheep.groupMin'), t.get('sheep.groupMax')));
+            var high = Math.floor(Math.max(t.get('sheep.groupMin'), t.get('sheep.groupMax')));
+            return {
+              kind: kind,
+              count: kind === 'sheep' ? low + Math.floor(this.ctx.rng.spawn.next() * (high - low + 1)) : 1
+            };
+          }
+          return null;
+        };
+        _proto.position = function position(kind) {
+          var t = this.ctx.tunables;
+          var r = t.get(kind + ".radius");
+          var inset = Math.max(r, t.get('spawn.edgeInset'));
+          var left = inset;
+          var right = this.ctx.arena.width - inset;
+          var bottom = Math.max(inset, t.get('spawn.bottomExclude') + r);
+          var top = this.ctx.arena.height - inset;
+          var pet = this.world.player().pos;
+          var distance = t.get('spawn.minDistFromPet');
+          var edges = [];
+          var add = function add(vertical, fixed, low, high) {
+            if (high < low) return;
+            var delta = fixed - (vertical ? pet.x : pet.y);
+            var center = vertical ? pet.y : pet.x;
+            if (Math.abs(delta) >= distance) edges.push({
+              vertical: vertical,
+              fixed: fixed,
+              low: low,
+              high: high
+            });else {
+              var half = Math.sqrt(distance * distance - delta * delta);
+              if (center - half >= low) edges.push({
+                vertical: vertical,
+                fixed: fixed,
+                low: low,
+                high: Math.min(high, center - half)
+              });
+              if (center + half <= high) edges.push({
+                vertical: vertical,
+                fixed: fixed,
+                low: Math.max(low, center + half),
+                high: high
+              });
+            }
+          };
+          // Uniform legal arc length, no unbounded rejection loop or retry parameter.
+          add(true, left, bottom, top);
+          add(false, top, left, right);
+          add(true, right, bottom, top);
+          if (t.get('spawn.bottomExclude') <= inset - r) add(false, inset, left, right);
+          var total = edges.reduce(function (sum, edge) {
+            return sum + edge.high - edge.low;
+          }, 0);
+          if (total <= 0) return null;
+          var roll = this.ctx.rng.spawn.next() * total;
+          for (var _i = 0, _edges = edges; _i < _edges.length; _i++) {
+            var edge = _edges[_i];
+            var length = edge.high - edge.low;
+            if (roll <= length) return edge.vertical ? {
+              x: edge.fixed,
+              y: edge.low + roll
+            } : {
+              x: edge.low + roll,
+              y: edge.fixed
+            };
+            roll -= length;
+          }
+          return null;
+        };
+        _proto.groupPosition = function groupPosition(anchor) {
+          var t = this.ctx.tunables;
+          var angle = this.ctx.rng.spawn.next() * Math.PI * 2;
+          var radius = Math.sqrt(this.ctx.rng.spawn.next()) * t.get('sheep.groupSpawnRadius');
+          var r = t.get('sheep.radius');
+          var pos = this.ctx.arena.clamp({
+            x: anchor.x + Math.cos(angle) * radius,
+            y: Math.max(t.get('spawn.bottomExclude') + r, anchor.y + Math.sin(angle) * radius)
+          }, r);
+          var pet = this.world.player().pos;
+          return Math.hypot(pos.x - pet.x, pos.y - pet.y) + 1e-9 >= t.get('spawn.minDistFromPet') ? pos : _extends({}, anchor);
+        };
+        _createClass(SpawnDirector, [{
+          key: "elapsed",
+          get: function get() {
+            return this.time;
+          }
+        }, {
+          key: "danger",
+          get: function get() {
+            var t = this.time / 60; // P0 §8: minutes, no cap and no speed scaling.
+            return 1 + this.ctx.tunables.get('diff.tA') * t + this.ctx.tunables.get('diff.tB') * t * t;
+          }
+        }, {
+          key: "alive",
+          get: function get() {
+            return this.world.aliveCount();
+          }
+        }]);
+        return SpawnDirector;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/StepProbe.ts", ['cc', './SystemOrder.ts'], function (exports) {
+  var cclegacy, SystemOrder;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "7c261UGE+ZFdb0tVUqtN67U", "StepProbe", undefined);
+
+      /**
+       * Example system: counts real simulation steps.
+       * At 60 Hz, 30 Hz, and 120 Hz rendering, one second of game time is 60 steps.
+       * Hit-stop frames do not increment `steps` (this system is not the input slot).
+       */
+      var StepProbe = exports('StepProbe', /*#__PURE__*/function () {
+        function StepProbe() {
+          this.id = 'core.stepProbe';
+          this.order = SystemOrder.StepProbe;
+          this.steps = 0;
+        }
+        var _proto = StepProbe.prototype;
+        _proto.fixedUpdate = function fixedUpdate(_dt) {
+          this.steps += 1;
+        };
+        _proto.reset = function reset() {
+          this.steps = 0;
+        };
+        return StepProbe;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Storage.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports('isRecord', isRecord);
+      cclegacy._RF.push({}, "a752d1o2w9IUJvAosW9McNI", "Storage", undefined);
+      /** Injectable so logic tests and native builds never need browser globals. */
+      var StoredJson = exports('StoredJson', /*#__PURE__*/function () {
+        function StoredJson(storage) {
+          this.error = '';
+          this.storage = void 0;
+          this.storage = storage;
+        }
+        var _proto = StoredJson.prototype;
+        _proto.read = function read(key) {
+          if (!this.storage) return null;
+          try {
+            var text = this.storage.getItem(key);
+            return text === null ? null : JSON.parse(text);
+          } catch (_unused) {
+            this.error = '本地数据读取失败；仍可导出内存数据';
+            return null;
+          }
+        };
+        _proto.write = function write(key, value) {
+          if (!this.storage) {
+            this.error = '本地存储不可用；请导出数据';
+            return false;
+          }
+          try {
+            this.storage.setItem(key, JSON.stringify(value));
+            this.error = '';
+            return true;
+          } catch (_unused2) {
+            this.error = '本地保存失败（空间或权限）；请导出数据';
+            return false;
+          }
+        };
+        return StoredJson;
+      }());
+      function isRecord(value) {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordChain.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Damage.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy, ropeLength;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      ropeLength = module.ropeLength;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "a9141+9o3hF9YL0JSJ2A/sn", "SwordChain", undefined);
+      var SwordChain = exports('SwordChain', /*#__PURE__*/function () {
+        function SwordChain(ctx) {
+          this.slots = [];
+          this.loose = [];
+          this.slotMax = 12;
+          this.immune = 0;
+          this.startedAt = 0;
+          this.ctx = void 0;
+          this.ctx = ctx;
+        }
+        var _proto = SwordChain.prototype;
+        _proto.reset = function reset() {
+          this.loose.length = 0;
+          this.immune = 0;
+          // P0 §6.3: reset is reached from session:start, including debug restart.
+          // Use simulation time so hit-stop pauses grace; setCount must not renew it.
+          this.startedAt = this.ctx.loop.simTime;
+          this.slotMax = Math.floor(this.ctx.tunables.get('chain.slotMax'));
+          this.setCount(this.ctx.tunables.get('chain.startCount'));
+        };
+        _proto.rollGrade = function rollGrade() {
+          var a = Math.floor(this.ctx.tunables.get('chain.gradeMin'));
+          var b = Math.floor(this.ctx.tunables.get('chain.gradeMax'));
+          return Math.min(a, b) + this.ctx.rng.loot.nextInt(Math.abs(a - b) + 1);
+        };
+        _proto.setCount = function setCount(count) {
+          if (!Number.isFinite(count)) return;
+          this.slots.length = 0;
+          var n = Math.max(0, Math.min(this.capacity, Math.floor(count)));
+          // P0 未定义，自选默认值: opening/debug swords use the same grade roll as loot.
+          for (var i = 0; i < n; i++) this.insert(this.rollGrade());
+          this.changed();
+        };
+        _proto.addLoose = function addLoose(pos, grade, recovered) {
+          if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(grade)) return;
+          this.loose.push({
+            pos: this.ctx.arena.clamp(pos, this.ctx.tunables.get('chain.linkRadius')),
+            grade: Math.max(0, Math.min(5, Math.floor(grade))),
+            left: this.ctx.tunables.get(recovered ? 'scatter.blinkTime' : 'chain.groundLife'),
+            recovered: recovered
+          });
+        };
+        _proto.setImmune = function setImmune(seconds) {
+          if (Number.isFinite(seconds)) this.immune = Math.max(this.immune, seconds, 0);
+          this.clearContacts();
+        };
+        _proto.clearContacts = function clearContacts() {
+          for (var _iterator = _createForOfIteratorHelperLoose(this.slots), _step; !(_step = _iterator()).done;) {
+            var s = _step.value;
+            s.contactTime = 0;
+          }
+        };
+        _proto.step = function step(dt, pet) {
+          this.immune = Math.max(0, this.immune - dt);
+          // Hot capacity/layer reductions leave excess swords on the ground, never overstack.
+          var changed = false;
+          for (var i = this.slots.length - 1; i >= 0; i--) {
+            var slot = this.slots[i];
+            while (slot.grades.length > this.stackMax) {
+              var grade = slot.grades.pop();
+              if (grade !== undefined) this.addLoose(slot.pos, grade, false);
+              changed = true;
+            }
+            if (slot.grades.length === 0) this.slots.splice(i, 1);
+          }
+          while (this.N > this.capacity) {
+            var _slot = this.slots[this.slots.length - 1];
+            var _grade = _slot.grades.pop();
+            if (_grade !== undefined) this.addLoose(_slot.pos, _grade, false);
+            if (_slot.grades.length === 0) this.slots.pop();
+            changed = true;
+          }
+          if (changed) this.changed();
+          var expired = 0;
+          for (var _i = this.loose.length - 1; _i >= 0; _i--) {
+            var sword = this.loose[_i];
+            sword.left -= dt;
+            // Expiration wins at the exact deadline, including when the pet is on the sword.
+            if (sword.left <= 1e-8) {
+              expired++;
+              this.loose.splice(_i, 1);
+              continue;
+            }
+            if (this.N >= this.capacity || Math.hypot(pet.x - sword.pos.x, pet.y - sword.pos.y) > this.ctx.tunables.get('chain.pickupRadius')) continue;
+            this.insert(sword.grade);
+            this.loose.splice(_i, 1);
+            this.changed();
+            this.ctx.events.emit('chain:pickup', {
+              N: this.N,
+              recovered: sword.recovered
+            });
+          }
+          if (expired > 0) this.ctx.events.emit('chain:scatterExpired', {
+            count: expired
+          });
+        }
+
+        /** A slot is the rope node, not an independent visual sample. */;
+        _proto.place = function place(rope) {
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.slots), _step2; !(_step2 = _iterator2()).done;) {
+            var slot = _step2.value;
+            var point = rope.points[slot.index + 1];
+            if (!point) continue;
+            slot.pos = point;
+            slot.previous = {
+              x: point.beforeX,
+              y: point.beforeY
+            };
+          }
+        }
+
+        /** P0 §6.3: contact, rope distance, head-on closing, duration and immunity. */;
+        _proto.detectBreak = function detectBreak(dt, pet, vel, rope) {
+          if (dt <= 0 || !this.enabled || this.immune > 1e-8 || !this.ctx.tunables.getBool('break.enabled') || this.ctx.loop.simTime - this.startedAt + 1e-8 < this.ctx.tunables.get('break.spawnGrace')) {
+            this.clearContacts();
+            return null;
+          }
+          var radius = this.ctx.tunables.get('pet.radius') + this.ctx.tunables.get('chain.linkRadius');
+          var minClosing = this.ctx.tunables.get('break.minClosingSpeed');
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.slots), _step3; !(_step3 = _iterator3()).done;) {
+            var slot = _step3.value;
+            var dx = slot.pos.x - pet.x;
+            var dy = slot.pos.y - pet.y;
+            var dist = Math.hypot(dx, dy);
+            var linkX = (slot.pos.x - slot.previous.x) / dt;
+            var linkY = (slot.pos.y - slot.previous.y) / dt;
+            var closing = dist > 1e-9 ? ((vel.x - linkX) * dx + (vel.y - linkY) * dy) / dist : 0;
+            // P0 §6.3 / product decision 2026-10-19 #4: positive closing also
+            // includes catching a slower link. Require opposite velocities and
+            // apply the same closing threshold to their paired approach:
+            // 2*min(petApproach, linkApproach) = closing - |speed imbalance|.
+            // This removes the catch-up contribution; a tiny counter-motion
+            // from the hanging rope's adjustment is not a head-on collision.
+            // No new speed/angle tunable or pet turn threshold is introduced.
+            var opposing = -(vel.x * linkX + vel.y * linkY);
+            var petApproach = dist > 1e-9 ? (vel.x * dx + vel.y * dy) / dist : 0;
+            var linkApproach = dist > 1e-9 ? -(linkX * dx + linkY * dy) / dist : 0;
+            var pairedClosing = 2 * Math.min(petApproach, linkApproach);
+            var along = rope.distanceTo(slot.index + 1);
+            if (opposing <= 0 || petApproach <= 0 || linkApproach <= 0 || pairedClosing + 1e-8 < minClosing || dist > radius || along + 1e-8 < this.ctx.tunables.get('break.minRopeDist') || closing + 1e-8 < minClosing) {
+              slot.contactTime = 0;
+              continue;
+            }
+            slot.contactTime += dt;
+            if (slot.contactTime + 1e-8 >= this.ctx.tunables.get('break.minContactTime')) return {
+              index: slot.index,
+              distance: along,
+              closing: closing
+            };
+          }
+          return null;
+        };
+        _proto.breakAt = function breakAt(index, distance, closing) {
+          if (index < 0 || index >= this.slots.length) return;
+          var before = this.N;
+          for (var i = index; i < this.slots.length; i++) {
+            var slot = this.slots[i];
+            for (var _iterator4 = _createForOfIteratorHelperLoose(slot.grades), _step4; !(_step4 = _iterator4()).done;) {
+              var grade = _step4.value;
+              var angle = this.ctx.rng.loot.range(0, Math.PI * 2);
+              var offset = this.ctx.rng.loot.range(0, this.ctx.tunables.get('scatter.spread'));
+              this.addLoose({
+                x: slot.pos.x + Math.cos(angle) * offset,
+                y: slot.pos.y + Math.sin(angle) * offset
+              }, grade, true);
+            }
+          }
+          this.slots.splice(index);
+          this.setImmune(this.ctx.tunables.get('break.immunity'));
+          this.changed();
+          this.ctx.events.emit('chain:break', {
+            slotIndex: index,
+            lost: before - this.N,
+            nBefore: before,
+            ropeDist: distance,
+            closingSpeed: closing
+          });
+        };
+        _proto.insert = function insert(grade) {
+          if (this.N >= this.capacity) return;
+          if (this.slots.length < this.slotMax) {
+            var pos = {
+              x: this.ctx.arena.width / 2,
+              y: this.ctx.arena.height / 2
+            };
+            this.slots.push({
+              index: this.slots.length,
+              grades: [grade],
+              pos: pos,
+              previous: _extends({}, pos),
+              autoLeft: this.ctx.tunables.get('chain.autoInterval'),
+              contactTime: 0
+            });
+          } else {
+            var _selected;
+            var selected = null;
+            // Rope order breaks ties toward the pet; preserve each existing sword's slot/grade.
+            for (var _iterator5 = _createForOfIteratorHelperLoose(this.slots), _step5; !(_step5 = _iterator5()).done;) {
+              var slot = _step5.value;
+              if (slot.grades.length < this.stackMax && (!selected || slot.grades.length < selected.grades.length)) selected = slot;
+            }
+            (_selected = selected) == null || _selected.grades.push(grade);
+          }
+        };
+        _proto.changed = function changed() {
+          this.ctx.events.emit('chain:changed', {
+            N: this.N,
+            slots: this.slots.length
+          });
+        };
+        _createClass(SwordChain, [{
+          key: "N",
+          get: function get() {
+            return this.slots.reduce(function (sum, slot) {
+              return sum + slot.grades.length;
+            }, 0);
+          }
+        }, {
+          key: "targetLength",
+          get: function get() {
+            return ropeLength(this.ctx.tunables, this.slots.length);
+          }
+        }, {
+          key: "enabled",
+          get: function get() {
+            return this.ctx.tunables.getBool('mech.chain');
+          }
+        }, {
+          key: "capacity",
+          get: function get() {
+            return this.enabled ? Math.min(36, Math.floor(this.ctx.tunables.get('chain.maxCount')), this.slotMax * this.stackMax) : 0;
+          }
+        }, {
+          key: "stackMax",
+          get: function get() {
+            return Math.min(3, Math.floor(this.ctx.tunables.get('chain.stackMax')));
+          }
+        }]);
+        return SwordChain;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordCombat.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Geom2.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, cclegacy, pointSegmentDistance;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      pointSegmentDistance = module.pointSegmentDistance;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "f773afLGFFN/YuVnQas39mE", "SwordCombat", undefined);
+      /** Enemy owns cooldowns too; this local guard avoids duplicate service calls in a step. */
+      var SwordCombat = exports('SwordCombat', /*#__PURE__*/function () {
+        function SwordCombat(ctx) {
+          this.labels = [];
+          this.out = [];
+          this.lastHits = new Map();
+          this.clock = 0;
+          this.ctx = void 0;
+          this.ctx = ctx;
+        }
+        var _proto = SwordCombat.prototype;
+        _proto.reset = function reset() {
+          this.labels.length = 0;
+          this.lastHits.clear();
+          this.clock = 0;
+        };
+        _proto.step = function step(dt) {
+          this.clock += dt;
+          for (var i = this.labels.length - 1; i >= 0; i--) {
+            this.labels[i].left -= dt;
+            if (this.labels[i].left <= 0) this.labels.splice(i, 1);
+          }
+          for (var _iterator = _createForOfIteratorHelperLoose(this.lastHits.values()), _step; !(_step = _iterator()).done;) {
+            var hits = _step.value;
+            for (var _iterator2 = _createForOfIteratorHelperLoose(hits), _step2; !(_step2 = _iterator2()).done;) {
+              var _step2$value = _step2.value,
+                id = _step2$value[0],
+                until = _step2$value[1];
+              if (until <= this.clock) hits["delete"](id);
+            }
+          }
+        };
+        _proto.segment = function segment(a, b, radius, amount, source, key, cooldown, knockback) {
+          if (knockback === void 0) {
+            knockback = 0;
+          }
+          if (!this.ctx.services.has('enemies') || amount <= 0) return;
+          var enemies = this.ctx.services.get('enemies');
+          this.out.length = 0;
+          enemies.querySegment(a, b, radius, this.out);
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.out), _step3; !(_step3 = _iterator3()).done;) {
+            var enemy = _step3.value;
+            if (!enemy.alive || pointSegmentDistance(enemy.pos, a, b) > radius + enemy.radius) continue;
+            this.hit(enemy, amount, source, key, cooldown, {
+              x: b.x - a.x,
+              y: b.y - a.y
+            }, knockback);
+          }
+        };
+        _proto.circle = function circle(pos, radius, amount, source, key, cooldown, nearestOnly) {
+          if (!this.ctx.services.has('enemies')) return;
+          var enemies = this.ctx.services.get('enemies');
+          this.out.length = 0;
+          enemies.queryCircle(pos, radius, this.out);
+          var nearest = null;
+          var distance = Infinity;
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.out), _step4; !(_step4 = _iterator4()).done;) {
+            var e = _step4.value;
+            var d = Math.hypot(e.pos.x - pos.x, e.pos.y - pos.y);
+            if (!e.alive || d > radius + e.radius) continue;
+            if (!nearestOnly) this.hit(e, amount, source, key, cooldown, {
+              x: e.pos.x - pos.x,
+              y: e.pos.y - pos.y
+            });else if (d < distance) {
+              nearest = e;
+              distance = d;
+            }
+          }
+          if (nearest) this.hit(nearest, amount, source, key, cooldown, {
+            x: nearest.pos.x - pos.x,
+            y: nearest.pos.y - pos.y
+          });
+        };
+        _proto.hit = function hit(enemy, amount, source, key, cooldown, dir, knockback) {
+          var _hits$get,
+            _this = this;
+          if (knockback === void 0) {
+            knockback = 0;
+          }
+          if (amount <= 0) return;
+          var hits = this.lastHits.get(key);
+          if (!hits) {
+            hits = new Map();
+            this.lastHits.set(key, hits);
+          }
+          if (((_hits$get = hits.get(enemy.id)) != null ? _hits$get : -Infinity) > this.clock + 1e-8) return;
+          var len = Math.hypot(dir.x, dir.y);
+          var result = this.ctx.services.get('enemies').hit(enemy.id, {
+            source: source,
+            amount: amount,
+            hitKey: key,
+            cooldown: cooldown,
+            dir: len > 0 ? {
+              x: dir.x / len,
+              y: dir.y / len
+            } : {
+              x: 0,
+              y: 0
+            },
+            knockback: knockback
+          });
+          if (!result.applied) return;
+          hits.set(enemy.id, this.clock + cooldown);
+          var merge = this.labels.find(function (label) {
+            return label.enemyId === enemy.id && _this.clock - label.created < _this.ctx.tunables.get('fx.damageMergeTime');
+          });
+          if (merge) {
+            merge.amount += result.dealt;
+            merge.source = source;
+            return;
+          }
+          var max = Math.floor(this.ctx.tunables.get('fx.damageMax'));
+          while (this.labels.length > 0 && this.labels.length >= max) this.labels.shift();
+          if (max > 0) this.labels.push({
+            enemyId: enemy.id,
+            created: this.clock,
+            pos: _extends({}, enemy.pos),
+            amount: result.dealt,
+            source: source,
+            left: this.ctx.tunables.get('fx.damageLife')
+          });
+        };
+        return SwordCombat;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordParams.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _extends, cclegacy;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "fe08bUOhyFBI4HA9Rl7k4N5", "SwordParams", undefined);
+      function number(key, group, label, value, min, max, restart) {
+        if (restart === void 0) {
+          restart = false;
+        }
+        return {
+          key: key,
+          group: group,
+          label: label,
+          kind: 'number',
+          "default": value,
+          min: min,
+          max: max,
+          restart: restart
+        };
+      }
+      function toggle(key, group, label, value) {
+        if (value === void 0) {
+          value = 1;
+        }
+        return {
+          key: key,
+          group: group,
+          label: label,
+          kind: 'bool',
+          "default": value
+        };
+      }
+
+      /** P0 §6.1–6.3; loop return hooks use §6.5. No legacy aliases. */
+      var SWORD_PARAMS = exports('SWORD_PARAMS', [number('pet.speed', '宠物', '基础速度', 4.5, 2, 9), number('pet.accelTime', '宠物', '加速时间', 0.08, 0, 0.4), number('pet.decelTime', '宠物', '减速时间', 0.06, 0, 0.4), number('pet.weightSlow', '宠物', '每点剑重减速', 0.05, 0, 0.15), number('pet.radius', '宠物', '半径', 0.35, 0.2, 0.6), number('pet.maxHp', '宠物', '生命', 100, 10, 1000, true), number('pet.invuln', '宠物', '受伤免疫秒', 0.8, 0, 3), toggle('pet.godMode', '宠物', '无敌', 0), number('sword.level', '主剑', '强化等级', 0, 0, 15), number('sword.baseDmg', '主剑', '基础伤害', 10, 1, 100), number('sword.levelGrowth', '主剑', '每级成长', 1.12, 1, 1.3), number('sword.W', '主剑', '剑重', 2, 1, 5), number('sword.Lg', '主剑', '剑长', 2, 1, 5), number('sword.Cv', '主剑', '弧度', 1, 0, 3), number('sword.bladeLenBase', '主剑', '剑身基础长度', 0.4, 0.1, 1.5), number('sword.bladeLenPerLg', '主剑', '每点剑长剑身长度', 0.2, 0, 0.5), number('sword.bladeRadius', '主剑', '剑身半径', 0.15, 0.05, 0.5), number('sword.fullChargeMul', '主剑', '甩满参考速度倍率', 1.3, 1, 2.5), number('rope.baseLen', '绳索', '基础绳长', 1, 0.3, 3), number('rope.lenPerLg', '绳索', '每点剑长加绳长', 0.2, 0, 0.5), number('rope.lenPerSlot', '绳索', '每格加绳长', 0.3, 0.1, 0.6),
+      // GDD §6.2 / F1: the settled hard cap wins over P0's proposed tuning range 2–10.
+      number('rope.lenCap', '绳索', '绳长上限', 5, 2, 5), number('rope.iterations', '绳索', '约束迭代', 6, 1, 16), number('rope.damping', '绳索', '每步速度损失', 0.02, 0, 0.2), number('rope.linkMass', '绳索', '链格质量', 0.5, 0.1, 3), number('rope.mainMassPerW', '绳索', '主剑质量每剑重', 1, 0.2, 3), number('rope.wallBounce', '绳索', '撞墙反弹', 0.2, 0, 1), number('rope.tipFrames', '绳索', '剑尖速度平均步数', 3, 1, 8), number('drag.vDead', '拖剑', '无伤速度', 2, 0, 5), number('drag.vRef', '拖剑', '参考速度', 6, 2, 15), number('drag.qCap', '拖剑', '速度档上限', 3, 1, 5), number('drag.speedExp', '拖剑', '速度指数', 1.3, 0.5, 2.5), number('drag.weightExp', '拖剑', '重量指数', 0.7, 0, 1.5), number('drag.hitCooldown', '拖剑', '同敌命中间隔', 0.25, 0.05, 1), number('drag.knockbackK', '拖剑', '击退系数', 0.4, 0, 2), number('whip.turnDeg', '鞭响', '转向角度', 100, 45, 180), number('whip.window', '鞭响', '转向窗口', 0.3, 0.1, 0.6), number('whip.minSpeedFrac', '鞭响', '最低速度比例', 0.7, 0, 1), number('whip.impulse', '鞭响', '剑尖冲量', 4, 0, 15), number('whip.dmgMul', '鞭响', '伤害倍率', 1.8, 1, 4), number('whip.duration', '鞭响', '伤害窗口', 0.25, 0.05, 1), number('whip.cooldown', '鞭响', '冷却', 0.6, 0, 2), number('fx.hitstopFrames', '特效', '鞭响顿帧', 3, 0, 8), number('fx.shakeAmp', '特效', '震屏幅度', 0.08, 0, 0.3), number('fx.shakeDur', '特效', '震屏时长', 0.12, 0, 0.5), toggle('fx.trail', '特效', '拖影'), toggle('fx.hitstop', '特效', '顿帧'), toggle('fx.shake', '特效', '震屏'), toggle('mech.chain', '剑链', '剑链机制'), number('chain.startCount', '剑链', '开局剑数', 0, 0, 36, true), number('chain.maxCount', '剑链', '链剑上限', 16, 0, 36), number('chain.slotMax', '剑链', '链格上限', 12, 4, 12, true),
+      // GDD §6.2 settled: at most three layers, despite P0's proposed range 1–5.
+      number('chain.stackMax', '剑链', '每格层数上限', 3, 1, 3), number('chain.dropChance', '剑链', '普通怪掉散剑概率', 0.08, 0, 1), number('chain.pickupRadius', '剑链', '拾取半径', 0.5, 0.2, 1.5), number('chain.gradeMin', '剑链', '散剑最低等级', 0, 0, 5), number('chain.gradeMax', '剑链', '散剑最高等级', 2, 0, 5), number('chain.baseDmg', '剑链', '链剑基础伤害', 4, 0, 50), number('chain.mainLevelShare', '剑链', '主剑等级共享', 0.25, 0, 1), number('chain.resonPer', '剑链', '每把共鸣', 0.03, 0, 0.1), number('chain.resonCount', '剑链', '共鸣计数上限', 12, 0, 36), number('chain.stackBonus', '剑链', '叠层伤害加成', 0.6, 0, 1), number('chain.autoInterval', '剑链', '自动砍间隔', 1, 0.2, 3), number('chain.autoRange', '剑链', '自动砍范围', 1, 0.3, 3), number('chain.contactMul', '剑链', '接触伤害倍率', 0.3, 0, 2), number('chain.contactCooldown', '剑链', '接触伤害冷却', 0.25, 0.05, 1), number('chain.linkRadius', '剑链', '链格半径', 0.2, 0.05, 0.5), toggle('break.enabled', '断链', '启用断链'), number('break.minRopeDist', '断链', '最小沿绳距离', 1.2, 0, 5), number('break.minClosingSpeed', '断链', '最小相向接近速度', 2.5, 0, 10), number('break.minContactTime', '断链', '最短持续接触', 0.08, 0, 0.5), number('break.immunity', '断链', '断链免疫', 0.5, 0, 3), _extends({}, number('break.spawnGrace', '断链', '开局断链保护秒', 1, 0, 3), {
+        step: 0.1
+      }), number('scatter.blinkTime', '散落', '回收时间', 4, 0, 10), number('scatter.spread', '散落', '随机偏移', 0.6, 0, 2), number('scatter.mainReturnDelay', '散落', '主剑飞回延迟', 0.8, 0, 3), number('scatter.mainReturnSpeed', '散落', '主剑飞回速度', 10, 2, 30), number('scatter.mainReturnDmgMul', '散落', '主剑飞回伤害倍率', 0.5, 0, 2), number('loop.returnTime', '剑阵', '链格飞回时长', 0.4, 0, 2), number('loop.postReturnImmune', '剑阵', '飞回后断链免疫', 1, 0, 3),
+      // Values are specified in P0 prose; only the additional keys are module-owned.
+      number('rope.transitionTime', '绳索', '链格变化过渡', 0.2, 0, 0.2), number('chain.groundLife', '散落', '普通散剑保留时间', 10, 0, 10), number('fx.scatterBlinkHz', '特效', '散落闪烁频率', 4, 0, 8), number('fx.scatterFastBlinkHz', '特效', '散落末段闪烁频率', 8, 0, 16), number('fx.scatterFastTime', '特效', '加快闪烁剩余秒', 1, 0, 4), number('fx.damageMergeTime', '特效', '同敌数字合并窗口', 0.2, 0, 1), number('fx.damageMax', '特效', '伤害数字上限', 30, 0, 50),
+      // P0 未定义，自选默认值: presentation durations, not combat constants.
+      number('fx.trailTime', '特效', '速度拖影时间', 0.08, 0, 0.5), number('fx.petBlinkHz', '特效', '受击闪烁频率', 8, 0, 16), number('fx.damageLife', '特效', '伤害数字寿命', 0.6, 0, 2), number('fx.damageRise', '特效', '伤害数字上浮速度', 0.5, 0, 2), toggle('fx.fullCharge', '特效', '甩满变色') // P0 未定义，自选默认值: enabled.
+      ]);
+
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordRig.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './SwordChain.ts', './Damage.ts', './Whip.ts', './Pet.ts', './VerletRope.ts', './SwordCombat.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy, SwordChain, dragDamage, slotDamage, contactDamage, speedTier, dragAtTier, baseDamage, ropeLength, Whip, Pet, VerletRope, SwordCombat;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SwordChain = module.SwordChain;
+    }, function (module) {
+      dragDamage = module.dragDamage;
+      slotDamage = module.slotDamage;
+      contactDamage = module.contactDamage;
+      speedTier = module.speedTier;
+      dragAtTier = module.dragAtTier;
+      baseDamage = module.baseDamage;
+      ropeLength = module.ropeLength;
+    }, function (module) {
+      Whip = module.Whip;
+    }, function (module) {
+      Pet = module.Pet;
+    }, function (module) {
+      VerletRope = module.VerletRope;
+    }, function (module) {
+      SwordCombat = module.SwordCombat;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "7edd19E/ElDY5X3wIjfY7Ld", "SwordRig", undefined);
+      /** P0 §6.5 parameter table: `jianyi.max` default. */
+      var JIANYI_MAX_DEFAULT = 100;
+      var SwordRig = exports('SwordRig', /*#__PURE__*/function () {
+        function SwordRig(ctx) {
+          var _this = this;
+          this.ctx = void 0;
+          this.pet = void 0;
+          this.rope = void 0;
+          this.chain = void 0;
+          this.whip = void 0;
+          this.combat = void 0;
+          this.mainPos = {
+            x: 0,
+            y: 0
+          };
+          this.mainVel = {
+            x: 0,
+            y: 0
+          };
+          this.multipliers = new Map();
+          this.unsubs = [];
+          this.attached = false;
+          this.running = false;
+          this.state = 'held';
+          this.landed = false;
+          this.loopReturning = false;
+          this.loopReturnElapsed = 0;
+          this.loopImmune = 0;
+          this.loopImmuneLeft = 0;
+          this.loopReturnFrom = [];
+          this.returnElapsed = 0;
+          this.internalReturn = false;
+          this.forcedSpeed = null;
+          this.speedValue = 0;
+          this.charged = false;
+          this.jianyiValue = 0;
+          this.comboValue = 0;
+          this.inkValue = null;
+          this.jianzhenRemainingValue = null;
+          this.enemyScale = 1;
+          this.ctx = ctx;
+          this.pet = new Pet(ctx, function () {
+            return _this.W;
+          });
+          this.rope = new VerletRope(ctx);
+          this.chain = new SwordChain(ctx);
+          this.whip = new Whip(ctx);
+          this.combat = new SwordCombat(ctx);
+        }
+        var _proto = SwordRig.prototype;
+        _proto.attach = function attach() {
+          var _this2 = this;
+          if (this.attached) return;
+          this.attached = true;
+          this.unsubs.push(this.ctx.events.on('session:start', function () {
+            return _this2.reset();
+          }));
+          this.unsubs.push(this.ctx.events.on('session:end', function () {
+            _this2.running = false;
+            _this2.pet.stop();
+          }));
+          this.unsubs.push(this.ctx.events.on('loot:sword', function (_ref) {
+            var pos = _ref.pos;
+            // P0 §6.3 explicitly rolls the grade with rng.loot; recovered swords retain it.
+            if (_this2.running && _this2.chain.enabled) _this2.chain.addLoose(pos, _this2.chain.rollGrade(), false);
+          }));
+          this.unsubs.push(this.ctx.events.on('debug:command', function (_ref2) {
+            var cmd = _ref2.cmd,
+              arg = _ref2.arg;
+            if (cmd === 'setChain' && arg !== undefined && arg.trim() !== '') _this2.chain.setCount(Number(arg));
+            if (cmd === 'forceVtip') {
+              if (arg === undefined || arg === 'off' || arg === 'auto') _this2.forcedSpeed = null;else if (arg.trim() !== '' && Number.isFinite(Number(arg))) _this2.forcedSpeed = Math.max(0, Number(arg));
+            }
+          }));
+        };
+        _proto.detach = function detach() {
+          for (var _iterator = _createForOfIteratorHelperLoose(this.unsubs), _step; !(_step = _iterator()).done;) {
+            var off = _step.value;
+            off();
+          }
+          this.unsubs.length = 0;
+          this.attached = false;
+        };
+        _proto.reset = function reset() {
+          this.state = 'held';
+          this.landed = this.loopReturning = this.internalReturn = false;
+          this.loopImmune = this.loopImmuneLeft = this.loopReturnElapsed = this.returnElapsed = 0;
+          this.forcedSpeed = null;
+          this.speedValue = this.jianyiValue = this.comboValue = 0;
+          this.inkValue = this.jianzhenRemainingValue = null;
+          this.enemyScale = 1;
+          this.multipliers.clear();
+          this.pet.reset();
+          this.chain.reset();
+          this.rope.reset(this.pet.pos, this.targetLength, this.ropeSlots);
+          this.chain.place(this.rope);
+          this.copyMain(this.rope.tip, {
+            x: 0,
+            y: 0
+          });
+          this.whip.reset();
+          this.combat.reset();
+          this.running = true;
+          this.updateCharge(false);
+        };
+        _proto.stepPet = function stepPet(dt) {
+          if (this.attached && this.running) this.pet.fixedUpdate(dt);
+        }
+
+        /** Order 400: rope -> drag/whip -> chain -> throw entry -> loop entry. */;
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          if (!this.attached || !this.running || this.pet.hp <= 0 || dt <= 0) return;
+          this.combat.step(dt);
+          this.loopImmuneLeft = Math.max(0, this.loopImmuneLeft - dt);
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.multipliers), _step2; !(_step2 = _iterator2()).done;) {
+            var _step2$value = _step2.value,
+              key = _step2$value[0],
+              _value = _step2$value[1];
+            _value.left -= dt;
+            if (_value.left <= 0) this.multipliers["delete"](key);
+          }
+          var heldAtStart = this.mainHeld;
+          this.rope.step(dt, this.pet.pos, this.targetLength, this.ropeSlots);
+          if (heldAtStart) {
+            this.copyMain(this.rope.tip, this.rope.tipVelocity);
+            this.speedValue = this.rope.tipSpeed;
+          } else if (this.internalReturn) this.stepMainReturn(dt);else this.speedValue = 0;
+          if (this.whip.step(dt, this.pet.vel, this.pet.maxSpeed, this.mainPos, heldAtStart)) this.whipImpulse(dt);
+          this.updateCharge(this.mainHeld && this.vTip + 1e-8 >= this.ctx.tunables.get('sword.fullChargeMul') * this.ctx.tunables.get('drag.vRef'));
+          if (heldAtStart) {
+            var mul = this.whip.active ? this.ctx.tunables.get('whip.dmgMul') : 1;
+            for (var _iterator3 = _createForOfIteratorHelperLoose(this.multipliers.values()), _step3; !(_step3 = _iterator3()).done;) {
+              var value = _step3.value;
+              mul *= value.mul;
+            }
+            this.hitMain(this.rope.tipBefore, dragDamage(this.ctx.tunables, this.vTip) * mul, this.whip.active ? 'whip' : 'drag');
+          }
+          this.chain.step(dt, this.pet.pos);
+          this.rope.configure(this.ropeSlots, this.targetLength);
+          if (!this.landed) this.chain.place(this.rope);
+          if (this.loopReturning) {
+            this.stepLoopReturn(dt);
+            this.chain.clearContacts();
+            return;
+          }
+          if (this.landed || !this.chain.enabled) {
+            this.chain.clearContacts();
+            return;
+          }
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.chain.slots), _step4; !(_step4 = _iterator4()).done;) {
+            var slot = _step4.value;
+            var damage = slotDamage(this.ctx.tunables, slot.grades, this.N);
+            slot.autoLeft -= dt;
+            if (slot.autoLeft <= 1e-8) {
+              slot.autoLeft += this.ctx.tunables.get('chain.autoInterval');
+              this.combat.circle(slot.pos, this.ctx.tunables.get('chain.autoRange'), damage, 'link_auto', "slot:" + slot.index, this.ctx.tunables.get('chain.autoInterval'), true);
+            }
+            var speed = Math.hypot(slot.pos.x - slot.previous.x, slot.pos.y - slot.previous.y) / dt;
+            this.combat.segment(slot.previous, slot.pos, this.ctx.tunables.get('chain.linkRadius'), contactDamage(this.ctx.tunables, damage, speed), 'link_contact', "slotc:" + slot.index, this.ctx.tunables.get('chain.contactCooldown'));
+          }
+          if (this.loopImmuneLeft > 1e-8) {
+            this.chain.clearContacts();
+            return;
+          }
+          var hit = this.chain.detectBreak(dt, this.pet.pos, this.pet.vel, this.rope);
+          if (hit) {
+            if (this.mainHeld) this.beginMainReturn();
+            this.chain.breakAt(hit.index, hit.distance, hit.closing);
+            this.rope.configure(this.ropeSlots, this.targetLength);
+            this.chain.place(this.rope);
+          }
+        };
+        _proto.detachMain = function detachMain() {
+          var result = {
+            pos: _extends({}, this.mainPos),
+            vel: _extends({}, this.mainVel)
+          };
+          this.setMainState('thrown');
+          return result;
+        };
+        _proto.attachMain = function attachMain() {
+          this.internalReturn = false;
+          this.rope.setMainAttached(true);
+          this.state = 'held';
+          this.copyMain(this.rope.tip, this.rope.tipVelocity);
+          this.pet.setMode(this.landed, false);
+        };
+        _proto.setMainState = function setMainState(s) {
+          this.internalReturn = false;
+          this.state = s;
+          this.chain.clearContacts();
+          if (s === 'held') this.attachMain();else {
+            this.rope.setMainAttached(false);
+            this.updateCharge(false);
+            this.pet.setMode(this.landed, this.emptyHanded);
+          }
+        };
+        _proto.setChainLanded = function setChainLanded(landed, immuneSec) {
+          if (landed === this.landed) return;
+          this.landed = landed;
+          this.loopReturning = !landed;
+          this.loopImmuneLeft = 0;
+          var seconds = immuneSec != null ? immuneSec : this.ctx.tunables.get('loop.postReturnImmune');
+          this.loopImmune = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+          this.loopReturnElapsed = 0;
+          this.loopReturnFrom = this.chain.slots.map(function (s) {
+            return _extends({}, s.pos);
+          });
+          this.chain.clearContacts();
+          this.rope.configure(this.ropeSlots, this.targetLength);
+          this.pet.setMode(landed, this.emptyHanded);
+        };
+        _proto.setBreakImmune = function setBreakImmune(seconds) {
+          this.chain.setImmune(seconds);
+        };
+        _proto.addDragMul = function addDragMul(key, mul, seconds) {
+          if (Number.isFinite(mul) && Number.isFinite(seconds) && mul >= 0 && seconds > 0) this.multipliers.set(key, {
+            mul: mul,
+            left: seconds
+          });
+        };
+        _proto.setEnemyTimeScale = function setEnemyTimeScale(s) {
+          if (Number.isFinite(s)) this.enemyScale = Math.max(0, Math.min(1, s));
+        }
+        /** P0 §6.5: 剑意 is 0–`jianyi.max` (registered by sword/loop); falls back to the P0 default 100 when unregistered. Read per call so hot-tuning applies on the next write. */;
+        _proto.setJianyi = function setJianyi(v) {
+          if (!Number.isFinite(v)) return;
+          var max = this.ctx.tunables.has('jianyi.max') ? this.ctx.tunables.get('jianyi.max') : JIANYI_MAX_DEFAULT;
+          this.jianyiValue = Math.max(0, Math.min(max, v));
+        };
+        _proto.setCombo = function setCombo(c) {
+          if (Number.isFinite(c)) this.comboValue = Math.max(0, Math.floor(c));
+        };
+        _proto.setJianzhenInfo = function setJianzhenInfo(ink, remaining) {
+          if (ink === null || remaining === null) {
+            this.inkValue = this.jianzhenRemainingValue = null;
+            return;
+          }
+          if (!Number.isFinite(ink) || !Number.isFinite(remaining)) return;
+          this.inkValue = Math.max(0, ink);
+          this.jianzhenRemainingValue = Math.max(0, remaining);
+        };
+        _proto.copyMain = function copyMain(pos, vel) {
+          this.mainPos.x = pos.x;
+          this.mainPos.y = pos.y;
+          this.mainVel.x = vel.x;
+          this.mainVel.y = vel.y;
+        };
+        _proto.updateCharge = function updateCharge(on) {
+          if (this.charged === on) return;
+          this.charged = on;
+          this.ctx.events.emit('sword:fullCharge', {
+            on: on
+          });
+        };
+        _proto.whipImpulse = function whipImpulse(dt) {
+          var dir = this.bladeDir;
+          var x = -dir.y;
+          var y = dir.x;
+          var outside = {
+            x: this.pet.vel.y * this.whip.turnSign,
+            y: -this.pet.vel.x * this.whip.turnSign
+          };
+          if (x * outside.x + y * outside.y < 0) {
+            x = -x;
+            y = -y;
+          }
+          var impulse = this.ctx.tunables.get('whip.impulse');
+          this.rope.impulse({
+            x: x * impulse,
+            y: y * impulse
+          }, dt);
+        };
+        _proto.hitMain = function hitMain(before, amount, source) {
+          var p = this.ctx.tunables;
+          var radius = p.get('sword.bladeRadius');
+          var cooldown = p.get('drag.hitCooldown');
+          var q = source === 'main_return' ? 1 : speedTier(p, this.vTip);
+          var knockback = p.get('drag.knockbackK') * this.W * q;
+          var dir = this.bladeDir;
+          var half = this.bladeLength / 2;
+          var a = {
+            x: this.mainPos.x - dir.x * half,
+            y: this.mainPos.y - dir.y * half
+          };
+          var b = {
+            x: this.mainPos.x + dir.x * half,
+            y: this.mainPos.y + dir.y * half
+          };
+          this.combat.segment(a, b, radius, amount, source, 'main', cooldown, knockback);
+          this.combat.segment(before, this.mainPos, radius, amount, source, 'main', cooldown, knockback);
+        };
+        _proto.beginMainReturn = function beginMainReturn() {
+          this.returnElapsed = 0;
+          this.state = 'returning';
+          this.rope.setMainAttached(false);
+          this.internalReturn = true;
+          this.mainVel.x = this.mainVel.y = this.speedValue = 0;
+          this.pet.setMode(this.landed, this.emptyHanded);
+          this.updateCharge(false);
+        };
+        _proto.stepMainReturn = function stepMainReturn(dt) {
+          var delay = this.ctx.tunables.get('scatter.mainReturnDelay');
+          var elapsed = this.returnElapsed;
+          this.returnElapsed += dt;
+          var flightDt = Math.max(0, this.returnElapsed - delay) - Math.max(0, elapsed - delay);
+          if (flightDt <= 1e-8) {
+            this.speedValue = 0;
+            return;
+          }
+          var before = _extends({}, this.mainPos);
+          var target = this.rope.tip;
+          var dx = target.x - before.x;
+          var dy = target.y - before.y;
+          var distance = Math.hypot(dx, dy);
+          var step = this.ctx.tunables.get('scatter.mainReturnSpeed') * flightDt;
+          var t = distance <= 1e-9 ? 1 : Math.min(1, step / distance);
+          var pos = {
+            x: before.x + dx * t,
+            y: before.y + dy * t
+          };
+          this.copyMain(pos, {
+            x: (pos.x - before.x) / flightDt,
+            y: (pos.y - before.y) / flightDt
+          });
+          this.speedValue = Math.hypot(this.mainVel.x, this.mainVel.y);
+          this.hitMain(before, dragAtTier(this.ctx.tunables, 1) * this.ctx.tunables.get('scatter.mainReturnDmgMul'), 'main_return');
+          if (t >= 1) this.attachMain();
+        };
+        _proto.stepLoopReturn = function stepLoopReturn(dt) {
+          this.loopReturnElapsed += dt;
+          var duration = this.ctx.tunables.get('loop.returnTime');
+          var t = duration <= 0 ? 1 : Math.min(1, this.loopReturnElapsed / duration);
+          for (var i = 0; i < this.chain.slots.length; i++) {
+            var _this$loopReturnFrom$;
+            var slot = this.chain.slots[i];
+            var from = (_this$loopReturnFrom$ = this.loopReturnFrom[i]) != null ? _this$loopReturnFrom$ : this.pet.pos;
+            // Animate the display position; physics nodes remain the actual rope target.
+            slot.pos = {
+              x: from.x + (slot.pos.x - from.x) * t,
+              y: from.y + (slot.pos.y - from.y) * t
+            };
+            slot.previous = _extends({}, slot.pos);
+          }
+          if (t >= 1 - 1e-8) {
+            this.loopReturning = false;
+            this.chain.place(this.rope);
+            // Product supplement 3: start this separate immunity clock AFTER the animation.
+            this.loopImmuneLeft = this.loopImmune;
+            this.loopImmune = 0;
+          }
+        };
+        _createClass(SwordRig, [{
+          key: "B",
+          get: function get() {
+            return baseDamage(this.ctx.tunables);
+          }
+        }, {
+          key: "W",
+          get: function get() {
+            return this.ctx.tunables.get('sword.W');
+          }
+        }, {
+          key: "Lg",
+          get: function get() {
+            return this.ctx.tunables.get('sword.Lg');
+          }
+        }, {
+          key: "Cv",
+          get: function get() {
+            return this.ctx.tunables.get('sword.Cv');
+          }
+        }, {
+          key: "N",
+          get: function get() {
+            return this.chain.N;
+          }
+        }, {
+          key: "slots",
+          get: function get() {
+            return this.chain.slots.length;
+          }
+        }, {
+          key: "ropeLength",
+          get: function get() {
+            return this.rope.length;
+          }
+        }, {
+          key: "mainHeld",
+          get: function get() {
+            return this.state === 'held';
+          }
+        }, {
+          key: "mainState",
+          get: function get() {
+            return this.state;
+          }
+        }, {
+          key: "mainVisible",
+          get: function get() {
+            return this.mainHeld || this.internalReturn;
+          }
+        }, {
+          key: "chainVisible",
+          get: function get() {
+            return !this.landed && this.chain.enabled;
+          }
+        }, {
+          key: "chainLanded",
+          get: function get() {
+            return this.landed;
+          }
+        }, {
+          key: "vTip",
+          get: function get() {
+            var _this$forcedSpeed;
+            return (_this$forcedSpeed = this.forcedSpeed) != null ? _this$forcedSpeed : this.speedValue;
+          }
+        }, {
+          key: "fullCharge",
+          get: function get() {
+            return this.charged;
+          }
+        }, {
+          key: "jianyi",
+          get: function get() {
+            return this.jianyiValue;
+          }
+        }, {
+          key: "combo",
+          get: function get() {
+            return this.comboValue;
+          }
+        }, {
+          key: "ink",
+          get: function get() {
+            return this.landed ? this.inkValue : null;
+          }
+        }, {
+          key: "jianzhenRemaining",
+          get: function get() {
+            return this.landed ? this.jianzhenRemainingValue : null;
+          }
+        }, {
+          key: "enemyTimeScale",
+          get: function get() {
+            return this.enemyScale;
+          }
+        }, {
+          key: "petPos",
+          get: function get() {
+            return this.pet.pos;
+          }
+        }, {
+          key: "petVel",
+          get: function get() {
+            return this.pet.vel;
+          }
+        }, {
+          key: "petMaxSpeed",
+          get: function get() {
+            return this.pet.maxSpeed;
+          }
+        }, {
+          key: "bladeLength",
+          get: function get() {
+            return this.ctx.tunables.get('sword.bladeLenBase') + this.ctx.tunables.get('sword.bladeLenPerLg') * this.Lg;
+          }
+        }, {
+          key: "bladeDir",
+          get: function get() {
+            var before = this.rope.points[this.rope.points.length - 2];
+            if (!before) return {
+              x: 0,
+              y: -1
+            };
+            var dx = this.rope.tip.x - before.x;
+            var dy = this.rope.tip.y - before.y;
+            var len = Math.hypot(dx, dy);
+            return len > 1e-9 ? {
+              x: dx / len,
+              y: dy / len
+            } : {
+              x: 0,
+              y: -1
+            };
+          }
+        }, {
+          key: "mode",
+          get: function get() {
+            return this.landed ? 'jianzhen' : this.state === 'held' ? 'drag' : this.state === 'thrown' || this.state === 'returning' ? 'thrown' : 'empty';
+          }
+          /**
+           * #37 / P0 §6.4: 'empty' spans miss → back in hand: grounded, plus throw's post-miss auto-return
+           * ('returning' set via setMainState). Normal throw flight ('thrown') and the P0 §6.3 chain-break
+           * main return (internalReturn) are not empty-handed. mode is visual and unchanged.
+           */
+        }, {
+          key: "emptyHanded",
+          get: function get() {
+            return this.state === 'grounded' || this.state === 'returning' && !this.internalReturn;
+          }
+        }, {
+          key: "ropeSlots",
+          get: function get() {
+            return this.landed || !this.chain.enabled ? 0 : this.slots;
+          }
+        }, {
+          key: "targetLength",
+          get: function get() {
+            return ropeLength(this.ctx.tunables, this.ropeSlots);
+          }
+        }]);
+        return SwordRig;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordRigHooks.ts", ['cc'], function () {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "fe0ffi7VSFLxqrQIRmq6D5H", "SwordRigHooks", undefined);
+      /** Internal to sword; public cross-module consumers use core's ISwordRigInfo. */
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SwordView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Color, Node, Graphics, view, UITransform, Label, Component;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      Node = module.Node;
+      Graphics = module.Graphics;
+      view = module.view;
+      UITransform = module.UITransform;
+      Label = module.Label;
+      Component = module.Component;
+    }],
+    execute: function () {
+      exports('mountSwordView', mountSwordView);
+      var _dec, _class;
+      cclegacy._RF.push({}, "21e9dkzRk9B8L4SjAyLTdrj", "SwordView", undefined);
+      var ccclass = _decorator.ccclass;
+      var WHITE = new Color(225, 232, 240);
+      var ORANGE = new Color(255, 156, 48);
+      var BLUE = new Color(130, 170, 230);
+      var CYAN = new Color(100, 235, 235);
+      var YELLOW = new Color(255, 225, 100);
+      var STACK_COLORS = [new Color(165, 175, 190), new Color(205, 215, 230), WHITE];
+
+      /** All Cocos runtime dependencies and node ownership stay in view/. */
+      var SwordView = exports('SwordView', (_dec = ccclass('SwordGreyboxView'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(SwordView, _Component);
+        function SwordView() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.rig = null;
+          _this.graphics = null;
+          _this.hud = null;
+          _this.stacks = [];
+          _this.damage = [];
+          return _this;
+        }
+        var _proto = SwordView.prototype;
+        _proto.bind = function bind(rig) {
+          this.rig = rig;
+          var geometry = new Node('Geometry');
+          geometry.layer = this.node.layer;
+          this.node.addChild(geometry);
+          this.graphics = geometry.addComponent(Graphics);
+          this.hud = makeLabel(rig.ctx.layers.get('debug'), 'SwordTelemetry', 18, 680, 64);
+          for (var i = 0; i < 12; i++) this.stacks.push(makeLabel(this.node, "Stack" + i, 14, 70, 24));
+          for (var _i = 0; _i < Math.floor(rig.ctx.tunables.get('fx.damageMax')); _i++) this.damage.push(makeLabel(this.node, "Damage" + _i, 16, 190, 26));
+        };
+        _proto.onEnable = function onEnable() {
+          var _this$rig;
+          (_this$rig = this.rig) == null || _this$rig.attach();
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$rig2;
+          (_this$rig2 = this.rig) == null || _this$rig2.detach();
+        };
+        _proto.onDestroy = function onDestroy() {
+          var _this$rig3, _this$hud;
+          (_this$rig3 = this.rig) == null || _this$rig3.detach();
+          (_this$hud = this.hud) == null || _this$hud.node.destroy();
+          this.rig = null;
+        };
+        _proto.draw = function draw() {
+          var rig = this.rig;
+          var g = this.graphics;
+          if (!rig || !g || !this.enabledInHierarchy) return;
+          var px = rig.ctx.toPx;
+          var scale = Math.abs(px({
+            x: 1,
+            y: 0
+          }).x - px({
+            x: 0,
+            y: 0
+          }).x);
+          var params = rig.ctx.tunables;
+          var charged = rig.fullCharge && params.getBool('fx.fullCharge');
+          g.clear();
+          g.lineWidth = 1;
+          g.strokeColor = BLUE;
+          var points = rig.rope.points;
+          var first = px(points[0]);
+          g.moveTo(first.x, first.y);
+          for (var i = 1; i < points.length; i++) {
+            var p = px(points[i]);
+            g.lineTo(p.x, p.y);
+          }
+          g.stroke();
+          g.fillColor = WHITE;
+          var pet = px(rig.petPos);
+          if (!rig.pet.damageImmune || Math.floor(rig.ctx.loop.simTime * params.get('fx.petBlinkHz') * 2) % 2 === 0) {
+            g.circle(pet.x, pet.y, rig.pet.radius * scale);
+            g.fill();
+            var speed = Math.hypot(rig.petVel.x, rig.petVel.y);
+            var dx = speed > 1e-8 ? rig.petVel.x / speed : 0;
+            var dy = speed > 1e-8 ? rig.petVel.y / speed : -1;
+            var r = rig.pet.radius * scale;
+            g.fillColor = BLUE;
+            g.moveTo(pet.x + dx * r, pet.y + dy * r);
+            g.lineTo(pet.x - dy * r / 2, pet.y + dx * r / 2);
+            g.lineTo(pet.x + dy * r / 2, pet.y - dx * r / 2);
+            g.lineTo(pet.x + dx * r, pet.y + dy * r);
+            g.fill();
+          }
+          g.lineWidth = Math.max(1, scale * 0.025);
+          g.strokeColor = charged ? ORANGE : WHITE;
+          if (rig.mainVisible) {
+            var main = px(rig.mainPos);
+            var _speed = Math.hypot(rig.mainVel.x, rig.mainVel.y);
+            if (params.getBool('fx.trail') && _speed > 1e-8) {
+              var length = rig.vTip * params.get('fx.trailTime') * scale;
+              g.moveTo(main.x, main.y);
+              g.lineTo(main.x - rig.mainVel.x / _speed * length, main.y - rig.mainVel.y / _speed * length);
+              g.stroke();
+            }
+            var dir = rig.bladeDir;
+            var half = rig.bladeLength * scale / 2;
+            var radius = params.get('sword.bladeRadius') * scale;
+            g.lineWidth = radius * 2;
+            g.moveTo(main.x - dir.x * half, main.y - dir.y * half);
+            g.lineTo(main.x + dir.x * half, main.y + dir.y * half);
+            g.stroke();
+            g.fillColor = charged ? ORANGE : WHITE;
+            for (var _i2 = 0, _arr = [-1, 1]; _i2 < _arr.length; _i2++) {
+              var sign = _arr[_i2];
+              g.circle(main.x + dir.x * half * sign, main.y + dir.y * half * sign, radius);
+              g.fill();
+            }
+            g.lineWidth = Math.max(1, scale * 0.025);
+            if (rig.whip.active && rig.mainHeld) {
+              g.strokeColor = WHITE;
+              var angle = Math.atan2(dir.y, dir.x);
+              // Polyline tessellation is presentation only, no gameplay sampling.
+              for (var _i3 = 0; _i3 <= 16; _i3++) {
+                var a = angle + (_i3 / 16 - 0.5) * params.get('whip.turnDeg') * Math.PI / 180;
+                var x = main.x + Math.cos(a) * rig.bladeLength * scale;
+                var y = main.y + Math.sin(a) * rig.bladeLength * scale;
+                if (_i3 === 0) g.moveTo(x, y);else g.lineTo(x, y);
+              }
+              g.stroke();
+            } else if (rig.mainHeld && rig.vTip < params.get('drag.vDead')) {
+              // Greybox ground sparks, constrained to the blade's own footprint.
+              g.strokeColor = YELLOW;
+              this.sword(g, rig.mainPos, radius, {
+                x: -dir.y,
+                y: dir.x
+              });
+            }
+          }
+          for (var _i4 = 0; _i4 < this.stacks.length; _i4++) {
+            var label = this.stacks[_i4];
+            var slot = rig.chain.slots[_i4];
+            label.node.active = rig.chainVisible && slot !== undefined && slot.grades.length > 1;
+            if (!slot || !rig.chainVisible) continue;
+            g.strokeColor = STACK_COLORS[slot.grades.length - 1];
+            g.lineWidth = Math.max(1, scale * 0.025 * slot.grades.length);
+            this.link(g, slot.pos, params.get('chain.linkRadius') * scale);
+            label.string = "\xD7" + slot.grades.length;
+            var _p = px(slot.pos);
+            label.node.setPosition(Math.min(10 * scale - 70, Math.max(0, _p.x + 12)), Math.min(15 * scale - 12, Math.max(12, _p.y + 12)), 0);
+          }
+          for (var _iterator = _createForOfIteratorHelperLoose(rig.chain.loose), _step; !(_step = _iterator()).done;) {
+            var sword = _step.value;
+            var hz = params.get(sword.left <= params.get('fx.scatterFastTime') ? 'fx.scatterFastBlinkHz' : 'fx.scatterBlinkHz');
+            if (sword.recovered && Math.floor(sword.left * hz * 2) % 2 === 0) continue;
+            g.strokeColor = sword.recovered ? ORANGE : BLUE;
+            var _p3 = px(sword.pos);
+            var _r = params.get('chain.linkRadius') * scale;
+            g.lineWidth = 1;
+            g.moveTo(_p3.x, _p3.y - _r);
+            g.lineTo(_p3.x, _p3.y + _r);
+            g.stroke();
+          }
+          var damageMax = Math.floor(params.get('fx.damageMax'));
+          while (this.damage.length < damageMax) this.damage.push(makeLabel(this.node, "Damage" + this.damage.length, 16, 190, 26));
+          for (var _i5 = 0; _i5 < this.damage.length; _i5++) {
+            var _label = this.damage[_i5];
+            var hit = rig.combat.labels[_i5];
+            _label.node.active = hit !== undefined && _i5 < damageMax;
+            if (!hit) continue;
+            _label.string = hit.amount.toFixed(1) + " " + hit.source;
+            _label.color = hit.source === 'whip' ? YELLOW : hit.source === 'loop' ? CYAN : WHITE;
+            var _p2 = px(hit.pos);
+            _label.node.setPosition(_p2.x, _p2.y + (params.get('fx.damageLife') - hit.left) * params.get('fx.damageRise') * scale, 0);
+          }
+          if (this.hud) {
+            var visible = view.getVisibleSize();
+            this.hud.node.setPosition(-visible.width / 2 + 12, visible.height / 2 - 38, 0);
+            this.hud.string = "HP " + rig.pet.hp + "/" + rig.pet.maxHp + "  v_tip " + rig.vTip.toFixed(2) + "u/s  N/slots " + rig.N + "/" + rig.slots + "\nL " + rig.ropeLength.toFixed(2) + "u  " + rig.mode + "  \u5251\u610F " + rig.jianyi.toFixed(0) + "  combo " + rig.combo;
+            this.hud.color = charged ? ORANGE : WHITE;
+          }
+        };
+        _proto.link = function link(g, pos, radius) {
+          var rig = this.rig;
+          if (!rig) return;
+          var p = rig.ctx.toPx(pos);
+          g.moveTo(p.x, p.y - radius);
+          g.lineTo(p.x + radius, p.y);
+          g.lineTo(p.x, p.y + radius);
+          g.lineTo(p.x - radius, p.y);
+          g.lineTo(p.x, p.y - radius);
+          g.stroke();
+        };
+        _proto.sword = function sword(g, pos, halfLength, vel) {
+          var rig = this.rig;
+          if (!rig) return;
+          var p = rig.ctx.toPx(pos);
+          var len = Math.hypot(vel.x, vel.y);
+          var x = len > 1e-6 ? vel.x / len : 0;
+          var y = len > 1e-6 ? vel.y / len : 1;
+          g.moveTo(p.x - x * halfLength, p.y - y * halfLength);
+          g.lineTo(p.x + x * halfLength, p.y + y * halfLength);
+          g.moveTo(p.x - y * halfLength * 0.5, p.y + x * halfLength * 0.5);
+          g.lineTo(p.x + y * halfLength * 0.5, p.y - x * halfLength * 0.5);
+          g.stroke();
+        };
+        return SwordView;
+      }(Component)) || _class));
+      function makeLabel(parent, name, fontSize, width, height) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        var transform = node.addComponent(UITransform);
+        transform.setContentSize(width, height);
+        transform.setAnchorPoint(0, 0.5);
+        parent.addChild(node);
+        var label = node.addComponent(Label);
+        label.fontSize = fontSize;
+        label.lineHeight = fontSize + 4;
+        label.color = WHITE;
+        return label;
+      }
+      function mountSwordView(rig) {
+        var parent = rig.ctx.layers.get('rig');
+        // Pure core consumers can supply only a layer descriptor, without a Cocos scene.
+        if (typeof parent.addChild !== 'function') return null;
+        var node = new Node('SwordRig');
+        node.layer = parent.layer;
+        node.addComponent(UITransform).setAnchorPoint(0, 0);
+        parent.addChild(node);
+        var component = node.addComponent(SwordView);
+        component.bind(rig);
+        return function () {
+          return component.draw();
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/SystemOrder.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "34877iqKttPza4MBVHB/9Du", "SystemOrder", undefined);
+      /**
+       * Fixed-step system order. Lower runs first.
+       * Gameplay modules use the named slots from the P0 spec.
+       * `StepProbe` and `Session` are core bookkeeping, not module slots.
+       */
+      var SystemOrder = exports('SystemOrder', {
+        /** Counts simulated steps so frame-rate independence can be checked. */
+        StepProbe: 50,
+        /** Read touch, update InputFrame and history. */
+        Input: 100,
+        /** Pet movement. */
+        Pet: 200,
+        /** Enemy AI, movement (times enemyTimeScale), contact damage. */
+        Enemy: 300,
+        /** Rope, drag, whip, chain, throw, sword array. */
+        Sword: 400,
+        /** Deaths, drops, spawn director. */
+        EnemyResolve: 500,
+        /** Core: end the session when the director clock reaches session.length. */
+        Session: 800,
+        /** Telemetry aggregation and HUD data. */
+        Tuning: 900
+      });
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Telemetry.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './events.ts', './Hud.ts', './Storage.ts', './TuningParams.ts'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy, GameEvent, readHud, isRecord, P0_RULES, TIME_EPSILON;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      GameEvent = module.GameEvent;
+    }, function (module) {
+      readHud = module.readHud;
+    }, function (module) {
+      isRecord = module.isRecord;
+    }, function (module) {
+      P0_RULES = module.P0_RULES;
+      TIME_EPSILON = module.TIME_EPSILON;
+    }],
+    execute: function () {
+      exports({
+        emptyDamage: emptyDamage,
+        groupedDamage: groupedDamage,
+        percentile: percentile
+      });
+      cclegacy._RF.push({}, "fc7a1Q4U/9NT59OzrDPJL7B", "Telemetry", undefined);
+
+      // P0 未定义，自选默认值: local storage namespace.
+      var STORAGE_KEY = 'yuedie.tuning.telemetry.v1';
+      var DAMAGE_SOURCES = exports('DAMAGE_SOURCES', ['drag', 'whip', 'link_auto', 'link_contact', 'throw_out', 'throw_back', 'main_return', 'loop', 'claw']);
+      var DAMAGE_GROUPS = exports('DAMAGE_GROUPS', ['拖剑', '鞭响', '链剑', '飞剑', '剑阵', '其他']);
+
+      /** P0 §9.2 names six categories.
+       * P0 未定义，自选默认值: main_return and claw map to the remaining "other" category.
+       */
+      function groupedDamage(d) {
+        return [d.drag, d.whip, d.link_auto + d.link_contact, d.throw_out + d.throw_back, d.loop, d.main_return + d.claw];
+      }
+      function emptyDamage() {
+        return {
+          drag: 0,
+          whip: 0,
+          link_auto: 0,
+          link_contact: 0,
+          throw_out: 0,
+          throw_back: 0,
+          main_return: 0,
+          loop: 0,
+          claw: 0
+        };
+      }
+
+      /** P0 未定义，自选默认值: nearest-rank quantile, null for no samples. */
+      function percentile(values, fraction) {
+        if (values.length === 0) return null;
+        var sorted = values.slice().sort(function (a, b) {
+          return a - b;
+        });
+        return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)];
+      }
+      var EVENT_TYPES = {
+        'tuning:changed': 'param_change',
+        'sword:whip': 'whip',
+        'jianzhen:loop': 'loop_closed',
+        'jianzhen:rejectedLoop': 'loop_rejected',
+        'jianzhen:start': 'jianzhen_start',
+        'jianzhen:end': 'jianzhen_end',
+        'jianzhen:hit': 'jianzhen_hit',
+        'throw:start': 'throw_start',
+        'throw:cancel': 'throw_cancel',
+        'throw:catch': 'catch',
+        'throw:miss': 'miss',
+        'chain:pickup': 'chain_pickup',
+        'chain:break': 'chain_break',
+        'chain:scatterExpired': 'chain_scatter_expired',
+        'player:damaged': 'player_damaged'
+      };
+      var Telemetry = exports('Telemetry', /*#__PURE__*/function () {
+        function Telemetry(ctx, store) {
+          this.store = void 0;
+          this.ctx = void 0;
+          this.archives = [];
+          this.run = null;
+          this.resultRecent = emptyDamage();
+          this.resultLines = null;
+          this.unsubs = [];
+          this.debugNext = false;
+          this.normalNext = false;
+          this.started = false;
+          this.wallTime = 0;
+          this.frameHistory = [];
+          this.frameCount = 0;
+          this.frameSeconds = 0;
+          this.result = null;
+          this.ctx = ctx;
+          this.store = store;
+          var saved = store.read(STORAGE_KEY);
+          if (!Array.isArray(saved)) return;
+          for (var _iterator = _createForOfIteratorHelperLoose(saved), _step; !(_step = _iterator()).done;) {
+            var lines = _step.value;
+            if (!Array.isArray(lines)) continue;
+            var valid = [];
+            for (var _iterator2 = _createForOfIteratorHelperLoose(lines), _step2; !(_step2 = _iterator2()).done;) {
+              var line = _step2.value;
+              if (typeof line !== 'string') continue;
+              try {
+                var row = JSON.parse(line);
+                if (isRecord(row) && row.v === 1 && typeof row.type === 'string' && typeof row.sid === 'string' && typeof row.t === 'number' && typeof row.ph === 'string') valid.push(line);else store.error = '日志格式不符合 P0 §10，已跳过（旧草稿格式不自动转换）';
+              } catch (_unused) {
+                store.error = '部分日志损坏，已跳过';
+              }
+            }
+            if (valid.length > 0) this.archives.push(valid);
+          }
+          this.archives = this.archives.slice(-P0_RULES.retainedSessions);
+        }
+        var _proto = Telemetry.prototype;
+        _proto.attach = function attach() {
+          var _this = this;
+          if (this.unsubs.length > 0) return;
+          var events = this.ctx.events;
+          this.unsubs.push(events.on('session:start', function (p) {
+            return _this.begin(p);
+          }));
+          this.unsubs.push(events.on('session:end', function (p) {
+            var _this$run;
+            if (((_this$run = _this.run) == null ? void 0 : _this$run.summary.sid) === p.sid) _this.finish(p.reason, p.duration);
+          }));
+          this.unsubs.push(events.on('enemy:damaged', function (p) {
+            var r = _this.run;
+            if (!r) return;
+            r.summary.damage[p.source] += p.amount;
+            r.summary.totalDamage += p.amount;
+            r.bucket[p.source] += p.amount;
+            r.bucketTotal += p.amount;
+            r.recent.push({
+              t: _this.ctx.loop.simTime,
+              source: p.source,
+              amount: p.amount
+            });
+            _this.record('enemy:damaged', p);
+          }));
+          this.unsubs.push(events.on('enemy:died', function (p) {
+            if (_this.run) {
+              _this.run.summary.kills += 1;
+              _this.run.bucketKills[p.source] += 1;
+            }
+            _this.record('enemy:died', p);
+          }));
+          this.unsubs.push(events.on('debug:command', function (p) {
+            var _this$run2;
+            _this.record('debug:command', p);
+            if (p.cmd === 'restart' && !((_this$run2 = _this.run) != null && _this$run2.summary.debugRestart)) _this.debugNext = true;
+          }));
+          // Register metrics before generic logging; core may synchronously end the
+          // session while dispatching player:died, so death context comes from damage.
+          this.unsubs.push(events.on('player:damaged', function (p) {
+            if (_this.run) _this.run.lastDamage = {
+              byKind: p.byKind,
+              state: p.state
+            };
+          }));
+          this.unsubs.push(events.on('sword:whip', function () {
+            if (_this.run && _this.run.summary.firstWhipTime === null) _this.run.summary.firstWhipTime = _this.ctx.loop.simTime;
+          }));
+          this.unsubs.push(events.on('chain:changed', function (p) {
+            if (_this.run) _this.run.summary.maxN = Math.max(_this.run.summary.maxN, p.N);
+          }));
+          this.unsubs.push(events.on('chain:pickup', function (p) {
+            if (!_this.run) return;
+            _this.run.summary.maxN = Math.max(_this.run.summary.maxN, p.N);
+            if (p.recovered) _this.run.summary.recoveredSwords += 1;
+          }));
+          this.unsubs.push(events.on('chain:break', function () {
+            if (_this.run) _this.run.summary.chainBreaks += 1;
+          }));
+          this.unsubs.push(events.on('chain:scatterExpired', function (p) {
+            if (_this.run) _this.run.summary.expiredSwords += p.count;
+          }));
+          this.unsubs.push(events.on('throw:start', function (p) {
+            if (!_this.run) return;
+            _this.run.summary.throwAttempts += 1;
+            if (p.joyMag < P0_RULES.throwJoyMin || p.magDrop300 > P0_RULES.throwDropMax) _this.run.summary.suspiciousThrows += 1;
+          }));
+          this.unsubs.push(events.on('throw:cancel', function () {
+            if (!_this.run) return;
+            _this.run.summary.throwAttempts += 1;
+            _this.run.summary.throwCancels += 1;
+          }));
+          this.unsubs.push(events.on('throw:catch', function (p) {
+            if (!_this.run) return;
+            if (p.kind === 'perfect') _this.run.summary.perfectCatches += 1;else _this.run.summary.normalCatches += 1;
+          }));
+          this.unsubs.push(events.on('throw:miss', function () {
+            if (_this.run) _this.run.summary.misses += 1;
+          }));
+          this.unsubs.push(events.on('jianzhen:start', function (p) {
+            if (!_this.run) return;
+            _this.run.summary.jianzhenCount += 1;
+            _this.run.summary.maxN = Math.max(_this.run.summary.maxN, p.N);
+            _this.run.arrayClosed = false;
+            // P0 §11: upstream counts enemies within 4u; fewer than 3 is empty.
+            _this.run.arrayEmpty = p.enemiesNear < 3;
+            if (_this.run.arrayEmpty) _this.run.summary.emptyStarts += 1;
+          }));
+          this.unsubs.push(events.on('jianzhen:loop', function (p) {
+            if (!_this.run) return;
+            _this.run.summary.loops.push({
+              area: p.area,
+              n: p.n
+            });
+            if (!_this.run.arrayClosed) _this.run.summary.closedJianzhen += 1;
+            _this.run.arrayClosed = true;
+          }));
+          this.unsubs.push(events.on('jianzhen:hit', function () {
+            if (_this.run) _this.run.summary.jianzhenHits += 1;
+          }));
+          this.unsubs.push(events.on('jianzhen:end', function (p) {
+            if (!_this.run) return;
+            if (p.emptyStart !== _this.run.arrayEmpty) _this.run.summary.emptyStarts += p.emptyStart ? 1 : -1;
+          }));
+          var _loop = function _loop() {
+            var key = _arr[_i];
+            var name = GameEvent[key];
+            if (name === 'session:start' || name === 'session:end' || name === 'enemy:damaged' || name === 'enemy:died' || name === 'debug:command') return 1; // continue
+            _this.unsubs.push(events.on(name, function (p) {
+              var _EVENT_TYPES$name;
+              _this.record((_EVENT_TYPES$name = EVENT_TYPES[name]) != null ? _EVENT_TYPES$name : name, p);
+            }));
+          };
+          for (var _i = 0, _arr = Object.keys(GameEvent); _i < _arr.length; _i++) {
+            if (_loop()) continue;
+          }
+        };
+        _proto.detach = function detach() {
+          this.flush();
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.unsubs), _step3; !(_step3 = _iterator3()).done;) {
+            var off = _step3.value;
+            off();
+          }
+          this.unsubs = [];
+        }
+
+        /** Cocos lifecycle supplies real render dt, including hit-stop frames. */;
+        _proto.frame = function frame(dt) {
+          var _this2 = this;
+          if (!Number.isFinite(dt) || dt <= 0 || !this.run) return;
+          this.wallTime += dt;
+          this.frameCount += 1;
+          this.frameSeconds += dt;
+          this.frameHistory.push({
+            t: this.wallTime,
+            dt: dt
+          });
+          this.frameHistory = this.frameHistory.filter(function (f) {
+            return f.t > _this2.wallTime - P0_RULES.fpsWindow;
+          });
+          this.run.frames.push(dt);
+        }
+
+        // P0 未定义，自选默认值: average = frames / seconds; minimum = 1 / longest frame.
+        ;
+
+        _proto.fps = function fps() {
+          return {
+            fpsAvg: this.frameSeconds > 0 ? this.frameCount / this.frameSeconds : null,
+            fpsMin: this.frameHistory.length ? 1 / Math.max.apply(null, this.frameHistory.map(function (f) {
+              return f.dt;
+            })) : null
+          };
+        }
+
+        /** P0 未定义，自选默认值: HUD percentiles use all fixed-step samples in the current session. */;
+        _proto.vtipPercentiles = function vtipPercentiles() {
+          var _this$run$sessionVTip, _this$run3;
+          var values = (_this$run$sessionVTip = (_this$run3 = this.run) == null ? void 0 : _this$run3.sessionVTips) != null ? _this$run$sessionVTip : [];
+          return {
+            p50: percentile(values, 0.5),
+            p90: percentile(values, 0.9)
+          };
+        };
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          var r = this.run;
+          if (!r) return;
+          r.elapsed = Math.max(r.elapsed, this.ctx.loop.simTime + dt);
+          var hud = readHud(this.ctx);
+          if (hud.vTip !== null) {
+            r.vTips.push(hud.vTip);
+            r.sessionVTips.push(hud.vTip);
+          }
+          if (hud.N !== null) r.summary.maxN = Math.max(r.summary.maxN, hud.N);
+          if (r.elapsed - r.bucketStart >= P0_RULES.damagePeriod - TIME_EPSILON) this.flushBucket(r.elapsed);
+          if (r.elapsed - r.sampleStart >= P0_RULES.samplePeriod - TIME_EPSILON) {
+            this.append('vtip_10s', r.elapsed, {
+              p50: percentile(r.vTips, 0.5),
+              p90: percentile(r.vTips, 0.9),
+              max: r.vTips.length ? Math.max.apply(null, r.vTips) : null
+            });
+            var seconds = r.frames.reduce(function (sum, d) {
+              return sum + d;
+            }, 0);
+            this.append('perf_10s', r.elapsed, {
+              fpsAvg: seconds > 0 ? r.frames.length / seconds : null,
+              fpsMin: r.frames.length ? 1 / Math.max.apply(null, r.frames) : null,
+              alive: hud.alive,
+              N: hud.N
+            });
+            r.vTips = [];
+            r.frames = [];
+            r.sampleStart = r.elapsed;
+          }
+          this.pruneRecent();
+        }
+
+        /** P0 §10: only completed runs are persisted; active evidence stays in memory. */;
+        _proto.flush = function flush() {
+          this.store.write(STORAGE_KEY, this.archives);
+        };
+        _proto.exportJsonLines = function exportJsonLines() {
+          var lines = [];
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.archives), _step4; !(_step4 = _iterator4()).done;) {
+            var archive = _step4.value;
+            for (var _iterator6 = _createForOfIteratorHelperLoose(archive), _step6; !(_step6 = _iterator6()).done;) {
+              var _line = _step6.value;
+              lines.push(_line);
+            }
+          }
+          if (this.run) {
+            for (var _iterator5 = _createForOfIteratorHelperLoose(this.run.lines), _step5; !(_step5 = _iterator5()).done;) {
+              var line = _step5.value;
+              lines.push(line);
+            }
+          }
+          return lines.length > 0 ? lines.join('\n') + '\n' : '';
+        };
+        _proto.clear = function clear() {
+          // P0 未定义，自选默认值: clearing during a run stops logging until next start.
+          // Do not create a partial, inconsistent run. Clearing an active run also
+          // stops its recording until the next real session:start.
+          this.archives = [];
+          this.run = null;
+          this.result = null;
+          this.resultLines = null;
+          this.resultRecent = emptyDamage();
+          this.flush();
+        };
+        _proto.resultChoice = function resultChoice(choice) {
+          if (!this.result || !this.resultLines) return;
+          this.resultLines.push(this.line('result_choice', this.result.duration, {
+            choice: choice
+          }, this.result));
+          this.flush();
+        };
+        _proto.damage = function damage(recent) {
+          var _ref, _this$run$summary$dam, _this$run4, _this$result;
+          if (recent === void 0) {
+            recent = false;
+          }
+          if (!recent) return _extends({}, (_ref = (_this$run$summary$dam = (_this$run4 = this.run) == null ? void 0 : _this$run4.summary.damage) != null ? _this$run$summary$dam : (_this$result = this.result) == null ? void 0 : _this$result.damage) != null ? _ref : emptyDamage());
+          if (!this.run) return _extends({}, this.resultRecent);
+          this.pruneRecent();
+          var damage = emptyDamage();
+          for (var _iterator7 = _createForOfIteratorHelperLoose((_this$run$recent = (_this$run5 = this.run) == null ? void 0 : _this$run5.recent) != null ? _this$run$recent : []), _step7; !(_step7 = _iterator7()).done;) {
+            var _this$run$recent, _this$run5;
+            var hit = _step7.value;
+            damage[hit.source] += hit.amount;
+          }
+          return damage;
+        };
+        _proto.expectDebugRestart = function expectDebugRestart() {
+          this.debugNext = true;
+          this.normalNext = false;
+        };
+        _proto.expectNormalRetry = function expectNormalRetry() {
+          this.normalNext = true;
+          this.debugNext = false;
+        };
+        _proto.totals = function totals() {
+          var total = {
+            sessions: 0,
+            damage: 0,
+            kills: 0
+          };
+          for (var _iterator8 = _createForOfIteratorHelperLoose(this.archives), _step8; !(_step8 = _iterator8()).done;) {
+            var lines = _step8.value;
+            for (var _iterator9 = _createForOfIteratorHelperLoose(lines), _step9; !(_step9 = _iterator9()).done;) {
+              var line = _step9.value;
+              var row = JSON.parse(line);
+              if (!isRecord(row) || row.type !== 'session_end' || !isRecord(row.summary)) continue;
+              var s = row.summary;
+              if (s.eligible !== true || s.debugRestart !== false || typeof s.totalDamage !== 'number' || typeof s.kills !== 'number') continue;
+              total.sessions += 1;
+              total.damage += s.totalDamage;
+              total.kills += s.kills;
+            }
+          }
+          return total;
+        };
+        _proto.begin = function begin(p) {
+          var _readHud$N;
+          var debugRestart = this.debugNext || this.started && !this.normalNext;
+          if (this.run) this.finish('restart', this.run.elapsed);
+          this.run = {
+            summary: {
+              sid: p.sid,
+              seed: this.ctx.session.seed,
+              paramsHash: p.paramsHash,
+              debugRestart: debugRestart,
+              eligible: false,
+              reason: '',
+              duration: 0,
+              damage: emptyDamage(),
+              shares: emptyDamage(),
+              totalDamage: 0,
+              kills: 0,
+              counts: {},
+              loops: [],
+              jianzhenCount: 0,
+              closedJianzhen: 0,
+              closedRate: 0,
+              emptyStarts: 0,
+              emptyRate: 0,
+              jianzhenHits: 0,
+              throwAttempts: 0,
+              throwCancels: 0,
+              suspiciousThrows: 0,
+              perfectCatches: 0,
+              normalCatches: 0,
+              misses: 0,
+              mistakenThrowRate: 0,
+              chainBreaks: 0,
+              recoveredSwords: 0,
+              expiredSwords: 0,
+              maxN: (_readHud$N = readHud(this.ctx).N) != null ? _readHud$N : 0,
+              firstWhipTime: null,
+              death: null
+            },
+            lines: [],
+            bucket: emptyDamage(),
+            bucketKills: emptyDamage(),
+            bucketTotal: 0,
+            bucketStart: 0,
+            elapsed: 0,
+            sampleStart: 0,
+            vTips: [],
+            sessionVTips: [],
+            frames: [],
+            arrayClosed: false,
+            arrayEmpty: false,
+            lastDamage: null,
+            recent: []
+          };
+          this.debugNext = false;
+          this.normalNext = false;
+          this.started = true;
+          this.result = null;
+          this.resultLines = null;
+          this.resultRecent = emptyDamage();
+          this.frameCount = 0;
+          this.frameSeconds = 0;
+          this.wallTime = 0;
+          this.frameHistory = [];
+          this.record('session_start', {
+            seed: this.ctx.session.seed,
+            params: this.ctx.tunables.snapshot(),
+            screen: typeof window === 'undefined' ? {
+              w: null,
+              h: null,
+              dpr: null
+            } : {
+              w: window.innerWidth,
+              h: window.innerHeight,
+              dpr: window.devicePixelRatio
+            },
+            ua: typeof navigator === 'undefined' ? '' : navigator.userAgent
+          });
+        };
+        _proto.record = function record(type, data) {
+          var _this$run$summary$cou;
+          if (!this.run) return;
+          this.run.elapsed = Math.max(this.run.elapsed, this.ctx.loop.simTime);
+          this.run.summary.counts[type] = ((_this$run$summary$cou = this.run.summary.counts[type]) != null ? _this$run$summary$cou : 0) + 1;
+          this.append(type, this.run.elapsed, data);
+        };
+        _proto.line = function line(type, time, data, s) {
+          return JSON.stringify(_extends({}, data, {
+            v: 1,
+            sid: s.sid,
+            t: Number(time.toFixed(P0_RULES.timeDigits)),
+            type: type,
+            ph: this.ctx.tunables.hash(),
+            debugRestart: s.debugRestart
+          }));
+        };
+        _proto.append = function append(type, time, data) {
+          if (this.run) this.run.lines.push(this.line(type, time, data, this.run.summary));
+        }
+        // P0 未定义，自选默认值: recent interval is (t - 30, t], modulo TIME_EPSILON.
+        ;
+
+        _proto.pruneRecent = function pruneRecent() {
+          var _this3 = this;
+          if (this.run) this.run.recent = this.run.recent.filter(function (hit) {
+            return hit.t > _this3.runElapsed() - P0_RULES.damageWindow + TIME_EPSILON;
+          });
+        };
+        _proto.runElapsed = function runElapsed() {
+          var _this$run$elapsed, _this$run6;
+          return Math.max((_this$run$elapsed = (_this$run6 = this.run) == null ? void 0 : _this$run6.elapsed) != null ? _this$run$elapsed : 0, this.ctx.loop.simTime);
+        };
+        _proto.flushBucket = function flushBucket(end) {
+          var r = this.run;
+          if (!r) return;
+          if (end > r.bucketStart + TIME_EPSILON || r.bucketTotal !== 0) this.append('dmg_1s', end, {
+            from: r.bucketStart,
+            to: end,
+            duration: end - r.bucketStart,
+            bySource: r.bucket,
+            killsBySource: r.bucketKills,
+            totalDamage: r.bucketTotal
+          });
+          r.bucket = emptyDamage();
+          r.bucketKills = emptyDamage();
+          r.bucketTotal = 0;
+          r.bucketStart = end;
+        };
+        _proto.finish = function finish(reason, duration) {
+          var r = this.run;
+          if (!r) return;
+          this.flushBucket(Math.max(duration, r.elapsed));
+          var s = r.summary;
+          s.duration = duration;
+          s.reason = reason;
+          s.eligible = !s.debugRestart && reason !== 'restart';
+          for (var _i2 = 0, _DAMAGE_SOURCES = DAMAGE_SOURCES; _i2 < _DAMAGE_SOURCES.length; _i2++) {
+            var source = _DAMAGE_SOURCES[_i2];
+            s.shares[source] = s.totalDamage > 0 ? s.damage[source] / s.totalDamage : 0;
+          }
+          // P0 §10 / GDD Appendix B: attempts include cancelled and completed throws.
+          // P0 未定义，自选默认值: a zero denominator yields 0 for all rates.
+          s.mistakenThrowRate = s.throwAttempts > 0 ? (s.throwCancels + s.suspiciousThrows) / s.throwAttempts : 0;
+          s.closedRate = s.jianzhenCount > 0 ? s.closedJianzhen / s.jianzhenCount : 0;
+          s.emptyRate = s.jianzhenCount > 0 ? s.emptyStarts / s.jianzhenCount : 0;
+          s.death = reason === 'died' ? r.lastDamage : null;
+          this.append('session_end', duration, {
+            reason: reason,
+            duration: duration,
+            summary: s
+          });
+          this.archives.push(r.lines);
+          this.archives = this.archives.slice(-P0_RULES.retainedSessions);
+          this.resultRecent = this.damage(true);
+          this.result = reason === 'restart' ? null : s;
+          this.resultLines = reason === 'restart' ? null : r.lines;
+          this.run = null;
+          this.flush();
+        };
+        _createClass(Telemetry, [{
+          key: "debugRestart",
+          get: function get() {
+            var _ref2, _this$run$summary$deb, _this$run7, _this$result2;
+            return (_ref2 = (_this$run$summary$deb = (_this$run7 = this.run) == null ? void 0 : _this$run7.summary.debugRestart) != null ? _this$run$summary$deb : (_this$result2 = this.result) == null ? void 0 : _this$result2.debugRestart) != null ? _ref2 : false;
+          }
+        }]);
+        return Telemetry;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ThrowController.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Vec2.ts', './ThrowFormulas.ts'], function (exports) {
+  var _extends, _createForOfIteratorHelperLoose, _createClass, cclegacy, vNormalize, vDist, vSub, vDot, throwDistance, arcAmplitude, catchKind, throwDamage, clawDamage;
+  return {
+    setters: [function (module) {
+      _extends = module.extends;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      vNormalize = module.vNormalize;
+      vDist = module.vDist;
+      vSub = module.vSub;
+      vDot = module.vDot;
+    }, function (module) {
+      throwDistance = module.throwDistance;
+      arcAmplitude = module.arcAmplitude;
+      catchKind = module.catchKind;
+      throwDamage = module.throwDamage;
+      clawDamage = module.clawDamage;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "932efWRPB5JF5j3PMFGoEEi", "ThrowController", undefined);
+      // P0 §6.4 body-contact cooldown is fixed prose, not an extra tunable.
+      var CLAW_COOLDOWN = 0.25;
+      // OPEN QUESTION (T6-Q9): P0 §5 does not specify the grounded flash frequency.
+      var GROUNDED_BLINK_HZ = 4;
+      // OPEN QUESTION (T6-Q13): P0 §5 does not specify cross rotation speed; one turn/s.
+      var SPIN_RAD_PER_SECOND = 2 * Math.PI;
+      // Numerical tolerances / quadrature resolution, not gameplay parameters.
+      var EPS = 1e-10;
+      var ARC_STEP = Math.PI / 180;
+
+      /** Owns only the external main sword. No cc, concrete rig access, or input mutation. */
+      var ThrowController = exports('ThrowController', /*#__PURE__*/function () {
+        function ThrowController(rig) {
+          this.phase = 'idle';
+          this.running = false;
+          this.pos = {
+            x: 0,
+            y: 0
+          };
+          this.heading = {
+            x: 0,
+            y: 0
+          };
+          this.origin = {
+            x: 0,
+            y: 0
+          };
+          this.axis = {
+            x: 0,
+            y: 0
+          };
+          this.distance = 0;
+          this.theta = 0;
+          this.spin = 0;
+          this.elapsed = 0;
+          this.passedPet = false;
+          this.pending = null;
+          this.aim = null;
+          this.launchCombo = 0;
+          this.launchVtip = 0;
+          this.outHits = new Set();
+          this.backHits = new Set();
+          this.enemies = [];
+          this.rig = void 0;
+          this.rig = rig;
+        }
+
+        /** Detached copies keep view consumers from mutating simulation state. */
+        var _proto = ThrowController.prototype;
+        _proto.reset = function reset() {
+          this.phase = 'idle';
+          this.pending = this.aim = null;
+          this.elapsed = this.theta = this.spin = this.distance = this.launchCombo = this.launchVtip = 0;
+          this.passedPet = false;
+          this.pos = _extends({}, this.rig.petPos);
+          this.origin = _extends({}, this.pos);
+          this.heading = this.axis = {
+            x: 0,
+            y: 0
+          };
+          this.outHits.clear();
+          this.backHits.clear();
+          this.enemies.length = 0;
+          this.rig.setCombo(0);
+          this.running = true;
+        };
+        _proto.stop = function stop() {
+          this.running = false;
+          this.aim = null;
+        };
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          if (!this.running || !Number.isFinite(dt) || dt <= 0) return;
+          var _this$rig$ctx = this.rig.ctx,
+            services = _this$rig$ctx.services,
+            p = _this$rig$ctx.tunables;
+          if (services.has('player') && services.get('player').hp <= 0) return;
+          if (this.phase === 'pending') {
+            // OPEN QUESTION (T6-Q7): switch-off / internal detachment silently abandons pending.
+            if (!p.getBool('mech.throw') || !this.rig.mainHeld) this.idle();else if (services.has('input') && services.get('input').frame.pressedThisTick) {
+              this.idle();
+              this.rig.ctx.events.emit('throw:cancel', {
+                reason: 'retouch'
+              });
+            } else {
+              this.elapsed += dt;
+              if (this.elapsed + EPS >= p.get('throw.confirmDelay')) this.launch();
+            }
+          } else if (this.phase === 'idle') this.checkRelease(dt);else {
+            this.spin = (this.spin + SPIN_RAD_PER_SECOND * dt) % (2 * Math.PI);
+            // A live blade-size change must also keep grounded / returning circles in bounds.
+            this.pos = this.rig.ctx.arena.clamp(this.pos, this.radius);
+            if (this.phase === 'out') this.flyOut(dt);else if (this.phase === 'back') this.flyBack(dt);else {
+              this.claw();
+              if (this.phase === 'grounded') this.grounded(dt);else this.autoReturn(dt);
+            }
+          }
+          this.updateAim();
+        };
+        _proto.checkRelease = function checkRelease(dt) {
+          var _this$rig$ctx2 = this.rig.ctx,
+            services = _this$rig$ctx2.services,
+            p = _this$rig$ctx2.tunables;
+          if (!p.getBool('mech.throw') || !this.rig.mainHeld || !services.has('input') || !services.has('swordRig')) return;
+          var input = services.get('input');
+          var info = services.get('swordRig');
+          if (!input.frame.releasedThisTick || !info.fullCharge || input.minMag(p.get('throw.minMagWindow')) < p.get('throw.minMag')) return;
+          var dir = vNormalize(input.avgDir(p.get('throw.dirWindow')));
+          if (dir.x === 0 && dir.y === 0) return;
+          // OPEN QUESTION (T6-Q8): InputHistory windows are held-only and end-exclusive.
+          // InputSystem records at frame.time = loop.simTime. minMag(dt) reads the last
+          // held sample; magDrop's endpoint is inclusive, so exclude the release at 0.
+          this.pending = {
+            vTip: info.vTip,
+            dir: dir,
+            joyMag: input.minMag(dt),
+            magDrop300: input.magDrop(0.3, input.frame.time - dt),
+            dist: throwDistance(p, info.vTip, this.rig.W),
+            origin: _extends({}, this.rig.petPos)
+          };
+          this.phase = 'pending';
+          this.elapsed = 0;
+          if (p.get('throw.confirmDelay') <= 0) this.launch();
+        };
+        _proto.updateAim = function updateAim() {
+          var _this$rig$ctx3 = this.rig.ctx,
+            services = _this$rig$ctx3.services,
+            p = _this$rig$ctx3.tunables;
+          this.aim = null;
+          if (!p.getBool('mech.throw') || !p.getBool('throw.aimLine') || !this.rig.mainHeld) return;
+          if (this.phase === 'pending' && this.pending) {
+            this.aim = {
+              origin: _extends({}, this.pending.origin),
+              dir: _extends({}, this.pending.dir),
+              dist: this.pending.dist
+            };
+            return;
+          }
+          if (this.phase !== 'idle' || !services.has('input') || !services.has('swordRig')) return;
+          var input = services.get('input');
+          var info = services.get('swordRig');
+          if (!info.fullCharge || !input.frame.touching || input.frame.mag < p.get('throw.minMag')) return;
+          var dir = vNormalize(input.avgDir(p.get('throw.dirWindow')));
+          if (dir.x !== 0 || dir.y !== 0) this.aim = {
+            origin: _extends({}, this.rig.petPos),
+            dir: dir,
+            dist: throwDistance(p, info.vTip, this.rig.W)
+          };
+        };
+        _proto.launch = function launch() {
+          var pending = this.pending;
+          if (!pending) return;
+          var ctx = this.rig.ctx;
+          var _this$rig$detachMain = this.rig.detachMain(),
+            pos = _this$rig$detachMain.pos;
+          this.pos = ctx.arena.clamp(pos, this.radius);
+          this.origin = _extends({}, this.pos);
+          this.axis = _extends({}, pending.dir);
+          this.heading = _extends({}, this.axis);
+          // Only historical samples (release vTip / launch combo) are retained.
+          // Pending aim retains release D; flight geometry reads live tunables below.
+          this.launchVtip = pending.vTip;
+          this.distance = throwDistance(ctx.tunables, pending.vTip, this.rig.W);
+          this.launchCombo = ctx.services.has('swordRig') ? ctx.services.get('swordRig').combo : 0;
+          this.outHits.clear();
+          this.backHits.clear();
+          this.theta = this.elapsed = 0;
+          this.passedPet = false;
+          this.phase = 'out';
+          this.pending = null;
+          this.aim = null;
+          // OPEN QUESTION (T6-Q10): frozen rig sets player.state='empty' even while thrown.
+          // OPEN QUESTION (T6-Q11): tuning owns telemetry export; only emit core payloads here.
+          ctx.events.emit('throw:start', {
+            vTip: pending.vTip,
+            joyMag: pending.joyMag,
+            magDrop300: pending.magDrop300,
+            dir: _extends({}, this.axis),
+            dist: this.distance
+          });
+          if (this.distance <= 0) this.beginBack();
+        };
+        _proto.curve = function curve(theta) {
+          // OPEN QUESTION (T6-Q1): docs give only maximum lateral offset and a Cv=3
+          // "large ellipse" description; the exact curve awaits design confirmation.
+          // T6 implementation choice: s=D*theta/pi, lateral=A*(1-cos(pi*s/D))/2.
+          // Its initial tangent follows dir; perp is dir rotated 90 degrees CCW.
+          // OPEN QUESTION (T6-Q17): tangent alignment does not bound a finite tick's
+          // chord angle for short D / high speed. Default D passes; see PR open questions.
+          var along = this.distance * theta / Math.PI;
+          var side = arcAmplitude(this.rig.ctx.tunables, this.rig.Cv, this.distance) * (1 - Math.cos(theta)) / 2;
+          return {
+            x: this.origin.x + this.axis.x * along - this.axis.y * side,
+            y: this.origin.y + this.axis.y * along + this.axis.x * side
+          };
+        };
+        _proto.flyOut = function flyOut(dt) {
+          var p = this.rig.ctx.tunables;
+          this.distance = throwDistance(p, this.launchVtip, this.rig.W);
+          if (this.distance <= 0) {
+            this.beginBack();
+            this.flyBack(dt);
+            return;
+          }
+          var speed = p.get('throw.speed');
+          var budget = speed * dt;
+          while (budget > EPS && this.phase === 'out') {
+            var end = Math.min(Math.PI, this.theta + ARC_STEP);
+            var from = this.curve(this.theta);
+            var next = this.curve(end);
+            var length = vDist(from, next);
+            var theta = end;
+            if (length > budget) {
+              var lo = this.theta;
+              var hi = end;
+              // Monotone chord-length solve within a one-degree interval.
+              for (var i = 0; i < 32; i++) {
+                var mid = (lo + hi) / 2;
+                if (vDist(from, this.curve(mid)) > budget) hi = mid;else lo = mid;
+              }
+              theta = (lo + hi) / 2;
+              next = this.curve(theta);
+              length = vDist(from, next);
+            }
+            this.theta = theta;
+            // Applying the curve delta at the current position preserves continuity
+            // when distance / curvature are edited, while taking effect this step.
+            var delta = vSub(next, from);
+            var before = _extends({}, this.pos);
+            var candidate = {
+              x: before.x + delta.x,
+              y: before.y + delta.y
+            };
+            var direction = vNormalize(delta);
+            this.heading = direction;
+            var wall = this.move(candidate);
+            this.damage(before, 'out', direction);
+            budget = Math.max(0, budget - length);
+            if (wall) {
+              this.phase = 'back';
+              this.passedPet = false;
+            } else if (this.theta >= Math.PI - EPS) this.beginBack();
+            if (length <= EPS && this.phase === 'out') this.theta = end;
+          }
+          if (this.phase === 'back' && budget > EPS) this.flyBack(budget / speed);
+        }
+
+        /** Returns true on contact; incoming heading is reflected once for each hit edge. */;
+        _proto.move = function move(candidate) {
+          var clamped = this.rig.ctx.arena.clamp(candidate, this.radius);
+          var x = clamped.x !== candidate.x;
+          var y = clamped.y !== candidate.y;
+          this.pos = clamped;
+          if (x) this.heading.x = -this.heading.x;
+          if (y) this.heading.y = -this.heading.y;
+          return x || y;
+        };
+        _proto.beginBack = function beginBack() {
+          this.phase = 'back';
+          this.passedPet = false;
+          this.heading = vNormalize(vSub(this.rig.petPos, this.pos));
+        };
+        _proto.flyBack = function flyBack(dt) {
+          if (this.tryCatch()) return;
+          var p = this.rig.ctx.tunables;
+          var target = vNormalize(vSub(this.rig.petPos, this.pos));
+          var angle = Math.atan2(this.heading.x * target.y - this.heading.y * target.x, vDot(this.heading, target));
+          var limit = p.get('throw.returnTurn') * Math.PI / 180 * dt;
+          var turn = Math.max(-limit, Math.min(limit, angle));
+          var c = Math.cos(turn);
+          var s = Math.sin(turn);
+          this.heading = {
+            x: this.heading.x * c - this.heading.y * s,
+            y: this.heading.x * s + this.heading.y * c
+          };
+          var before = _extends({}, this.pos);
+          var direction = _extends({}, this.heading);
+          this.move({
+            x: before.x + direction.x * p.get('throw.speed') * dt,
+            y: before.y + direction.y * p.get('throw.speed') * dt
+          });
+          this.damage(before, 'back', direction);
+          if (this.tryCatch()) return;
+          var behind = vDot(this.heading, vSub(this.rig.petPos, this.pos)) <= 0;
+          if (behind) this.passedPet = true;
+          if (this.passedPet && behind && vDist(this.pos, this.rig.petPos) >= p.get('throw.missPassDist')) {
+            var comboLost = this.combo;
+            this.rig.setCombo(0);
+            this.rig.setMainState('grounded');
+            this.phase = 'grounded';
+            this.elapsed = 0;
+            this.rig.ctx.events.emit('throw:miss', {
+              comboLost: comboLost
+            });
+          }
+        };
+        _proto.tryCatch = function tryCatch() {
+          var p = this.rig.ctx.tunables;
+          var offset = vSub(this.pos, this.rig.petPos);
+          // Contact fallback: wall/corner clamping can keep a large sword
+          // outside catchRadius. Touching still catches, with the same quality test.
+          if (!this.inCatchRange()) return false;
+          var result = catchKind(p, this.rig.petVel, offset, this.rig.petMaxSpeed);
+          var combo = this.combo;
+          if (result.kind === 'perfect') {
+            combo = Math.min(combo + 1, Math.floor(p.get('throw.comboMax')));
+            this.rig.setCombo(combo);
+            this.rig.addDragMul('throw.yujin', 1 + p.get('throw.yujinMul'), p.get('throw.yujinDur'));
+          }
+          this.rig.ctx.events.emit('throw:catch', _extends({}, result, {
+            combo: combo
+          }));
+          this.rig.attachMain();
+          this.idle();
+          return true;
+        };
+        _proto.damage = function damage(before, phase, dir) {
+          var _this$rig$ctx4 = this.rig.ctx,
+            services = _this$rig$ctx4.services,
+            p = _this$rig$ctx4.tunables;
+          if (!services.has('enemies')) return;
+          var service = services.get('enemies');
+          var seen = phase === 'out' ? this.outHits : this.backHits;
+          this.enemies.length = 0;
+          service.querySegment(before, this.pos, this.radius, this.enemies);
+          for (var _iterator = _createForOfIteratorHelperLoose(this.enemies), _step; !(_step = _iterator()).done;) {
+            var enemy = _step.value;
+            if (!enemy.alive || seen.has(enemy.id)) continue;
+            seen.add(enemy.id);
+            var source = phase === 'out' ? 'throw_out' : 'throw_back';
+            // OPEN QUESTION (T6-Q3): local once-per-leg authority; cooldown=0, omit knockback.
+            service.hit(enemy.id, {
+              source: source,
+              hitKey: source,
+              cooldown: 0,
+              dir: _extends({}, dir),
+              amount: throwDamage(p, this.rig.B, this.rig.W, this.launchCombo)
+            });
+          }
+        };
+        _proto.claw = function claw() {
+          var _this$rig$ctx5 = this.rig.ctx,
+            services = _this$rig$ctx5.services,
+            p = _this$rig$ctx5.tunables;
+          if (!services.has('enemies') || !services.has('player')) return;
+          var service = services.get('enemies');
+          this.enemies.length = 0;
+          service.queryCircle(_extends({}, this.rig.petPos), services.get('player').radius, this.enemies);
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.enemies), _step2; !(_step2 = _iterator2()).done;) {
+            var enemy = _step2.value;
+            if (enemy.alive) {
+              service.hit(enemy.id, {
+                source: 'claw',
+                hitKey: 'claw',
+                cooldown: CLAW_COOLDOWN,
+                amount: clawDamage(p, this.rig.B),
+                dir: vNormalize(vSub(enemy.pos, this.rig.petPos))
+              });
+            }
+          }
+        };
+        _proto.grounded = function grounded(dt) {
+          var p = this.rig.ctx.tunables;
+          // OPEN QUESTION (T6-Q5): touching circles = player.radius + sword half-length.
+          if (this.touchingPet()) {
+            this.recover('pickup');
+            return;
+          }
+          this.elapsed += dt;
+          if (this.elapsed + EPS >= p.get('throw.autoReturn')) {
+            this.phase = 'autoReturn';
+            this.rig.setMainState('returning');
+          }
+        };
+        _proto.autoReturn = function autoReturn(dt) {
+          if (this.inCatchRange()) {
+            this.recover('auto');
+            return;
+          }
+          var p = this.rig.ctx.tunables;
+          var distance = vDist(this.pos, this.rig.petPos);
+          // OPEN QUESTION (T6-Q4): automatic recovery does no sword damage; claw still runs.
+          // OPEN QUESTION (T6-Q6): reuse throw.speed, straight pursuit without a turn limit.
+          // Contact also recovers as 'auto', including arena-clamped corners.
+          this.heading = vNormalize(vSub(this.rig.petPos, this.pos));
+          var step = Math.min(distance, p.get('throw.speed') * dt);
+          this.pos = this.rig.ctx.arena.clamp({
+            x: this.pos.x + this.heading.x * step,
+            y: this.pos.y + this.heading.y * step
+          }, this.radius);
+          if (this.inCatchRange()) this.recover('auto');
+        };
+        _proto.touchingPet = function touchingPet() {
+          var services = this.rig.ctx.services;
+          // OPEN QUESTION (T6-Q16): extreme legal blade sizes can prevent even contact
+          // in a corner: sqrt(2)*(swordRadius-playerRadius) > their summed radii.
+          // Both circle containment and contact rules still apply; no teleport/timeout.
+          return services.has('player') && vDist(this.pos, this.rig.petPos) <= services.get('player').radius + this.radius;
+        };
+        _proto.inCatchRange = function inCatchRange() {
+          return vDist(this.pos, this.rig.petPos) <= this.rig.ctx.tunables.get('throw.catchRadius') || this.touchingPet();
+        };
+        _proto.recover = function recover(how) {
+          this.rig.attachMain();
+          this.idle();
+          this.rig.ctx.events.emit('throw:recovered', {
+            how: how
+          });
+        };
+        _proto.idle = function idle() {
+          this.phase = 'idle';
+          this.pending = this.aim = null;
+          this.elapsed = 0;
+        };
+        _createClass(ThrowController, [{
+          key: "snapshot",
+          get: function get() {
+            var aim = this.aim;
+            return {
+              phase: this.phase,
+              pos: _extends({}, this.pos),
+              spin: this.spin,
+              aim: aim ? {
+                origin: _extends({}, aim.origin),
+                dir: _extends({}, aim.dir),
+                dist: aim.dist
+              } : null,
+              groundedFlash: this.phase === 'grounded' && Math.floor(this.elapsed * GROUNDED_BLINK_HZ * 2) % 2 === 0
+            };
+          }
+        }, {
+          key: "radius",
+          get: function get() {
+            // OPEN QUESTION (T6-Q2): use P0 §5/§6.2 sword half-length as rotating-cross radius.
+            var p = this.rig.ctx.tunables;
+            return (p.get('sword.bladeLenBase') + p.get('sword.bladeLenPerLg') * this.rig.Lg) / 2;
+          }
+        }, {
+          key: "combo",
+          get: function get() {
+            var services = this.rig.ctx.services;
+            return services.has('swordRig') ? services.get('swordRig').combo : 0;
+          }
+        }]);
+        return ThrowController;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ThrowFormulas.ts", ['cc', './Vec2.ts'], function (exports) {
+  var cclegacy, vDot, vNormalize, vLen;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      vDot = module.vDot;
+      vNormalize = module.vNormalize;
+      vLen = module.vLen;
+    }],
+    execute: function () {
+      exports({
+        arcAmplitude: arcAmplitude,
+        catchKind: catchKind,
+        clawDamage: clawDamage,
+        directionAngleDeg: directionAngleDeg,
+        directionCos: directionCos,
+        throwDamage: throwDamage,
+        throwDistance: throwDistance
+      });
+      cclegacy._RF.push({}, "c68fe2Ym0NKmb6eDIj0F5dX", "ThrowFormulas", undefined);
+
+      /** P0 §6.4 / GDD §6.4: cap BEFORE the weight multiplier; T6 §3.3 floors D at 0. */
+      function throwDistance(p, vTip, W) {
+        return Math.max(0, Math.min(p.get('throw.distBase') + p.get('throw.distPerVtip') * vTip, p.get('throw.distCap')) * (1 - p.get('throw.distWeightK') * (W - 2)));
+      }
+
+      /** P0 §6.4 / GDD §6.4: maximum lateral offset, independent of the chosen path shape. */
+      function arcAmplitude(p, Cv, distance) {
+        return p.get('throw.arcPerCv') * Cv * distance;
+      }
+
+      /** P0 §6.4: B comes from the rig; combo is the count captured at launch. */
+      function throwDamage(p, B, W, combo) {
+        return B * (p.get('throw.dmgBase') + p.get('throw.dmgPerW') * W) * (1 + p.get('throw.comboK') * combo);
+      }
+
+      /** P0 §6.4: empty-handed body contact damage. */
+      function clawDamage(p, B) {
+        return B * p.get('throw.clawMul');
+      }
+
+      /** Unit-vector dot product. Zero / near-zero vectors follow core vNormalize's zero convention. */
+      function directionCos(a, b) {
+        return Math.max(-1, Math.min(1, vDot(vNormalize(a), vNormalize(b))));
+      }
+
+      /** Unsigned angle in degrees for P0 §6.4's <5° aim check; a missing direction returns 0. */
+      function directionAngleDeg(a, b) {
+        var ua = vNormalize(a);
+        var ub = vNormalize(b);
+        if (vLen(ua) === 0 || vLen(ub) === 0) return 0;
+        return Math.acos(directionCos(ua, ub)) * 180 / Math.PI;
+      }
+      /** P0 §6.4 / T6 §3.7: petToSword = sword - pet; both thresholds are inclusive. */
+      function catchKind(p, petVel, petToSword, petMaxSpeed) {
+        var cos = directionCos(petVel, petToSword);
+        var speedFrac = petMaxSpeed > 0 ? vLen(petVel) / petMaxSpeed : 0;
+        return {
+          cos: cos,
+          speedFrac: speedFrac,
+          kind: cos >= p.get('throw.perfectCos') && speedFrac >= p.get('throw.perfectSpeedFrac') ? 'perfect' : 'normal'
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ThrowParams.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "b0d0eFSxxpK3pTAc8pBw6cE", "ThrowParams", undefined);
+      function number(key, label, value, min, max) {
+        return {
+          key: key,
+          group: '掷剑',
+          label: label,
+          kind: 'number',
+          "default": value,
+          min: min,
+          max: max
+        };
+      }
+      function toggle(key, label) {
+        return {
+          key: key,
+          group: '掷剑',
+          label: label,
+          kind: 'bool',
+          "default": 1
+        };
+      }
+
+      /** P0 §6.4 parameter table: 25 keys (mech.throw + 24 throw.*). */
+      var THROW_PARAMS = exports('THROW_PARAMS', [toggle('mech.throw', '掷剑机制开关'), number('throw.minMag', '松手前最低摇杆幅度', 0.8, 0, 1), number('throw.minMagWindow', '幅度检查窗口（s）', 0.15, 0, 0.5),
+      // P0 §11: 120ms, expressed in simulation seconds.
+      number('throw.confirmDelay', '延迟确认（s）【默认·待试玩】', 0.12, 0, 0.3), number('throw.dirWindow', '方向平均窗口（s）', 0.1, 0, 0.3), toggle('throw.aimLine', '方向指示线'), number('throw.speed', '飞行速度（u/s）', 10, 4, 25), number('throw.distBase', '飞出距离基数', 2, 0, 5), number('throw.distPerVtip', '每 u/s 剑尖速度', 0.4, 0, 1), number('throw.distCap', '飞出距离上限（u）', 7, 2, 12), number('throw.distWeightK', '每点剑重（相对 2）距离变化', 0.1, 0, 0.3), number('throw.arcPerCv', '每点弧度的侧向偏移比例', 0.25, 0, 0.6), number('throw.returnTurn', '回程最大转向（°/s）', 360, 90, 1080), number('throw.dmgBase', '飞剑伤害系数', 0.8, 0, 3), number('throw.dmgPerW', '飞剑伤害系数/W', 0.2, 0, 1), number('throw.comboK', '每层连击加成', 0.25, 0, 1), number('throw.comboMax', '连击上限', 10, 1, 30), number('throw.catchRadius', '接剑半径（u）', 0.7, 0.3, 1.5), number('throw.perfectCos', '完美接剑余弦门槛', 0.6, 0, 1), number('throw.perfectSpeedFrac', '完美接剑最低速度比例', 0.5, 0, 1), number('throw.yujinMul', '余劲加成', 0.3, 0, 1), number('throw.yujinDur', '余劲时长（s）', 3, 0, 10), number('throw.missPassDist', '漏接判定距离（u）', 1.5, 0.5, 4), number('throw.autoReturn', '漏接后自动飞回（s）', 3, 0.5, 10), number('throw.clawMul', '空手爪击（× B）', 0.2, 0, 1)]);
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/ThrowView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _inheritsLoose, cclegacy, _decorator, Color, Graphics, Node, UITransform, Component;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      Color = module.Color;
+      Graphics = module.Graphics;
+      Node = module.Node;
+      UITransform = module.UITransform;
+      Component = module.Component;
+    }],
+    execute: function () {
+      exports('mountThrowView', mountThrowView);
+      var _dec, _class;
+      cclegacy._RF.push({}, "2246eRdFOFAM6SMaUusyADX", "ThrowView", undefined);
+      var ccclass = _decorator.ccclass;
+      var ORANGE = new Color(255, 156, 48);
+      var GREY = new Color(165, 175, 190);
+      var WHITE = new Color(255, 255, 255);
+      // OPEN QUESTION (T6-Q15): P0 §5 leaves dash/gap and stroke sizes unspecified.
+      // Presentation constants in world units; never extra gameplay tunables.
+      var DASH_LENGTH = 0.15;
+      var DASH_GAP = 0.1;
+      var STROKE_WIDTH = 0.025;
+      var MIN_STROKE_PX = 1;
+      var ThrowView = exports('ThrowView', (_dec = ccclass('ThrowGreyboxView'), _dec(_class = /*#__PURE__*/function (_Component) {
+        _inheritsLoose(ThrowView, _Component);
+        function ThrowView() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.rig = null;
+          _this.controller = null;
+          _this.graphics = null;
+          return _this;
+        }
+        var _proto = ThrowView.prototype;
+        _proto.bind = function bind(rig, controller) {
+          this.rig = rig;
+          this.controller = controller;
+          this.graphics = this.node.addComponent(Graphics);
+        };
+        _proto.draw = function draw() {
+          var rig = this.rig;
+          var controller = this.controller;
+          var g = this.graphics;
+          if (!rig || !controller || !g || !this.enabledInHierarchy) return;
+          var snapshot = controller.snapshot;
+          var px = rig.ctx.toPx;
+          // Same pixel scale as SwordView, including translated world origins.
+          var scale = Math.abs(px({
+            x: 1,
+            y: 0
+          }).x - px({
+            x: 0,
+            y: 0
+          }).x);
+          g.clear();
+          g.lineWidth = Math.max(MIN_STROKE_PX, STROKE_WIDTH * scale);
+          g.strokeColor = ORANGE;
+          var aim = snapshot.aim;
+          if (aim) {
+            for (var s = 0; s < aim.dist; s += DASH_LENGTH + DASH_GAP) {
+              var end = Math.min(aim.dist, s + DASH_LENGTH);
+              var a = px({
+                x: aim.origin.x + aim.dir.x * s,
+                y: aim.origin.y + aim.dir.y * s
+              });
+              var b = px({
+                x: aim.origin.x + aim.dir.x * end,
+                y: aim.origin.y + aim.dir.y * end
+              });
+              g.moveTo(a.x, a.y);
+              g.lineTo(b.x, b.y);
+            }
+            g.stroke();
+          }
+          if (snapshot.phase === 'idle' || snapshot.phase === 'pending') return;
+          var p = px(snapshot.pos);
+          var tunables = rig.ctx.tunables;
+          // T6-Q2: rotating-cross arm length equals the collision half-length.
+          var radius = (tunables.get('sword.bladeLenBase') + tunables.get('sword.bladeLenPerLg') * rig.Lg) / 2 * scale;
+          var x = Math.cos(snapshot.spin) * radius;
+          var y = Math.sin(snapshot.spin) * radius;
+          g.strokeColor = snapshot.groundedFlash ? WHITE : GREY;
+          g.moveTo(p.x - x, p.y - y);
+          g.lineTo(p.x + x, p.y + y);
+          g.moveTo(p.x + y, p.y - x);
+          g.lineTo(p.x - y, p.y + x);
+          if (snapshot.groundedFlash) g.circle(p.x, p.y, radius);
+          g.stroke();
+        };
+        return ThrowView;
+      }(Component)) || _class));
+      function mountThrowView(rig, controller) {
+        var parent = rig.ctx.layers.get('rig');
+        // Pure core consumers may provide a descriptor without a Cocos scene.
+        if (typeof parent.addChild !== 'function') return null;
+        var node = new Node('SwordThrow');
+        node.layer = parent.layer;
+        node.addComponent(UITransform).setAnchorPoint(0, 0);
+        parent.addChild(node);
+        var component = node.addComponent(ThrowView);
+        component.bind(rig, controller);
+        return function () {
+          return component.draw();
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Tunables.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports('hashValues', hashValues);
+      cclegacy._RF.push({}, "97245/G1A1BSKOC8+qwlLjh", "Tunables", undefined);
+      /** One row in the tuning registry. Modules register their own rows at install time. */
+      var KEY_RE = /^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/;
+
+      /**
+       * Runtime tuning registry. Core does not own gameplay defaults; each module
+       * passes its `*Params.ts` rows to `define` from `install`.
+       */
+      var Tunables = exports('Tunables', /*#__PURE__*/function () {
+        /**
+         * @param emit optional bridge into the event bus. Called only when the
+         * stored number actually changes, with the pre-clamp previous value and
+         * the clamped new value.
+         */
+        function Tunables(emit) {
+          this.defs = new Map();
+          this.values = new Map();
+          this.order = [];
+          this.aliases = new Map();
+          this.listeners = new Map();
+          this.anyListeners = new Set();
+          this.emit = void 0;
+          this.emit = emit;
+        }
+
+        /**
+         * Map an old preset key onto the current one. `load` applies this before
+         * the unknown-key warning, so renamed keys do not drop out of old presets.
+         */
+        var _proto = Tunables.prototype;
+        _proto.registerAlias = function registerAlias(from, to) {
+          if (!from || !to) throw new Error('tunable alias needs both keys');
+          this.aliases.set(from, to);
+        };
+        _proto.define = function define(defs) {
+          for (var _iterator = _createForOfIteratorHelperLoose(defs), _step; !(_step = _iterator()).done;) {
+            var raw = _step.value;
+            var def = copyDef(validateDef(raw));
+            var existing = this.defs.get(def.key);
+            this.defs.set(def.key, def);
+            if (!existing) {
+              this.order.push(def.key);
+              this.values.set(def.key, this.clamp(def, def["default"]));
+            } else {
+              var _this$values$get;
+              console.warn("[tunables] redefining \"" + def.key + "\"");
+              var current = (_this$values$get = this.values.get(def.key)) != null ? _this$values$get : def["default"];
+              this.values.set(def.key, this.clamp(def, current));
+            }
+          }
+        };
+        _proto.has = function has(key) {
+          return this.defs.has(key);
+        };
+        _proto.get = function get(key) {
+          var _this$values$get2;
+          if (!this.defs.has(key)) throw new Error("Unknown tunable: " + key);
+          return (_this$values$get2 = this.values.get(key)) != null ? _this$values$get2 : 0;
+        };
+        _proto.getBool = function getBool(key) {
+          return this.get(key) !== 0;
+        };
+        _proto.set = function set(key, v) {
+          var _this$values$get3;
+          var def = this.defs.get(key);
+          if (!def) throw new Error("Unknown tunable: " + key);
+          var from = (_this$values$get3 = this.values.get(key)) != null ? _this$values$get3 : def["default"];
+          var to = this.clamp(def, v);
+          if (to === from) return;
+          this.values.set(key, to);
+          this.emitChange(key, from, to);
+        };
+        _proto.onChange = function onChange(key, cb) {
+          var _this = this;
+          if (key === '*') {
+            this.anyListeners.add(cb);
+            return function () {
+              _this.anyListeners["delete"](cb);
+            };
+          }
+          var set = this.listeners.get(key);
+          if (!set) {
+            set = new Set();
+            this.listeners.set(key, set);
+          }
+          set.add(cb);
+          return function () {
+            set["delete"](cb);
+          };
+        };
+        _proto.all = function all() {
+          var out = [];
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.order), _step2; !(_step2 = _iterator2()).done;) {
+            var _key = _step2.value;
+            var def = this.defs.get(_key);
+            if (def) out.push(copyDef(def));
+          }
+          return out;
+        };
+        _proto.snapshot = function snapshot() {
+          var out = {};
+          for (var _iterator3 = _createForOfIteratorHelperLoose(this.order), _step3; !(_step3 = _iterator3()).done;) {
+            var _this$values$get4;
+            var _key2 = _step3.value;
+            out[_key2] = (_this$values$get4 = this.values.get(_key2)) != null ? _this$values$get4 : 0;
+          }
+          return out;
+        };
+        _proto.load = function load(values) {
+          // Object.keys + lookup instead of Object.entries (ES2017) to stay within the ES2015 lib.
+          for (var _i = 0, _Object$keys = Object.keys(values); _i < _Object$keys.length; _i++) {
+            var _this$aliases$get;
+            var rawKey = _Object$keys[_i];
+            var rawVal = values[rawKey];
+            var _key3 = (_this$aliases$get = this.aliases.get(rawKey)) != null ? _this$aliases$get : rawKey;
+            if (!this.defs.has(_key3)) {
+              console.warn("[tunables] ignoring unknown key \"" + rawKey + "\"");
+              continue;
+            }
+            this.set(_key3, rawVal);
+          }
+        };
+        _proto.hash = function hash() {
+          return hashValues(this.snapshot());
+        };
+        _proto.resetAll = function resetAll() {
+          for (var _iterator4 = _createForOfIteratorHelperLoose(this.order), _step4; !(_step4 = _iterator4()).done;) {
+            var _key4 = _step4.value;
+            var def = this.defs.get(_key4);
+            if (!def) continue;
+            this.set(_key4, def["default"]);
+          }
+        };
+        _proto.clamp = function clamp(def, v) {
+          var x = v;
+          if (!Number.isFinite(x)) x = def["default"];
+          if (def.kind === 'bool') return x >= 0.5 ? 1 : 0;
+          if (def.kind === 'enum') {
+            var _def$options$length, _def$options;
+            var max = Math.max(0, ((_def$options$length = (_def$options = def.options) == null ? void 0 : _def$options.length) != null ? _def$options$length : 1) - 1);
+            var i = Math.round(x);
+            if (i < 0) return 0;
+            if (i > max) return max;
+            return i;
+          }
+          if (def.min !== undefined) x = Math.max(def.min, x);
+          if (def.max !== undefined) x = Math.min(def.max, x);
+          return x;
+        };
+        _proto.emitChange = function emitChange(key, from, to) {
+          var _this$emit;
+          (_this$emit = this.emit) == null || _this$emit.call(this, key, from, to);
+          var set = this.listeners.get(key);
+          if (set) {
+            // Array.from, not [...set]: Cocos 3.8 Babel loose spreads do not unpack Sets.
+            for (var _i2 = 0, _Array$from = Array.from(set); _i2 < _Array$from.length; _i2++) {
+              var _cb = _Array$from[_i2];
+              _cb(key, to);
+            }
+          }
+          for (var _i3 = 0, _Array$from2 = Array.from(this.anyListeners); _i3 < _Array$from2.length; _i3++) {
+            var _cb2 = _Array$from2[_i3];
+            _cb2(key, to);
+          }
+        };
+        return Tunables;
+      }());
+      function hashValues(values) {
+        var keys = Object.keys(values).sort();
+        var h = 0x811c9dc5;
+        var push = function push(s) {
+          for (var i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 0x01000193);
+          }
+        };
+        for (var _iterator5 = _createForOfIteratorHelperLoose(keys), _step5; !(_step5 = _iterator5()).done;) {
+          var _key5 = _step5.value;
+          push(_key5);
+          push('=');
+          push(String(values[_key5]));
+          push(';');
+        }
+        // Manual left-pad instead of String.prototype.padStart (ES2017).
+        var hex = (h >>> 0).toString(16);
+        while (hex.length < 8) hex = '0' + hex;
+        return hex;
+      }
+      function validateDef(def) {
+        if (!KEY_RE.test(def.key)) {
+          throw new Error("Tunable key \"" + def.key + "\" must look like \"module.name\"");
+        }
+        if (def.kind !== 'number' && def.kind !== 'bool' && def.kind !== 'enum') {
+          throw new Error("Tunable \"" + def.key + "\" has unknown kind");
+        }
+        if (!Number.isFinite(def["default"])) {
+          throw new Error("Tunable \"" + def.key + "\" default must be finite");
+        }
+        if (def.kind === 'enum' && (!def.options || def.options.length === 0)) {
+          throw new Error("Enum tunable \"" + def.key + "\" needs options");
+        }
+        return def;
+      }
+      function copyDef(def) {
+        return {
+          key: def.key,
+          group: def.group,
+          label: def.label,
+          kind: def.kind,
+          "default": def["default"],
+          min: def.min,
+          max: def.max,
+          step: def.step,
+          options: def.options ? def.options.slice() : undefined,
+          restart: def.restart,
+          note: def.note
+        };
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/TuningController.ts", ['cc', './SystemOrder.ts', './Presets.ts', './Storage.ts', './Telemetry.ts', './TuningParams.ts'], function (exports) {
+  var cclegacy, SystemOrder, Presets, StoredJson, Telemetry, TUNING_PARAMS;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }, function (module) {
+      SystemOrder = module.SystemOrder;
+    }, function (module) {
+      Presets = module.Presets;
+    }, function (module) {
+      StoredJson = module.StoredJson;
+    }, function (module) {
+      Telemetry = module.Telemetry;
+    }, function (module) {
+      TUNING_PARAMS = module.TUNING_PARAMS;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "3bd53zk7XBMeoB/OIxWFZWC", "TuningController", undefined);
+      var TuningController = exports('TuningController', /*#__PURE__*/function () {
+        function TuningController(ctx, storage) {
+          if (storage === void 0) {
+            storage = null;
+          }
+          this.id = 'tuning';
+          this.order = SystemOrder.Tuning;
+          this.ctx = void 0;
+          this.presets = void 0;
+          this.telemetry = void 0;
+          this.active = false;
+          this.draw = null;
+          this.ctx = ctx;
+          ctx.tunables.define(TUNING_PARAMS);
+          this.presets = new Presets(ctx.tunables, new StoredJson(storage));
+          this.telemetry = new Telemetry(ctx, new StoredJson(storage));
+        }
+        var _proto = TuningController.prototype;
+        _proto.attach = function attach() {
+          if (this.active) return;
+          this.active = true;
+          this.telemetry.attach();
+        };
+        _proto.detach = function detach() {
+          if (!this.active) return;
+          this.active = false;
+          this.telemetry.detach();
+        };
+        _proto.setView = function setView(draw) {
+          this.draw = draw;
+        };
+        _proto.fixedUpdate = function fixedUpdate(dt) {
+          if (this.active) this.telemetry.fixedUpdate(dt);
+        };
+        _proto.render = function render() {
+          var _this$draw;
+          if (this.active) (_this$draw = this.draw) == null || _this$draw.call(this);
+        };
+        _proto.command = function command(cmd, arg) {
+          if (cmd === 'restart') this.telemetry.expectDebugRestart();
+          this.ctx.events.emit('debug:command', arg === undefined ? {
+            cmd: cmd
+          } : {
+            cmd: cmd,
+            arg: arg
+          });
+        };
+        _proto.quit = function quit() {
+          this.telemetry.resultChoice('quit');
+        };
+        _proto.retry = function retry() {
+          // A result-page retry is a normal run. Debug buttons always use events.
+          if (this.telemetry.result) {
+            this.telemetry.resultChoice('again');
+            this.telemetry.expectNormalRetry();
+            this.ctx.session.restart();
+          }
+        };
+        return TuningController;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/TuningParams.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "9f593JvbMhHP7a9oWzfGdyU", "TuningParams", undefined);
+      /** Fixed analysis/schema rules from P0 §9–10; these are not gameplay knobs. */
+      var P0_RULES = exports('P0_RULES', {
+        damageWindow: 30,
+        fpsWindow: 5,
+        samplePeriod: 10,
+        damagePeriod: 1,
+        retainedSessions: 30,
+        timeDigits: 2,
+        hashLength: 6,
+        throwJoyMin: 0.5,
+        throwDropMax: 0.3,
+        chainShortcuts: [0, 8, 16],
+        sheepShortcut: 20
+      });
+
+      // P0 未定义，自选默认值: floating-point boundary tolerance, not game timing.
+      var TIME_EPSILON = exports('TIME_EPSILON', 1e-8);
+
+      /** Presentation/command preferences. No gameplay defaults are owned here. */
+      var TUNING_PARAMS = exports('TUNING_PARAMS', [
+      // P0 §9.2 defines the default, but not the key or tuning prefix.
+      {
+        key: 'tuning.hud',
+        group: '调试',
+        label: '调试 HUD',
+        kind: 'bool',
+        "default": 1
+      },
+      // P0 §9.1 defines default-on behavior. P0 未定义，自选默认值: key and tuning prefix.
+      {
+        key: 'tuning.pauseOnOpen',
+        group: '调试',
+        label: '打开时暂停',
+        kind: 'bool',
+        "default": 1
+      },
+      // P0 未定义，自选默认值 (seconds; nonnegative refresh delay).
+      {
+        key: 'tuning.refresh',
+        group: '调试',
+        label: '界面刷新间隔',
+        kind: 'number',
+        "default": 0.1,
+        min: 0,
+        max: 1,
+        step: 0.01
+      },
+      // P0 未定义，自选默认值 (positive integral page size).
+      {
+        key: 'tuning.pageRows',
+        group: '调试',
+        label: '每页参数行数',
+        kind: 'number',
+        "default": 6,
+        min: 1,
+        max: 6,
+        step: 1
+      },
+      // P0 未定义，自选默认值 (nonnegative command arguments).
+      {
+        key: 'tuning.chainArg',
+        group: '调试',
+        label: '调试链剑数',
+        kind: 'number',
+        "default": 10,
+        min: 0,
+        max: 36,
+        step: 1
+      },
+      // P0 未定义，自选默认值
+      {
+        key: 'tuning.speedArg',
+        group: '调试',
+        label: '调试剑尖速度',
+        kind: 'number',
+        "default": 25,
+        min: 0,
+        max: 100,
+        step: 0.1
+      },
+      // P0 未定义，自选默认值 (kind index 0 = blob; count >= 1).
+      {
+        key: 'tuning.spawnKind',
+        group: '调试',
+        label: '调试刷怪种类',
+        kind: 'enum',
+        "default": 0,
+        options: ['blob', 'sheep', 'boar']
+      },
+      // P0 未定义，自选默认值
+      {
+        key: 'tuning.spawnCount',
+        group: '调试',
+        label: '调试刷怪数量',
+        kind: 'number',
+        "default": 1,
+        min: 1,
+        max: 80,
+        step: 1
+      }]);
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/TuningView.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './Hud.ts', './Presets.ts', './Telemetry.ts', './TuningParams.ts', './ScreenLayout.ts', './TuningController.ts', './Widgets.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, sys, view, screen, EditBox, Label, Component, Color, BlockInputEvents, readHud, applyPlayMode, parameterGroups, groupedDamage, DAMAGE_GROUPS, DAMAGE_SOURCES, P0_RULES, layoutScreen, TuningController, edit, exportText, label, slider, button, box;
+  return {
+    setters: [function (module) {
+      _inheritsLoose = module.inheritsLoose;
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      _decorator = module._decorator;
+      sys = module.sys;
+      view = module.view;
+      screen = module.screen;
+      EditBox = module.EditBox;
+      Label = module.Label;
+      Component = module.Component;
+      Color = module.Color;
+      BlockInputEvents = module.BlockInputEvents;
+    }, function (module) {
+      readHud = module.readHud;
+    }, function (module) {
+      applyPlayMode = module.applyPlayMode;
+      parameterGroups = module.parameterGroups;
+    }, function (module) {
+      groupedDamage = module.groupedDamage;
+      DAMAGE_GROUPS = module.DAMAGE_GROUPS;
+      DAMAGE_SOURCES = module.DAMAGE_SOURCES;
+    }, function (module) {
+      P0_RULES = module.P0_RULES;
+    }, function (module) {
+      layoutScreen = module.layoutScreen;
+    }, function (module) {
+      TuningController = module.TuningController;
+    }, function (module) {
+      edit = module.edit;
+      exportText = module.exportText;
+      label = module.label;
+      slider = module.slider;
+      button = module.button;
+      box = module.box;
+    }],
+    execute: function () {
+      exports('mountTuning', mountTuning);
+      cclegacy._RF.push({}, "e0168dBxFFD/plfyryTv3uz", "TuningView", undefined);
+      /** Owns subscription lifetime without requiring a scene/prefab component. */
+      var TuningLifecycle = exports('TuningLifecycle', /*#__PURE__*/function (_Component) {
+        _inheritsLoose(TuningLifecycle, _Component);
+        function TuningLifecycle() {
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.owner = null;
+          return _this;
+        }
+        var _proto = TuningLifecycle.prototype;
+        _proto.update = function update(dt) {
+          var _this$owner;
+          (_this$owner = this.owner) == null || _this$owner.controller.telemetry.frame(dt);
+        };
+        _proto.onEnable = function onEnable() {
+          var _this$owner2;
+          (_this$owner2 = this.owner) == null || _this$owner2.enable();
+        };
+        _proto.onDisable = function onDisable() {
+          var _this$owner3;
+          (_this$owner3 = this.owner) == null || _this$owner3.disable();
+        };
+        _proto.onDestroy = function onDestroy() {
+          var _this$owner4;
+          (_this$owner4 = this.owner) == null || _this$owner4.destroy();
+          this.owner = null;
+        };
+        return TuningLifecycle;
+      }(Component));
+      _decorator.ccclass('TuningLifecycle')(TuningLifecycle);
+      function mountTuning(ctx) {
+        var controller = new TuningController(ctx, sys.localStorage);
+        ctx.loop.addSystem(controller);
+        var parent = ctx.layers.get('debug');
+        // Pure core callers supply opaque layer handles, rather than Cocos nodes.
+        if (typeof parent.addChild !== 'function') {
+          controller.attach();
+          return controller;
+        }
+        var ui = new TuningView(controller, parent, ctx.layers.get('hud'));
+        ui.enable();
+        return controller;
+      }
+      var TuningView = exports('TuningView', /*#__PURE__*/function () {
+        // P0 未定义，自选默认值: retained layout coordinates, sizes, typography and palette (design pixels).
+        function TuningView(controller, parent, hud) {
+          var _this2 = this,
+            _pauseOnOpen$children,
+            _pauseOnOpen$children2;
+          this.controller = void 0;
+          this.root = void 0;
+          this.hudRoot = void 0;
+          this.panel = void 0;
+          this.rowsRoot = void 0;
+          this.resultRoot = void 0;
+          this.transferRoot = void 0;
+          this.hudLabel = void 0;
+          this.damageLabel = void 0;
+          this.statusLabel = void 0;
+          this.pageLabel = void 0;
+          this.barRoot = void 0;
+          this.bars = [];
+          this.recentBars = [];
+          this.gear = void 0;
+          this.pauseOnOpenCaption = void 0;
+          this.debugEnabled = typeof DEBUG_TUNING === 'undefined' || DEBUG_TUNING;
+          this.tipFill = void 0;
+          this.tipTicks = [];
+          this.tipLabel = void 0;
+          this.sliders = new Map();
+          this.commandFields = new Map();
+          this.values = new Map();
+          this.editing = new Set();
+          this.captions = new Map();
+          this.collapsed = new Set();
+          this.presetName = null;
+          this.transfer = null;
+          this.search = '';
+          this.page = 0;
+          this.registrySignature = '';
+          this.lastResult = '';
+          this.dismissedResult = '';
+          this.status = '';
+          this.enabled = false;
+          this.destroyed = false;
+          this.pausedByPanel = false;
+          this.renderTime = 0;
+          this.flush = function () {
+            _this2.controller.telemetry.flush();
+          };
+          this.controller = controller;
+          this.root = box(parent, 'Tuning', 0, 0, 0, 0);
+          this.hudRoot = box(hud, 'TuningHUD', 0, 0, 0, 0);
+          this.hudLabel = label(this.hudRoot, '', -30, 23, 600, 50, 10);
+          if (this.hudLabel) this.hudLabel.lineHeight = 11;
+          this.damageLabel = label(this.hudRoot, '', 0, -42, 670, 16, 9);
+          this.barRoot = box(this.hudRoot, 'DamageShare', 0, -20, 0, 0);
+          var tipRoot = box(this.hudRoot, 'TipSpeed', -230, -5, 200, 6, new Color(48, 69, 92));
+          this.tipFill = box(tipRoot, 'SpeedFill', 0, 0, 1, 6, new Color(230, 150, 70));
+          for (var _i = 0, _arr = ['vDead', 'vRef', 'fullCharge']; _i < _arr.length; _i++) {
+            var name = _arr[_i];
+            this.tipTicks.push(box(tipRoot, name, 0, 0, 1, 10, new Color(240, 240, 240)));
+          }
+          this.tipLabel = label(this.hudRoot, '', 100, -5, 440, 16, 10);
+          for (var i = 0; i < DAMAGE_GROUPS.length; i++) {
+            this.bars.push(box(this.barRoot, DAMAGE_GROUPS[i], 0, 0, 1, 8, new Color(70 + i * 19, 190 - i * 11, 100 + i * 16)));
+          }
+          for (var _i2 = 0; _i2 < DAMAGE_GROUPS.length; _i2++) {
+            this.recentBars.push(box(this.barRoot, "Recent" + DAMAGE_GROUPS[_i2], 0, -12, 1, 8, new Color(70 + _i2 * 19, 190 - _i2 * 11, 100 + _i2 * 16)));
+          }
+          this.gear = button(this.root, '⚙', 310, 590, 60, function () {
+            return _this2.togglePanel();
+          });
+          this.gear.active = this.debugEnabled;
+          this.panel = box(this.root, 'TuningPanel', 0, -30, 690, 1110, new Color(27, 35, 48, 253));
+          this.panel.addComponent(BlockInputEvents);
+          label(this.panel, '调参 / 试玩', -205, 510, 240, 40, 28);
+          var pauseOnOpen = button(this.panel, '打开时暂停', 85, 510, 220, function () {
+            return _this2.togglePauseOnOpen();
+          });
+          this.pauseOnOpenCaption = (_pauseOnOpen$children = (_pauseOnOpen$children2 = pauseOnOpen.children.find(function (child) {
+            return child.getComponent(Label) !== null;
+          })) == null ? void 0 : _pauseOnOpen$children2.getComponent(Label)) != null ? _pauseOnOpen$children : null;
+          this.updatePauseOnOpenCaption();
+          button(this.panel, '关闭', 275, 510, 100, function () {
+            return _this2.togglePanel();
+          });
+          edit(this.panel, '', '搜索参数、分组、说明', 0, 450, 640, function (value) {
+            _this2.search = value;
+            _this2.page = 0;
+            _this2.rebuildRows();
+          }, 44, false, true);
+          button(this.panel, '只开拖剑', -165, 394, 310, function () {
+            return _this2.playMode(false);
+          });
+          button(this.panel, '全部机制', 165, 394, 310, function () {
+            return _this2.playMode(true);
+          });
+          this.presetName = edit(this.panel, '', '预设名', -210, 338, 220, function () {});
+          button(this.panel, '保存', -30, 338, 110, function () {
+            return _this2.action(function () {
+              var _this2$presetName$str, _this2$presetName;
+              var ok = controller.presets.save((_this2$presetName$str = (_this2$presetName = _this2.presetName) == null ? void 0 : _this2$presetName.string) != null ? _this2$presetName$str : '');
+              return ok ? '预设已保存；刷新后可加载' : controller.presets.store.error;
+            });
+          });
+          button(this.panel, '加载', 95, 338, 110, function () {
+            return _this2.action(function () {
+              var _this2$presetName$str2, _this2$presetName2;
+              var message = controller.presets.load((_this2$presetName$str2 = (_this2$presetName2 = _this2.presetName) == null ? void 0 : _this2$presetName2.string) != null ? _this2$presetName$str2 : '');
+              _this2.rebuildRows();
+              return message;
+            });
+          });
+          button(this.panel, '切换', 220, 338, 110, function () {
+            var names = controller.presets.names();
+            if (!_this2.presetName || names.length === 0) {
+              _this2.status = '暂无已保存预设';
+              return;
+            }
+            var i = names.indexOf(_this2.presetName.string);
+            _this2.presetName.string = names[(i + 1) % names.length];
+            _this2.status = "\u9884\u8BBE " + (i + 2 > names.length ? 1 : i + 2) + "/" + names.length + "\uFF1B\u70B9\u52A0\u8F7D\u5E94\u7528";
+          });
+          button(this.panel, '导出 JSON', -215, 282, 200, function () {
+            return _this2.showTransfer(controller.presets.exportJson(), false);
+          });
+          button(this.panel, '导入 JSON', 0, 282, 200, function () {
+            return _this2.showTransfer('', true);
+          });
+          button(this.panel, '导出埋点', 215, 282, 200, function () {
+            return _this2.showTransfer(controller.telemetry.exportJsonLines(), false, true);
+          });
+          button(this.panel, '调试重开', -215, 226, 200, function () {
+            return controller.command('restart');
+          });
+          button(this.panel, '填满剑意', 0, 226, 200, function () {
+            return controller.command('fillJianyi');
+          });
+          button(this.panel, '清空敌人', 215, 226, 200, function () {
+            return controller.command('clearEnemies');
+          });
+          this.commandField('tuning.chainArg', '链剑数', -265);
+          button(this.panel, '设链剑', -140, 170, 130, function () {
+            return _this2.numericCommand('setChain', String(controller.ctx.tunables.get('tuning.chainArg')));
+          });
+          this.commandField('tuning.speedArg', '剑尖速度', 65);
+          button(this.panel, '设速度', 205, 170, 150, function () {
+            return _this2.numericCommand('forceVtip', String(controller.ctx.tunables.get('tuning.speedArg')));
+          });
+          button(this.panel, '刷怪种类', -215, 114, 200, function () {
+            var t = controller.ctx.tunables;
+            t.set('tuning.spawnKind', (t.get('tuning.spawnKind') + 1) % 3);
+            _this2.status = "\u5237\u602A\u79CD\u7C7B\uFF1A" + ['blob', 'sheep', 'boar'][t.get('tuning.spawnKind')];
+          });
+          button(this.panel, '生成怪物', 0, 114, 200, function () {
+            return controller.command('spawn', ['blob', 'sheep', 'boar'][controller.ctx.tunables.get('tuning.spawnKind')] + ' ' + Math.floor(controller.ctx.tunables.get('tuning.spawnCount')));
+          });
+          button(this.panel, '恢复默认', 215, 114, 200, function () {
+            controller.ctx.tunables.resetAll();
+            _this2.status = '已恢复默认；标 * 项需重开';
+            _this2.rebuildRows();
+          });
+          button(this.panel, '删除预设', -240, 64, 150, function () {
+            return _this2.action(function () {
+              var _this2$presetName$str3, _this2$presetName3;
+              return controller.presets["delete"]((_this2$presetName$str3 = (_this2$presetName3 = _this2.presetName) == null ? void 0 : _this2$presetName3.string) != null ? _this2$presetName$str3 : '') ? '预设已删除' : controller.presets.store.error;
+            });
+          });
+          button(this.panel, '清空埋点', -80, 64, 150, function () {
+            controller.telemetry.clear();
+            _this2.status = '埋点已清空；下局重新记录';
+          });
+          button(this.panel, '刷20只羊', 80, 64, 150, function () {
+            return controller.command('spawn', "sheep " + P0_RULES.sheepShortcut);
+          });
+          var _loop = function _loop() {
+            var n = P0_RULES.chainShortcuts[_i3];
+            button(_this2.panel, "N=" + n, 190 + _i3 * 52, 64, 48, function () {
+              return controller.command('setChain', String(n));
+            });
+          };
+          for (var _i3 = 0; _i3 < P0_RULES.chainShortcuts.length; _i3++) {
+            _loop();
+          }
+          this.rowsRoot = box(this.panel, 'Parameters', 0, 0, 0, 0);
+          button(this.panel, '上一页', -215, -410, 190, function () {
+            _this2.page -= 1;
+            _this2.rebuildRows();
+          });
+          button(this.panel, '下一页', 215, -410, 190, function () {
+            _this2.page += 1;
+            _this2.rebuildRows();
+          });
+          this.pageLabel = label(this.panel, '', 0, -410, 220);
+          this.statusLabel = label(this.panel, '', 0, -492, 640, 100, 18);
+          this.transferRoot = box(this.panel, 'JsonTransfer', 0, -150, 670, 740, new Color(27, 35, 48));
+          label(this.transferRoot, 'JSON 传输 · 可选择复制 / 粘贴', 0, 320, 620);
+          this.transfer = edit(this.transferRoot, '', '粘贴完整 JSON', 0, 30, 620, function () {}, 510, true);
+          button(this.transferRoot, '应用导入', -160, -300, 280, function () {
+            return _this2.action(function () {
+              var _this2$transfer$strin, _this2$transfer;
+              var message = controller.presets.importJson((_this2$transfer$strin = (_this2$transfer = _this2.transfer) == null ? void 0 : _this2$transfer.string) != null ? _this2$transfer$strin : '');
+              _this2.transferRoot.active = false;
+              _this2.rebuildRows();
+              return message;
+            });
+          });
+          button(this.transferRoot, '返回', 160, -300, 280, function () {
+            _this2.transferRoot.active = false;
+          });
+          this.transferRoot.active = false;
+          this.resultRoot = box(this.root, 'Result', 0, 0, 680, 840, new Color(27, 35, 48, 253));
+          this.resultRoot.addComponent(BlockInputEvents);
+          this.resultRoot.active = false;
+          this.panel.active = false;
+          var lifecycle = this.root.addComponent(TuningLifecycle);
+          if (lifecycle) lifecycle.owner = this;
+          this.rebuildRows();
+          this.resize();
+        }
+        var _proto2 = TuningView.prototype;
+        _proto2.enable = function enable() {
+          var _this3 = this;
+          if (this.enabled || this.destroyed) return;
+          this.enabled = true;
+          this.hudRoot.active = true;
+          this.controller.attach();
+          this.controller.setView(function () {
+            return _this3.render();
+          });
+          view.on('canvas-resize', this.resize, this);
+          if (typeof window !== 'undefined') window.addEventListener('pagehide', this.flush);
+          this.syncPanelPause();
+          this.resize();
+        };
+        _proto2.disable = function disable() {
+          if (!this.enabled) return;
+          this.enabled = false;
+          view.off('canvas-resize', this.resize, this);
+          if (typeof window !== 'undefined') window.removeEventListener('pagehide', this.flush);
+          this.releasePanelPause();
+          this.controller.detach();
+          this.controller.setView(null);
+          this.hudRoot.active = false;
+        };
+        _proto2.destroy = function destroy() {
+          if (this.destroyed) return;
+          this.disable();
+          this.destroyed = true;
+          this.hudRoot.destroy();
+        };
+        _proto2.resize = function resize() {
+          var size = view.getVisibleSize();
+          var scale = Math.min(size.width / 720, size.height / 1280);
+          this.root.setScale(scale, scale, 1);
+          this.hudRoot.setScale(scale, scale, 1);
+          var safe = sys.getSafeAreaRect();
+          var windowSize = screen.windowSize;
+          var sx = windowSize.width > 0 ? size.width / windowSize.width : 1;
+          var sy = windowSize.height > 0 ? size.height / windowSize.height : 1;
+          var strip = layoutScreen(size.width, size.height, {
+            x: safe.x * sx,
+            y: safe.y * sy,
+            width: safe.width * sx,
+            height: safe.height * sy
+          }).hud;
+          // The gear remains at least 44 visible pixels, outside the arena.
+          this.gear.setScale(Math.max(1, 44 / (60 * scale)), Math.max(1, 44 / (44 * scale)), 1);
+          this.hudRoot.setPosition(strip.x + strip.width / 2 - size.width / 2, strip.y + strip.height / 2 - size.height / 2, 0);
+          this.gear.setPosition((strip.x + strip.width - 30 - size.width / 2) / scale, (strip.y + strip.height / 2 - size.height / 2) / scale, 0);
+        };
+        _proto2.togglePanel = function togglePanel() {
+          this.panel.active = !this.panel.active;
+          if (this.panel.active) {
+            this.resultRoot.active = false;
+            this.rebuildRows();
+          } else if (this.controller.telemetry.result && this.controller.telemetry.result.sid !== this.dismissedResult) this.resultRoot.active = true;
+          this.syncPanelPause();
+        };
+        _proto2.togglePauseOnOpen = function togglePauseOnOpen() {
+          var tunables = this.controller.ctx.tunables;
+          tunables.set('tuning.pauseOnOpen', tunables.getBool('tuning.pauseOnOpen') ? 0 : 1);
+          this.updatePauseOnOpenCaption();
+          this.syncPanelPause();
+        };
+        _proto2.updatePauseOnOpenCaption = function updatePauseOnOpenCaption() {
+          if (this.pauseOnOpenCaption) {
+            this.pauseOnOpenCaption.string = this.controller.ctx.tunables.getBool('tuning.pauseOnOpen') ? '打开时暂停：开 ✓' : '打开时暂停：关';
+          }
+        };
+        _proto2.syncPanelPause = function syncPanelPause() {
+          var loop = this.controller.ctx.loop;
+          if (this.panel.active && this.controller.ctx.tunables.getBool('tuning.pauseOnOpen')) {
+            if (!loop.paused) {
+              loop.pause();
+              this.pausedByPanel = true;
+            }
+            return;
+          }
+          this.releasePanelPause();
+        };
+        _proto2.releasePanelPause = function releasePanelPause() {
+          if (!this.pausedByPanel) return;
+          this.controller.ctx.loop.resume();
+          this.pausedByPanel = false;
+        };
+        _proto2.action = function action(fn) {
+          try {
+            this.status = fn();
+          } catch (error) {
+            this.status = error instanceof Error ? error.message : '操作失败';
+          }
+        };
+        _proto2.commandField = function commandField(key, hint, x) {
+          var _this4 = this;
+          var input = edit(this.panel, String(this.controller.ctx.tunables.get(key)), hint, x, 170, 105, function (v) {
+            return _this4.setCommandArg(key, v);
+          });
+          if (!input) return;
+          this.commandFields.set(key, input);
+          input.node.on(EditBox.EventType.EDITING_DID_BEGAN, function () {
+            return _this4.editing.add(key);
+          });
+          input.node.on(EditBox.EventType.EDITING_DID_ENDED, function () {
+            return _this4.editing["delete"](key);
+          });
+        };
+        _proto2.setCommandArg = function setCommandArg(key, text) {
+          var n = Number(text);
+          if (!text.trim() || !Number.isFinite(n) || n < 0) {
+            this.status = '请输入非负有限数值';
+            return;
+          }
+          this.controller.ctx.tunables.set(key, key === 'tuning.chainArg' ? Math.floor(n) : n);
+        };
+        _proto2.numericCommand = function numericCommand(cmd, text) {
+          var value = Number(text);
+          if (!text.trim() || !Number.isFinite(value) || value < 0) {
+            this.status = '请输入非负有限数值';
+            return;
+          }
+          this.controller.command(cmd, String(cmd === 'setChain' ? Math.floor(value) : value));
+        };
+        _proto2.playMode = function playMode(all) {
+          var keys = applyPlayMode(this.controller.ctx.tunables, all);
+          this.status = keys.length > 0 ? "\u5DF2\u5207\u6362 " + keys.length + " \u4E2A\u673A\u5236\u5F00\u5173\uFF1B\u6807 * \u9879\u9700\u91CD\u5F00" : '玩法模块尚未注册 mech.chain / mech.throw / mech.loop';
+          this.rebuildRows();
+        };
+        _proto2.showTransfer = function showTransfer(text, importing, logs) {
+          var _this5 = this;
+          if (logs === void 0) {
+            logs = false;
+          }
+          this.transferRoot.active = true;
+          if (this.transfer) this.transfer.string = text;
+          if (importing) {
+            this.status = '粘贴完整 JSON 后点应用导入';
+            return;
+          }
+          void exportText(text, logs ? "p0_telemetry_" + new Date().toISOString().slice(0, 10) + ".jsonl" : 'preset.json', logs ? 'application/x-ndjson' : 'application/json').then(function (message) {
+            _this5.status = message;
+          });
+        };
+        _proto2.rebuildRows = function rebuildRows() {
+          var _this6 = this;
+          for (var _i4 = 0, _arr2 = [].concat(this.rowsRoot.children); _i4 < _arr2.length; _i4++) {
+            var node = _arr2[_i4];
+            node.removeFromParent();
+            node.destroy();
+          }
+          this.values.clear();
+          this.sliders.clear();
+          this.editing.clear();
+          this.captions.clear();
+          var rows = [];
+          var groups = parameterGroups(this.controller.ctx.tunables, this.search, this.collapsed);
+          for (var _iterator = _createForOfIteratorHelperLoose(groups), _step; !(_step = _iterator()).done;) {
+            var group = _step.value;
+            rows.push({
+              group: group.name,
+              collapsed: group.collapsed
+            });
+            if (!group.collapsed) {
+              for (var _iterator2 = _createForOfIteratorHelperLoose(group.defs), _step2; !(_step2 = _iterator2()).done;) {
+                var def = _step2.value;
+                rows.push({
+                  def: def
+                });
+              }
+            }
+          }
+          var rowsPerPage = Math.floor(this.controller.ctx.tunables.get('tuning.pageRows'));
+          var pages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+          this.page = Math.max(0, Math.min(pages - 1, this.page));
+          if (this.pageLabel) this.pageLabel.string = this.page + 1 + " / " + pages;
+          var _loop2 = function _loop2() {
+            var row = rows[_this6.page * rowsPerPage + i];
+            if (!row) return 1; // break
+            var y = 10 - i * (408 / rowsPerPage);
+            if ('group' in row) {
+              button(_this6.rowsRoot, (row.collapsed ? '▸' : '▾') + " " + row.group, 0, y, 640, function () {
+                if (_this6.collapsed.has(row.group)) _this6.collapsed["delete"](row.group);else _this6.collapsed.add(row.group);
+                _this6.rebuildRows();
+              });
+            } else _this6.parameter(row.def, y);
+          };
+          for (var i = 0; i < rowsPerPage; i++) {
+            if (_loop2()) break;
+          }
+          if (rows.length === 0) label(this.rowsRoot, '没有匹配的参数', 0, -100, 640);
+        };
+        _proto2.parameter = function parameter(def, y) {
+          var _def$min,
+            _def$max,
+            _def$note,
+            _this7 = this;
+          var t = this.controller.ctx.tunables;
+          var value = t.get(def.key);
+          label(this.rowsRoot, "" + def.label + (def.restart ? ' 重开生效' : ''), -175, y + 11, 285, 28, 19);
+          var range = def.kind === 'number' ? " [" + ((_def$min = def.min) != null ? _def$min : '—') + ", " + ((_def$max = def.max) != null ? _def$max : '—') + "]" : '';
+          label(this.rowsRoot, "" + def.key + range + " " + ((_def$note = def.note) != null ? _def$note : ''), -175, y - 19, 285, 27, 13);
+          if (def.kind === 'number') {
+            var input = edit(this.rowsRoot, String(value), def.label, 125, y + 10, 145, function (text) {
+              var number = Number(text);
+              if (!text.trim() || !Number.isFinite(number)) _this7.status = '请输入有限数字';else t.set(def.key, number);
+              if (input) input.string = String(t.get(def.key));
+            }, 28);
+            if (input) {
+              this.values.set(def.key, input);
+              input.node.on(EditBox.EventType.EDITING_DID_BEGAN, function () {
+                return _this7.editing.add(def.key);
+              });
+              input.node.on(EditBox.EventType.EDITING_DID_ENDED, function () {
+                return _this7.editing["delete"](def.key);
+              });
+            }
+            // Unbounded rows have numeric input; no arbitrary gameplay range.
+            if (def.min !== undefined && def.max !== undefined && def.max > def.min) {
+              var min = def.min;
+              var max = def.max;
+              var control = slider(this.rowsRoot, "Slider:" + def.key, 125, y - 18, 145, (value - min) / (max - min), function (p) {
+                var raw = min + p * (max - min);
+                t.set(def.key, def.step ? min + Math.round((raw - min) / def.step) * def.step : raw);
+              });
+              if (control) this.sliders.set(def.key, control);
+            }
+            button(this.rowsRoot, '默认', 270, y, 84, function () {
+              return t.set(def.key, def["default"]);
+            });
+          } else if (def.kind === 'bool') {
+            var _node$children$find;
+            var node = button(this.rowsRoot, '', 180, y, 260, function () {
+              t.set(def.key, 1 - t.get(def.key));
+              if (def.key === 'tuning.pauseOnOpen') {
+                _this7.updatePauseOnOpenCaption();
+                _this7.syncPanelPause();
+              }
+            });
+            var caption = (_node$children$find = node.children.find(function (child) {
+              return child.getComponent(Label) !== null;
+            })) == null ? void 0 : _node$children$find.getComponent(Label);
+            if (caption) this.captions.set(def.key, caption);
+          } else {
+            var _def$options;
+            var options = (_def$options = def.options) != null ? _def$options : [];
+            var width = 260 / Math.max(1, options.length);
+            var _loop3 = function _loop3(i) {
+              var _node$children$find2;
+              var node = button(_this7.rowsRoot, options[i], 50 + width * (i + 0.5), y, width, function () {
+                t.set(def.key, i);
+                _this7.rebuildRows();
+              });
+              var caption = (_node$children$find2 = node.children.find(function (child) {
+                return child.getComponent(Label) !== null;
+              })) == null ? void 0 : _node$children$find2.getComponent(Label);
+              if (caption) _this7.captions.set(def.key + ":" + i, caption);
+            };
+            for (var i = 0; i < options.length; i++) {
+              _loop3(i);
+            }
+          }
+        };
+        _proto2.render = function render() {
+          var _data$vTip,
+            _data$vTip2,
+            _this8 = this;
+          // Rendering is driven even during hit-stop. Throttle text and node work.
+          var now = Date.now();
+          if (now - this.renderTime < this.controller.ctx.tunables.get('tuning.refresh') * 1000) return;
+          this.renderTime = now;
+          var ctx = this.controller.ctx;
+          var data = readHud(ctx);
+          var fps = this.controller.telemetry.fps();
+          var vtipPercentiles = this.controller.telemetry.vtipPercentiles();
+          var fmt = function fmt(v) {
+            return v === null ? '—' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v);
+          };
+          this.hudRoot.active = this.debugEnabled && ctx.tunables.getBool('tuning.hud') && !this.panel.active && !this.resultRoot.active;
+          if (this.hudLabel) this.hudLabel.string = ["seed " + data.seed + " \xB7 #" + data.paramsHash + " \xB7 " + (this.controller.telemetry.debugRestart ? '调试局（不计统计）' : '正常局'), "FPS " + fmt(fps.fpsAvg) + " / 5s\u4F4E " + fmt(fps.fpsMin) + " \xB7 \u65F6\u95F4 " + fmt(data.elapsed) + "  \u5371\u9669 " + fmt(data.danger) + "  \u654C\u4EBA " + fmt(data.alive) + "  HP " + fmt(data.hp) + "/" + fmt(data.maxHp), "vTip " + fmt(data.vTip) + " p50 " + fmt(vtipPercentiles.p50) + " p90 " + fmt(vtipPercentiles.p90) + " \u6EE1\u5145 " + fmt(data.fullCharge) + "  N " + fmt(data.N) + " \u69FD " + fmt(data.slots) + " \u7EF3 " + fmt(data.ropeLength), "\u5251\u610F " + fmt(data.jianyi) + "  \u8FDE\u51FB " + fmt(data.combo) + "  \u58A8\u91CF " + fmt(data.ink) + "  \u5251\u9635\u5269\u4F59 " + fmt(data.arrayRemaining)].join('\n');
+          var thresholds = [data.vDead, data.vRef, data.fullChargeSpeed];
+          var maxTip = Math.max.apply(null, [(_data$vTip = data.vTip) != null ? _data$vTip : 0].concat(thresholds.map(function (v) {
+            return v != null ? v : 0;
+          })));
+          var speedWidth = maxTip > 0 ? 200 * ((_data$vTip2 = data.vTip) != null ? _data$vTip2 : 0) / maxTip : 0;
+          this.tipFill.active = speedWidth > 0;
+          this.tipFill.setScale(speedWidth, 1, 1);
+          this.tipFill.setPosition(-100 + speedWidth / 2, 0, 0);
+          for (var i = 0; i < thresholds.length; i++) {
+            var tick = this.tipTicks[i];
+            var threshold = thresholds[i];
+            if (tick) {
+              tick.active = threshold !== null && maxTip > 0;
+              tick.setPosition(-100 + (maxTip > 0 ? 200 * (threshold != null ? threshold : 0) / maxTip : 0), 0, 0);
+            }
+          }
+          if (this.tipLabel) this.tipLabel.string = "vDead " + fmt(data.vDead) + " / vRef " + fmt(data.vRef) + " / \u7529\u6EE1 " + fmt(data.fullChargeSpeed);
+          var damage = this.controller.telemetry.damage();
+          var groups = groupedDamage(damage);
+          var recent = groupedDamage(this.controller.telemetry.damage(true));
+          var total = groups.reduce(function (sum, d) {
+            return sum + d;
+          }, 0);
+          var paint = function paint(bars, values, y) {
+            var sum = values.reduce(function (s, d) {
+              return s + d;
+            }, 0);
+            var x = -330;
+            for (var _i5 = 0; _i5 < values.length; _i5++) {
+              var width = sum > 0 ? 660 * values[_i5] / sum : 0;
+              var bar = bars[_i5];
+              if (bar) {
+                bar.active = width > 0;
+                bar.setScale(width, 1, 1);
+                bar.setPosition(x + width / 2, y, 0);
+              }
+              x += width;
+            }
+          };
+          paint(this.bars, groups, 0);
+          paint(this.recentBars, recent, -12);
+          if (this.damageLabel) this.damageLabel.string = "\u7D2F\u8BA1 " + fmt(total) + " / \u6700\u8FD130\u79D2 " + fmt(recent.reduce(function (s, d) {
+            return s + d;
+          }, 0)) + " \xB7 " + DAMAGE_GROUPS.map(function (key, i) {
+            return key + " " + (total > 0 ? (100 * groups[i] / total).toFixed(1) : '0') + "%";
+          }).join(' / ');
+          var defs = ctx.tunables.all();
+          var signature = JSON.stringify(defs) + ':' + ctx.tunables.get('tuning.pageRows');
+          if (signature !== this.registrySignature) {
+            this.registrySignature = signature;
+            this.rebuildRows();
+          }
+          if (this.panel.active) {
+            this.updatePauseOnOpenCaption();
+            for (var _i6 = 0, _Array$from = Array.from(this.commandFields.entries()); _i6 < _Array$from.length; _i6++) {
+              var _Array$from$_i = _Array$from[_i6],
+                key = _Array$from$_i[0],
+                input = _Array$from$_i[1];
+              if (!this.editing.has(key)) input.string = String(ctx.tunables.get(key));
+            }
+            for (var _iterator3 = _createForOfIteratorHelperLoose(defs), _step3; !(_step3 = _iterator3()).done;) {
+              var _def$options$ctx$tuna, _def$options3;
+              var def = _step3.value;
+              var control = this.sliders.get(def.key);
+              if (control && def.min !== undefined && def.max !== undefined && def.max > def.min) control.progress = (ctx.tunables.get(def.key) - def.min) / (def.max - def.min);
+              var _input = this.values.get(def.key);
+              if (_input && !this.editing.has(def.key)) _input.string = String(ctx.tunables.get(def.key));
+              if (def.kind === 'enum') {
+                var _def$options2;
+                var options = (_def$options2 = def.options) != null ? _def$options2 : [];
+                for (var _i7 = 0; _i7 < options.length; _i7++) {
+                  var segment = this.captions.get(def.key + ":" + _i7);
+                  if (segment) segment.string = options[_i7] + (ctx.tunables.get(def.key) === _i7 ? ' ✓' : '');
+                }
+              }
+              var caption = this.captions.get(def.key);
+              if (caption) caption.string = def.kind === 'bool' ? ctx.tunables.getBool(def.key) ? '开 ✓' : '关' : (_def$options$ctx$tuna = (_def$options3 = def.options) == null ? void 0 : _def$options3[ctx.tunables.get(def.key)]) != null ? _def$options$ctx$tuna : '—';
+            }
+          }
+          if (this.statusLabel) this.statusLabel.string = this.status + "\n#" + ctx.tunables.hash() + " \xB7 " + defs.length + " \u53C2\u6570\n" + (this.controller.presets.store.error || this.controller.telemetry.store.error);
+          var result = this.controller.telemetry.result;
+          if (!result) {
+            this.resultRoot.active = false;
+            this.lastResult = '';
+            return;
+          }
+          if (result.sid !== this.lastResult && result.sid !== this.dismissedResult) {
+            this.lastResult = result.sid;
+            this.panel.active = false;
+            this.syncPanelPause();
+            this.resultRoot.active = true;
+            for (var _i8 = 0, _arr3 = [].concat(this.resultRoot.children); _i8 < _arr3.length; _i8++) {
+              var node = _arr3[_i8];
+              node.removeFromParent();
+              node.destroy();
+            }
+            label(this.resultRoot, result.debugRestart ? '调试局结束 · 不计统计' : '本局结束', 0, 350, 620, 50, 30);
+            var totalStats = this.controller.telemetry.totals();
+            label(this.resultRoot, ["seed " + ctx.session.seed + " \xB7 #" + result.paramsHash + " \xB7 " + result.reason, "\u65F6\u957F " + result.duration.toFixed(2) + " \u79D2 \xB7 \u51FB\u6740 " + result.kills + " \xB7 \u603B\u4F24\u5BB3 " + result.totalDamage.toFixed(2), "\u95ED\u5408\u5708 " + result.loops.length + " \xB7 \u5B8C\u7F8E\u63A5\u5251 " + result.perfectCatches + " \xB7 \u65AD\u94FE " + result.chainBreaks].concat(DAMAGE_SOURCES.map(function (key) {
+              return key + ": " + result.damage[key].toFixed(2) + " (" + (100 * result.shares[key]).toFixed(1) + "%)";
+            }), ["\u6709\u6548\u5C40 " + totalStats.sessions + " \xB7 \u7D2F\u8BA1\u51FB\u6740 " + totalStats.kills + " \xB7 \u7D2F\u8BA1\u4F24\u5BB3 " + totalStats.damage.toFixed(2)]).join('\n'), 0, 30, 620, 510, 22);
+            // Equal size and weight: neither next action is promoted over the other.
+            button(this.resultRoot, '再来一局', -160, -340, 290, function () {
+              return _this8.controller.retry();
+            });
+            button(this.resultRoot, '结束', 160, -340, 290, function () {
+              _this8.controller.quit();
+              _this8.dismissedResult = result.sid;
+              _this8.resultRoot.active = false;
+            });
+          }
+        };
+        return TuningView;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/TypedEventBus.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "4f6a3X/SatMcqH51xbhsKqa", "TypedEventBus", undefined);
+      /**
+       * Type-safe pub/sub. `on` returns an unsubscribe function; components must
+       * call it from `onDisable` / `onDestroy`.
+       * A throwing listener is logged and does not stop the rest of the fan-out.
+       */
+      var TypedEventBus = exports('TypedEventBus', /*#__PURE__*/function () {
+        function TypedEventBus() {
+          this.listeners = new Map();
+        }
+        var _proto = TypedEventBus.prototype;
+        _proto.on = function on(name, cb) {
+          var set = this.listeners.get(name);
+          if (!set) {
+            set = new Set();
+            this.listeners.set(name, set);
+          }
+          var handler = cb;
+          set.add(handler);
+          return function () {
+            set["delete"](handler);
+          };
+        };
+        _proto.off = function off(name, cb) {
+          var set = this.listeners.get(name);
+          if (!set) return;
+          set["delete"](cb);
+        };
+        _proto.emit = function emit(name, payload) {
+          var set = this.listeners.get(name);
+          if (!set || set.size === 0) return;
+          // Array.from, not [...set]: Cocos 3.8 compiles spreads in Babel loose mode
+          // ([].concat(set)), which does not unpack a Set.
+          var snapshot = Array.from(set);
+          for (var _i = 0, _snapshot = snapshot; _i < _snapshot.length; _i++) {
+            var cb = _snapshot[_i];
+            try {
+              cb(payload);
+            } catch (err) {
+              console.error("[events] listener for \"" + name + "\" threw", err);
+            }
+          }
+        };
+        _proto.listenerCount = function listenerCount(name) {
+          var _this$listeners$get$s, _this$listeners$get;
+          return (_this$listeners$get$s = (_this$listeners$get = this.listeners.get(name)) == null ? void 0 : _this$listeners$get.size) != null ? _this$listeners$get$s : 0;
+        };
+        _proto.clear = function clear() {
+          this.listeners.clear();
+        };
+        return TypedEventBus;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Vec2.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports({
+        vAdd: vAdd,
+        vCopy: vCopy,
+        vDist: vDist,
+        vDistSq: vDistSq,
+        vDot: vDot,
+        vLen: vLen,
+        vLenSq: vLenSq,
+        vLerp: vLerp,
+        vNormalize: vNormalize,
+        vScale: vScale,
+        vSet: vSet,
+        vSub: vSub,
+        vec2: vec2
+      });
+      cclegacy._RF.push({}, "7259cbKwcdAlqyLjOMXJ3+b", "Vec2", undefined);
+      /** Arena-space vector. Origin is the arena's bottom-left; +y is up. Units are u. */
+      function vec2(x, y) {
+        if (x === void 0) {
+          x = 0;
+        }
+        if (y === void 0) {
+          y = 0;
+        }
+        return {
+          x: x,
+          y: y
+        };
+      }
+      function vSet(out, x, y) {
+        out.x = x;
+        out.y = y;
+        return out;
+      }
+      function vCopy(out, v) {
+        out.x = v.x;
+        out.y = v.y;
+        return out;
+      }
+      function vAdd(a, b, out) {
+        if (out === void 0) {
+          out = vec2();
+        }
+        out.x = a.x + b.x;
+        out.y = a.y + b.y;
+        return out;
+      }
+      function vSub(a, b, out) {
+        if (out === void 0) {
+          out = vec2();
+        }
+        out.x = a.x - b.x;
+        out.y = a.y - b.y;
+        return out;
+      }
+      function vScale(a, s, out) {
+        if (out === void 0) {
+          out = vec2();
+        }
+        out.x = a.x * s;
+        out.y = a.y * s;
+        return out;
+      }
+      function vDot(a, b) {
+        return a.x * b.x + a.y * b.y;
+      }
+      function vLenSq(a) {
+        return a.x * a.x + a.y * a.y;
+      }
+      function vLen(a) {
+        return Math.hypot(a.x, a.y);
+      }
+      function vDist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+      function vDistSq(a, b) {
+        var dx = a.x - b.x;
+        var dy = a.y - b.y;
+        return dx * dx + dy * dy;
+      }
+
+      /** Writes a unit vector. Zero-length input becomes (0, 0). */
+      function vNormalize(a, out) {
+        if (out === void 0) {
+          out = vec2();
+        }
+        var len = Math.hypot(a.x, a.y);
+        if (len <= 1e-12) {
+          out.x = 0;
+          out.y = 0;
+          return out;
+        }
+        out.x = a.x / len;
+        out.y = a.y / len;
+        return out;
+      }
+      function vLerp(a, b, t, out) {
+        if (out === void 0) {
+          out = vec2();
+        }
+        out.x = a.x + (b.x - a.x) * t;
+        out.y = a.y + (b.y - a.y) * t;
+        return out;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/VerletRope.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createClass, cclegacy;
+  return {
+    setters: [function (module) {
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "6c95ef8IaxBXKtau359qndj", "VerletRope", undefined);
+      /** P0 §6.2 / GDD §13.2: pet + real link nodes + main, at most 14 nodes. */
+      var VerletRope = exports('VerletRope', /*#__PURE__*/function () {
+        function VerletRope(ctx) {
+          this.points = [];
+          this.tipBefore = {
+            x: 0,
+            y: 0
+          };
+          this.tipVelocity = {
+            x: 0,
+            y: 0
+          };
+          this.length = 0;
+          this.tipSpeed = 0;
+          this.mainAttached = true;
+          this.topologyChanged = false;
+          this.speeds = [];
+          this.target = 0;
+          this.fromLength = 0;
+          this.transition = 0;
+          this.fromSegments = [];
+          this.ctx = void 0;
+          this.ctx = ctx;
+          this.points.push(this.particle({
+            x: 0,
+            y: 0
+          }), this.particle({
+            x: 0,
+            y: 0
+          }));
+        }
+        var _proto = VerletRope.prototype;
+        _proto.reset = function reset(anchor, length, slots) {
+          if (slots === void 0) {
+            slots = 0;
+          }
+          this.mainAttached = true;
+          this.topologyChanged = false;
+          this.length = this.target = this.fromLength = length;
+          this.points.length = 0;
+          // P0 未定义，自选默认值: initial rope hangs downward from the pet.
+          for (var i = 0; i < slots + 2; i++) {
+            this.points.push(this.particle(this.ctx.arena.clamp({
+              x: anchor.x,
+              y: anchor.y - length * i / (slots + 1)
+            }, this.radius(i, slots))));
+          }
+          this.transition = this.ctx.tunables.get('rope.transitionTime');
+          this.fromSegments = [];
+          this.speeds = [];
+          this.tipSpeed = 0;
+          this.setMasses();
+          this.tipBefore.x = this.tip.x;
+          this.tipBefore.y = this.tip.y;
+          this.tipVelocity.x = this.tipVelocity.y = 0;
+        }
+
+        /** GDD §6.7: an external/returning main leaves the last link as the rope end. */;
+        _proto.setMainAttached = function setMainAttached(attached) {
+          if (attached === this.mainAttached) return;
+          if (attached) {
+            var end = this.tip;
+            var main = this.particle(end);
+            main.oldX = end.oldX;
+            main.oldY = end.oldY;
+            this.points.push(main);
+          } else this.points.pop();
+          this.mainAttached = attached;
+          this.topologyChanged = true;
+          this.setMasses();
+        }
+
+        /** Preserve retained nodes/history. Additional links are inserted before the held main. */;
+        _proto.configure = function configure(slots, targetLength) {
+          var count = Math.max(0, Math.min(12, Math.floor(slots)));
+          var changed = this.topologyChanged;
+          this.topologyChanged = false;
+          var ends = this.mainAttached ? 2 : 1;
+          if (this.points.length !== count + ends) {
+            var _this$points;
+            var end = this.tip;
+            var oldCount = this.points.length - ends;
+            var last = this.points[Math.min(count, oldCount)];
+            var retained = this.points.slice(0, Math.min(count, oldCount) + 1);
+            for (var i = oldCount; i < count; i++) {
+              var t = this.mainAttached ? (i - oldCount + 1) / (count - oldCount + 1) : 0;
+              var p = this.particle({
+                x: last.x + (end.x - last.x) * t,
+                y: last.y + (end.y - last.y) * t
+              });
+              p.oldX = last.oldX + (end.oldX - last.oldX) * t;
+              p.oldY = last.oldY + (end.oldY - last.oldY) * t;
+              retained.push(p);
+            }
+            this.points.length = 0;
+            (_this$points = this.points).push.apply(_this$points, retained); // retained is an Array.
+            if (this.mainAttached) this.points.push(end);
+            changed = true;
+          }
+          if (changed || Math.abs(targetLength - this.target) > 1e-8) {
+            this.fromLength = this.length;
+            this.target = targetLength;
+            this.transition = 0;
+            this.fromSegments = [];
+            for (var _i = 1; _i < this.points.length; _i++) {
+              var a = this.points[_i - 1];
+              var b = this.points[_i];
+              this.fromSegments.push(Math.hypot(b.x - a.x, b.y - a.y));
+            }
+          }
+          this.setMasses();
+        };
+        _proto.step = function step(dt, anchor, targetLength, slots) {
+          if (slots === void 0) {
+            slots = this.points.length - (this.mainAttached ? 2 : 1);
+          }
+          if (dt <= 0) return;
+          this.configure(slots, targetLength);
+          var duration = this.ctx.tunables.get('rope.transitionTime');
+          this.transition += dt;
+          var t = duration <= 0 ? 1 : Math.min(1, this.transition / duration);
+          this.length = this.fromLength + (this.target - this.fromLength) * t;
+          this.tipBefore.x = this.tip.x;
+          this.tipBefore.y = this.tip.y;
+          var damping = 1 - this.ctx.tunables.get('rope.damping');
+          for (var i = 1; i < this.points.length; i++) {
+            var p = this.points[i];
+            p.beforeX = p.x;
+            p.beforeY = p.y;
+            var dx = (p.x - p.oldX) * damping;
+            var dy = (p.y - p.oldY) * damping;
+            p.oldX = p.x;
+            p.oldY = p.y;
+            p.x += dx;
+            p.y += dy;
+          }
+          var head = this.points[0];
+          head.x = head.oldX = anchor.x;
+          head.y = head.oldY = anchor.y;
+          var segment = this.target / (slots + 1);
+          var iterations = Math.round(this.ctx.tunables.get('rope.iterations'));
+          for (var j = 0; j < iterations; j++) {
+            for (var _i2 = 1; _i2 < this.points.length; _i2++) {
+              var _this$fromSegments;
+              var from = (_this$fromSegments = this.fromSegments[_i2 - 1]) != null ? _this$fromSegments : segment;
+              this.constrain(_i2, from + (segment - from) * t);
+            }
+            // Clamp after every sweep; each particle has its actual collision radius.
+            for (var _i3 = 1; _i3 < this.points.length; _i3++) this.clamp(this.points[_i3], this.radius(_i3, slots));
+          }
+          this.tipVelocity.x = (this.tip.x - this.tipBefore.x) / dt;
+          this.tipVelocity.y = (this.tip.y - this.tipBefore.y) / dt;
+          this.speeds.push(Math.hypot(this.tipVelocity.x, this.tipVelocity.y));
+          var frames = Math.round(this.ctx.tunables.get('rope.tipFrames'));
+          while (this.speeds.length > frames) this.speeds.shift();
+          this.tipSpeed = this.speeds.reduce(function (sum, value) {
+            return sum + value;
+          }, 0) / this.speeds.length;
+        }
+
+        /** Velocity impulse encoded in Verlet history; applied on the next integration. */;
+        _proto.impulse = function impulse(velocity, dt) {
+          this.tip.oldX -= velocity.x * dt;
+          this.tip.oldY -= velocity.y * dt;
+        };
+        _proto.distanceTo = function distanceTo(index) {
+          var distance = 0;
+          for (var i = 1; i <= index && i < this.points.length; i++) {
+            var a = this.points[i - 1];
+            var b = this.points[i];
+            distance += Math.hypot(b.x - a.x, b.y - a.y);
+          }
+          return distance;
+        };
+        _proto.particle = function particle(p) {
+          return {
+            x: p.x,
+            y: p.y,
+            oldX: p.x,
+            oldY: p.y,
+            beforeX: p.x,
+            beforeY: p.y,
+            mass: 0
+          };
+        };
+        _proto.radius = function radius(i, slots) {
+          return this.ctx.tunables.get(i === 0 ? 'pet.radius' : this.mainAttached && i === slots + 1 ? 'sword.bladeRadius' : 'chain.linkRadius');
+        };
+        _proto.setMasses = function setMasses() {
+          for (var i = 0; i < this.points.length; i++) {
+            this.points[i].mass = i === 0 ? Infinity : this.mainAttached && i === this.points.length - 1 ? this.ctx.tunables.get('sword.W') * this.ctx.tunables.get('rope.mainMassPerW') : this.ctx.tunables.get('rope.linkMass');
+          }
+        };
+        _proto.constrain = function constrain(i, segment) {
+          var a = this.points[i - 1];
+          var b = this.points[i];
+          var dx = b.x - a.x;
+          var dy = b.y - a.y;
+          var dist = Math.hypot(dx, dy);
+          if (dist < 1e-9) {
+            if (segment <= 1e-9) return;
+            var prev = this.points[Math.max(0, i - 2)];
+            var lx = a.x - prev.x;
+            var ly = a.y - prev.y;
+            var len = Math.hypot(lx, ly);
+            var nx = len > 1e-9 ? lx / len : 0;
+            var ny = len > 1e-9 ? ly / len : -1;
+            var _wa = 1 / a.mass;
+            var _wb = 1 / b.mass;
+            a.x -= nx * segment * _wa / (_wa + _wb);
+            a.y -= ny * segment * _wa / (_wa + _wb);
+            b.x += nx * segment * _wb / (_wa + _wb);
+            b.y += ny * segment * _wb / (_wa + _wb);
+            return;
+          }
+          var wa = 1 / a.mass;
+          var wb = 1 / b.mass;
+          var correction = (dist - segment) / dist / (wa + wb);
+          a.x += dx * correction * wa;
+          a.y += dy * correction * wa;
+          b.x -= dx * correction * wb;
+          b.y -= dy * correction * wb;
+        };
+        _proto.clamp = function clamp(p, radius) {
+          var pos = this.ctx.arena.clamp(p, radius);
+          var bounce = this.ctx.tunables.get('rope.wallBounce');
+          if (pos.x !== p.x) p.oldX = pos.x + (p.x - p.oldX) * bounce;
+          if (pos.y !== p.y) p.oldY = pos.y + (p.y - p.oldY) * bounce;
+          p.x = pos.x;
+          p.y = pos.y;
+        };
+        _createClass(VerletRope, [{
+          key: "hasMain",
+          get: function get() {
+            return this.mainAttached;
+          }
+        }, {
+          key: "tip",
+          get: function get() {
+            return this.points[this.points.length - 1];
+          }
+        }, {
+          key: "segmentLength",
+          get: function get() {
+            return this.length / (this.points.length - (this.mainAttached ? 1 : 0));
+          }
+        }]);
+        return VerletRope;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Whip.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, _extends, _createClass, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+      _extends = module.extends;
+      _createClass = module.createClass;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "d01b1e9UMtGEJUOHWptZHdR", "Whip", undefined);
+      /** Uses actual pet motion, never raw stick jitter, and net turn rather than summed wobble. */
+      var Whip = exports('Whip', /*#__PURE__*/function () {
+        function Whip(ctx) {
+          this.headings = [];
+          this.clock = 0;
+          this.cooldown = 0;
+          this.activeLeft = 0;
+          this.angle = 0;
+          this.turnSign = 1;
+          this.lastRaw = null;
+          this.ctx = void 0;
+          this.ctx = ctx;
+        }
+        var _proto = Whip.prototype;
+        _proto.reset = function reset() {
+          this.headings.length = 0;
+          this.clock = this.cooldown = this.activeLeft = this.angle = 0;
+          this.lastRaw = null;
+        };
+        _proto.turn = function turn(window) {
+          var max = 0;
+          for (var _iterator = _createForOfIteratorHelperLoose(this.headings), _step; !(_step = _iterator()).done;) {
+            var h = _step.value;
+            if (this.clock - h.time <= window + 1e-8) max = Math.max(max, Math.abs(this.angle - h.angle));
+          }
+          return max * 180 / Math.PI;
+        };
+        _proto.step = function step(dt, vel, maxSpeed, pos, held) {
+          this.clock += dt;
+          this.cooldown = Math.max(0, this.cooldown - dt);
+          this.activeLeft = Math.max(0, this.activeLeft - dt);
+          var window = this.ctx.tunables.get('whip.window');
+          while (this.headings.length > 0 && this.clock - this.headings[0].time > window + 1e-8) this.headings.shift();
+          if (this.headings.length === 0) this.lastRaw = null;
+          var speed = Math.hypot(vel.x, vel.y);
+          if (maxSpeed <= 0 || speed <= 1e-8 || speed < maxSpeed * this.ctx.tunables.get('whip.minSpeedFrac')) {
+            // P0 §6.2 gates CURRENT speed, not every sample in the window.
+            return false;
+          }
+          var raw = Math.atan2(vel.y, vel.x);
+          if (this.lastRaw !== null) {
+            var delta = raw - this.lastRaw;
+            while (delta > Math.PI) delta -= Math.PI * 2;
+            while (delta < -Math.PI) delta += Math.PI * 2;
+            this.angle += delta;
+          }
+          this.lastRaw = raw;
+          this.headings.push({
+            time: this.clock,
+            angle: this.angle
+          });
+          var turnDeg = this.turn(window);
+          if (!held || this.cooldown > 1e-8 || turnDeg + 1e-8 < this.ctx.tunables.get('whip.turnDeg')) return false;
+          var earliest = this.headings[0];
+          this.turnSign = earliest && this.angle < earliest.angle ? -1 : 1;
+          this.cooldown = this.ctx.tunables.get('whip.cooldown');
+          this.activeLeft = this.ctx.tunables.get('whip.duration');
+          this.ctx.events.emit('sword:whip', {
+            pos: _extends({}, pos),
+            turnDeg: turnDeg,
+            speed: speed
+          });
+          if (this.ctx.tunables.getBool('fx.hitstop')) this.ctx.events.emit('fx:hitstop', {
+            frames: this.ctx.tunables.get('fx.hitstopFrames')
+          });
+          if (this.ctx.tunables.getBool('fx.shake')) this.ctx.events.emit('fx:shake', {
+            amp: this.ctx.tunables.get('fx.shakeAmp'),
+            dur: this.ctx.tunables.get('fx.shakeDur')
+          });
+          return true;
+        };
+        _createClass(Whip, [{
+          key: "active",
+          get: function get() {
+            return this.activeLeft > 1e-8;
+          }
+        }]);
+        return Whip;
+      }());
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Widgets.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _asyncToGenerator, _regeneratorRuntime, cclegacy, Node, UITransform, Graphics, Label, Color, BlockInputEvents, EditBox, Slider, Sprite;
+  return {
+    setters: [function (module) {
+      _asyncToGenerator = module.asyncToGenerator;
+      _regeneratorRuntime = module.regeneratorRuntime;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+      Node = module.Node;
+      UITransform = module.UITransform;
+      Graphics = module.Graphics;
+      Label = module.Label;
+      Color = module.Color;
+      BlockInputEvents = module.BlockInputEvents;
+      EditBox = module.EditBox;
+      Slider = module.Slider;
+      Sprite = module.Sprite;
+    }],
+    execute: function () {
+      exports({
+        box: box,
+        button: button,
+        download: download,
+        edit: edit,
+        exportText: exportText,
+        label: label,
+        slider: slider
+      });
+      cclegacy._RF.push({}, "b9878IPiVRJ3oE8BDlsCs6l", "Widgets", undefined);
+
+      // P0 未定义，自选默认值: widget typography/palette; button height 44 meets P0 §9.1.
+      function box(parent, name, x, y, width, height, fill) {
+        var node = new Node(name);
+        node.layer = parent.layer;
+        parent.addChild(node);
+        node.setPosition(x, y, 0);
+        var transform = node.addComponent(UITransform);
+        if (transform) transform.setContentSize(width, height);
+        if (fill) {
+          // EditBox adds a Sprite to its own node on enable. Keep our painted
+          // background on a child so each node has at most one renderer.
+          var background = box(node, 'Background', 0, 0, width, height);
+          var graphics = background.addComponent(Graphics);
+          if (graphics) {
+            graphics.fillColor = fill;
+            graphics.rect(-width / 2, -height / 2, width, height);
+            graphics.fill();
+          }
+        }
+        return node;
+      }
+      function configureLabel(component, text, x, y, width, height, size) {
+        var _component$node$paren, _component$node$paren2, _component$node$getCo;
+        component.node.layer = (_component$node$paren = (_component$node$paren2 = component.node.parent) == null ? void 0 : _component$node$paren2.layer) != null ? _component$node$paren : component.node.layer;
+        component.node.setPosition(x, y, 0);
+        var transform = (_component$node$getCo = component.node.getComponent(UITransform)) != null ? _component$node$getCo : component.node.addComponent(UITransform);
+        if (transform) transform.setContentSize(width, height);
+        component.fontSize = size;
+        component.lineHeight = size + 6;
+        component.color = new Color(232, 237, 245);
+        component.overflow = Label.Overflow.CLAMP;
+        component.enableWrapText = true;
+        component.string = text;
+        return component;
+      }
+      function label(parent, text, x, y, width, height, size) {
+        if (height === void 0) {
+          height = 36;
+        }
+        if (size === void 0) {
+          size = 22;
+        }
+        var node = box(parent, 'Text', x, y, width, height);
+        var component = node.addComponent(Label);
+        return component ? configureLabel(component, text, x, y, width, height, size) : null;
+      }
+      function button(parent, text, x, y, width, click) {
+        var node = box(parent, text, x, y, width, 44, new Color(48, 69, 92));
+        node.addComponent(BlockInputEvents);
+        var caption = label(node, text, 0, 0, width - 8, 36, 20);
+        if (caption) caption.horizontalAlign = Label.HorizontalAlign.CENTER;
+        node.on(Node.EventType.TOUCH_END, click);
+        return node;
+      }
+      function edit(parent, text, hint, x, y, width, changed, height, multiline, live) {
+        var _input$textLabel, _input$placeholderLab;
+        if (height === void 0) {
+          height = 44;
+        }
+        if (multiline === void 0) {
+          multiline = false;
+        }
+        if (live === void 0) {
+          live = false;
+        }
+        var node = box(parent, hint, x, y, width, height, new Color(19, 27, 39));
+        node.addComponent(BlockInputEvents);
+        var input = node.addComponent(EditBox);
+        if (!input) return null;
+        var textLabel = (_input$textLabel = input.textLabel) != null ? _input$textLabel : label(node, '', 0, 0, width - 16, height - 8, 19);
+        var placeholderLabel = (_input$placeholderLab = input.placeholderLabel) != null ? _input$placeholderLab : label(node, hint, 0, 0, width - 16, height - 8, 19);
+        input.textLabel = textLabel ? configureLabel(textLabel, '', 0, 0, width - 16, height - 8, 19) : null;
+        input.placeholderLabel = placeholderLabel ? configureLabel(placeholderLabel, hint, 0, 0, width - 16, height - 8, 19) : null;
+        input.inputMode = multiline ? EditBox.InputMode.ANY : EditBox.InputMode.SINGLE_LINE;
+        input.inputFlag = EditBox.InputFlag.DEFAULT;
+        input.maxLength = -1;
+        input.string = text;
+        input.placeholder = hint;
+        node.on(live ? EditBox.EventType.TEXT_CHANGED : EditBox.EventType.EDITING_DID_ENDED, function () {
+          return changed(input.string);
+        });
+        return input;
+      }
+
+      /** Browser downloads; native builds retain the selectable transfer text. */
+      function download(text, filename, mime) {
+        if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') return false;
+        var url = URL.createObjectURL(new Blob([text], {
+          type: mime
+        }));
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        // P0 未定义，自选默认值: release the download URL after 1000ms.
+        setTimeout(function () {
+          return URL.revokeObjectURL(url);
+        }, 1000);
+        return true;
+      }
+
+      /** Slider renderers occupy their own child nodes (Cocos 3.8). */
+      function slider(parent, name, x, y, width, progress, changed) {
+        var track = box(parent, name, x, y, width, 16, new Color(48, 69, 92));
+        track.addComponent(BlockInputEvents);
+        var component = track.addComponent(Slider);
+        if (!component) return null;
+        var handle = box(track, 'Handle', 0, 0, 16, 24, new Color(190, 210, 230));
+        component.handle = handle.addComponent(Sprite);
+        component.progress = progress;
+        track.on('slide', function () {
+          return changed(component.progress);
+        });
+        return component;
+      }
+
+      /** P0 §10: download, then clipboard, then console. The text box stays available. */
+      function exportText(_x, _x2, _x3) {
+        return _exportText.apply(this, arguments);
+      }
+      function _exportText() {
+        _exportText = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(text, filename, mime) {
+          return _regeneratorRuntime().wrap(function _callee$(_context) {
+            while (1) switch (_context.prev = _context.next) {
+              case 0:
+                _context.prev = 0;
+                if (!download(text, filename, mime)) {
+                  _context.next = 3;
+                  break;
+                }
+                return _context.abrupt("return", '已请求下载；也可从文本框复制');
+              case 3:
+                _context.next = 7;
+                break;
+              case 5:
+                _context.prev = 5;
+                _context.t0 = _context["catch"](0);
+              case 7:
+                _context.prev = 7;
+                if (!(typeof navigator !== 'undefined' && navigator.clipboard)) {
+                  _context.next = 12;
+                  break;
+                }
+                _context.next = 11;
+                return navigator.clipboard.writeText(text);
+              case 11:
+                return _context.abrupt("return", '已复制到剪贴板');
+              case 12:
+                _context.next = 16;
+                break;
+              case 14:
+                _context.prev = 14;
+                _context.t1 = _context["catch"](7);
+              case 16:
+                console.log(text);
+                return _context.abrupt("return", '已输出到 console；也可从文本框复制');
+              case 18:
+              case "end":
+                return _context.stop();
+            }
+          }, _callee, null, [[0, 5], [7, 14]]);
+        }));
+        return _exportText.apply(this, arguments);
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
 
 (function(r) {
   r('virtual:///prerequisite-imports/main', 'chunks:///_virtual/main'); 
