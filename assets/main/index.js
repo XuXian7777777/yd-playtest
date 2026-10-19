@@ -1,13 +1,16 @@
-System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputSource.ts', './FxDriver.ts', './FixedLoop.ts', './Modules.ts', './Rng.ts', './Session.ts', './SessionWatch.ts', './ServiceRegistry.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts'], function (exports) {
-  var cclegacy, ARENA_WIDTH, ARENA_HEIGHT, arenaContains, arenaClamp, DebugInputSource, FxDriver, FixedLoop, installModules, createSessionRng, Session, createSessionWatch, ServiceRegistry, StepProbe, SystemOrder, Tunables, TypedEventBus;
+System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './Camera.ts', './CoreParams.ts', './DebugInputSource.ts', './FxDriver.ts', './FixedLoop.ts', './Modules.ts', './Rng.ts', './Session.ts', './SessionWatch.ts', './ServiceRegistry.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts'], function (exports) {
+  var cclegacy, createArena, Camera, CORE_PARAMS, MAP_DEFAULT_HEIGHT, MAP_DEFAULT_WIDTH, DebugInputSource, FxDriver, FixedLoop, installModules, createSessionRng, Session, createSessionWatch, ServiceRegistry, StepProbe, SystemOrder, Tunables, TypedEventBus;
   return {
     setters: [function (module) {
       cclegacy = module.cclegacy;
     }, function (module) {
-      ARENA_WIDTH = module.ARENA_WIDTH;
-      ARENA_HEIGHT = module.ARENA_HEIGHT;
-      arenaContains = module.arenaContains;
-      arenaClamp = module.arenaClamp;
+      createArena = module.createArena;
+    }, function (module) {
+      Camera = module.Camera;
+    }, function (module) {
+      CORE_PARAMS = module.CORE_PARAMS;
+      MAP_DEFAULT_HEIGHT = module.MAP_DEFAULT_HEIGHT;
+      MAP_DEFAULT_WIDTH = module.MAP_DEFAULT_WIDTH;
     }, function (module) {
       DebugInputSource = module.DebugInputSource;
     }, function (module) {
@@ -56,6 +59,15 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
         var fx = new FxDriver();
         var rng = createSessionRng(1);
         var probe = new StepProbe();
+        var arena = createArena(MAP_DEFAULT_WIDTH, MAP_DEFAULT_HEIGHT);
+        var camera = new Camera();
+        tunables.define(CORE_PARAMS);
+        var cameraTarget = function cameraTarget() {
+          return services.has('player') ? services.get('player').pos : {
+            x: arena.width / 2,
+            y: arena.height / 2
+          };
+        };
         var session = new Session({
           resolveSeed: function resolveSeed() {
             return tunables.has('session.seed') ? tunables.get('session.seed') : 0;
@@ -70,6 +82,7 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
             loop.resetClock();
             fx.reset();
             probe.reset();
+            arena.resize(tunables.get('map.width'), tunables.get('map.height'));
           },
           onStart: function onStart(info) {
             var next = createSessionRng(info.seed);
@@ -78,6 +91,8 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
             rng.fx = next.fx;
             debugInput.beginSession();
             events.emit('session:start', info);
+            // Listeners have placed the pet; start the session already centered on it.
+            camera.snap(cameraTarget());
           },
           onEnd: function onEnd(info) {
             events.emit('session:end', info);
@@ -128,12 +143,6 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
             return session.end(reason);
           }
         };
-        var arena = {
-          width: ARENA_WIDTH,
-          height: ARENA_HEIGHT,
-          contains: arenaContains,
-          clamp: arenaClamp
-        };
         var ctx = {
           events: events,
           services: servicesFacade,
@@ -141,9 +150,13 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
           loop: loopFacade,
           rng: rng,
           arena: arena,
+          camera: camera,
           layers: ports.layers,
           toPx: function toPx(p) {
-            return ports.toPx(p);
+            return ports.toPx({
+              x: p.x - camera.center.x + camera.viewW / 2,
+              y: p.y - camera.center.y + camera.viewH / 2
+            });
           },
           session: sessionFacade
         };
@@ -151,6 +164,13 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
         installModules(ctx);
         var usingDebugInput = services.get('input') === debugInput;
         loop.addSystem(probe);
+        loop.addSystem({
+          id: 'core.camera',
+          order: SystemOrder.Camera,
+          fixedUpdate: function fixedUpdate(dt) {
+            return camera.follow(cameraTarget(), dt, tunables.get('camera.lerp'));
+          }
+        });
         if (usingDebugInput) {
           loop.addSystem({
             id: 'core.debugInput',
@@ -212,6 +232,7 @@ System.register("chunks:///_virtual/App.ts", ['cc', './Arena.ts', './DebugInputS
         };
         return {
           ctx: ctx,
+          camera: camera,
           debugInput: debugInput,
           usingDebugInput: usingDebugInput,
           tick: function tick(frameDt) {
@@ -242,28 +263,161 @@ System.register("chunks:///_virtual/Arena.ts", ['cc', './Vec2.ts'], function (ex
     execute: function () {
       exports({
         arenaClamp: arenaClamp,
-        arenaContains: arenaContains
+        arenaContains: arenaContains,
+        createArena: createArena
       });
       cclegacy._RF.push({}, "6a0a1H9DTpIFboXNABVVNWX", "Arena", undefined);
 
-      /** Arena width in u. Origin is the bottom-left corner. */
-      var ARENA_WIDTH = exports('ARENA_WIDTH', 10);
-      /** Arena height in u. */
-      var ARENA_HEIGHT = exports('ARENA_HEIGHT', 15);
+      /** Bounded map in u. Origin is the bottom-left corner; walls on all four sides. */
 
-      /** True when the circle of radius `r` lies entirely inside the arena. */
-      function arenaContains(p, r) {
-        return p.x - r >= 0 && p.y - r >= 0 && p.x + r <= ARENA_WIDTH && p.y + r <= ARENA_HEIGHT;
+      /** True when the circle of radius `r` lies entirely inside a `width`×`height` map. */
+      function arenaContains(p, r, width, height) {
+        return p.x - r >= 0 && p.y - r >= 0 && p.x + r <= width && p.y + r <= height;
       }
 
       /**
-       * Push a circle back inside the arena. Returns a new vector.
+       * Push a circle back inside a `width`×`height` map. Returns a new vector.
        * A radius larger than half the shorter side is shrunk so a center still exists.
        */
-      function arenaClamp(p, r) {
-        var limit = Math.min(ARENA_WIDTH, ARENA_HEIGHT) * 0.5;
+      function arenaClamp(p, r, width, height) {
+        var limit = Math.min(width, height) * 0.5;
         var radius = Math.max(0, Math.min(r, limit));
-        return vec2(Math.min(ARENA_WIDTH - radius, Math.max(radius, p.x)), Math.min(ARENA_HEIGHT - radius, Math.max(radius, p.y)));
+        return vec2(Math.min(width - radius, Math.max(radius, p.x)), Math.min(height - radius, Math.max(radius, p.y)));
+      }
+      function createArena(width, height) {
+        var w = sanitize(width);
+        var h = sanitize(height);
+        return {
+          get width() {
+            return w;
+          },
+          get height() {
+            return h;
+          },
+          contains: function contains(p, r) {
+            return arenaContains(p, r, w, h);
+          },
+          clamp: function clamp(p, r) {
+            return arenaClamp(p, r, w, h);
+          },
+          resize: function resize(nextWidth, nextHeight) {
+            w = sanitize(nextWidth);
+            h = sanitize(nextHeight);
+          }
+        };
+      }
+      function sanitize(v) {
+        return Number.isFinite(v) && v > 0 ? v : 0;
+      }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/Camera.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc'], function (exports) {
+  var _createForOfIteratorHelperLoose, cclegacy;
+  return {
+    setters: [function (module) {
+      _createForOfIteratorHelperLoose = module.createForOfIteratorHelperLoose;
+    }, function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      exports('edgeArrow', edgeArrow);
+      cclegacy._RF.push({}, "9a3e9xsMpJFto3yMmofvL5S", "Camera", undefined);
+      /** Visible range in u (P0 §3 镜头: 10u × 15u, Fit Width). Independent of the map size. */
+      var VIEW_WIDTH = exports('VIEW_WIDTH', 10);
+      var VIEW_HEIGHT = exports('VIEW_HEIGHT', 15);
+      /**
+       * Follow camera. `center` is the simulated view center; shake is display-only
+       * and never written here (P0 §4.2 `ctx.camera`).
+       */
+      var Camera = exports('Camera', /*#__PURE__*/function () {
+        function Camera() {
+          this.center = {
+            x: 0,
+            y: 0
+          };
+          this.viewW = VIEW_WIDTH;
+          this.viewH = VIEW_HEIGHT;
+          this.targets = [];
+        }
+        var _proto = Camera.prototype;
+        _proto.inView = function inView(p, margin) {
+          if (margin === void 0) {
+            margin = 0;
+          }
+          return Math.abs(p.x - this.center.x) < this.viewW / 2 + margin && Math.abs(p.y - this.center.y) < this.viewH / 2 + margin;
+        };
+        _proto.snap = function snap(target) {
+          this.center.x = target.x;
+          this.center.y = target.y;
+        }
+
+        /**
+         * `lerp` is a time constant in seconds; 0 hard-locks onto the target.
+         * P0 未定义，自选: exponential smoothing, the same form as pet acceleration.
+         */;
+        _proto.follow = function follow(target, dt, lerp) {
+          if (!(lerp > 0) || !(dt > 0)) {
+            this.snap(target);
+            return;
+          }
+          var alpha = 1 - Math.exp(-dt / lerp);
+          this.center.x += (target.x - this.center.x) * alpha;
+          this.center.y += (target.y - this.center.y) * alpha;
+        };
+        _proto.addIndicator = function addIndicator(kind, pos) {
+          var _this = this;
+          var target = {
+            kind: kind,
+            pos: pos
+          };
+          this.targets.push(target);
+          return function () {
+            var i = _this.targets.indexOf(target);
+            if (i >= 0) _this.targets.splice(i, 1);
+          };
+        }
+
+        /** Arrows for every registered target that is currently outside the view. */;
+        _proto.arrows = function arrows(inset) {
+          var out = [];
+          for (var _iterator = _createForOfIteratorHelperLoose(this.targets), _step; !(_step = _iterator()).done;) {
+            var target = _step.value;
+            var p = target.pos();
+            if (!p) continue;
+            var arrow = edgeArrow(this.center, this.viewW, this.viewH, p, inset);
+            if (arrow) out.push({
+              kind: target.kind,
+              x: arrow.x,
+              y: arrow.y,
+              angle: arrow.angle
+            });
+          }
+          return out;
+        };
+        return Camera;
+      }());
+
+      /**
+       * Point on the view rectangle, `inset` u inside its edge, along the ray from the
+       * view center toward `target`. Null when the target is inside the view.
+       */
+      function edgeArrow(center, viewW, viewH, target, inset) {
+        var dx = target.x - center.x;
+        var dy = target.y - center.y;
+        if (Math.abs(dx) < viewW / 2 && Math.abs(dy) < viewH / 2) return null;
+        var hw = Math.max(0, viewW / 2 - inset);
+        var hh = Math.max(0, viewH / 2 - inset);
+        var sx = Math.abs(dx) > 1e-9 ? hw / Math.abs(dx) : Infinity;
+        var sy = Math.abs(dy) > 1e-9 ? hh / Math.abs(dy) : Infinity;
+        var s = Math.min(sx, sy);
+        return {
+          x: viewW / 2 + dx * s,
+          y: viewH / 2 + dy * s,
+          angle: Math.atan2(dy, dx)
+        };
       }
       cclegacy._RF.pop();
     }
@@ -285,6 +439,12 @@ System.register("chunks:///_virtual/contracts.ts", ['cc'], function () {
        * The enemy module implements this; core does not.
        */
       /** Read-only rig snapshot for the HUD, telemetry, and the enemy module. */
+      /**
+       * Hook for the future seamless ground renderer: large seamless textures,
+       * irregular blends between terrain regions, decals to break repetition
+       * (GDD §4.4 地形, 2026-10-19 补充决策; UI R9). Interface only; no shader yet.
+       * Presentation only: terrain never blocks or slows movement.
+       */
       cclegacy._RF.pop();
     }
   };
@@ -309,11 +469,15 @@ System.register("chunks:///_virtual/CoreArenaView.ts", ['./rollupPluginModLoBabe
       var ccclass = _decorator.ccclass;
       var FILL = new Color(36, 36, 42, 255);
       var BORDER = new Color(196, 196, 204, 255);
-      var NO_SPAWN = new Color(196, 196, 204, 64);
+      var GRID = new Color(46, 46, 54, 255);
+      var OUTSIDE = new Color(12, 12, 16, 255);
+      /** How far past the walls the dark outside area is drawn, in u. Covers half a view plus shake. */
+      var OUTSIDE_PAD = 15;
 
       /**
-       * Greybox arena: 10×15 u rectangle, light border, and a faint line 2 u up
-       * marking the bottom strip where enemies do not spawn.
+       * Greybox map (P0 §5 地图): dark-grey floor with a low-contrast 1 u grid so
+       * camera motion is visible, light wall line, darker area outside the walls.
+       * The node origin is the map's bottom-left; CoreBootstrap moves it with the camera.
        */
       var CoreArenaView = exports('CoreArenaView', (_dec = ccclass('CoreArenaView'), _dec(_class = /*#__PURE__*/function (_Component) {
         _inheritsLoose(CoreArenaView, _Component);
@@ -321,10 +485,11 @@ System.register("chunks:///_virtual/CoreArenaView.ts", ['./rollupPluginModLoBabe
           return _Component.apply(this, arguments) || this;
         }
         var _proto = CoreArenaView.prototype;
-        _proto.redraw = function redraw(pxPerUnit) {
+        _proto.redraw = function redraw(pxPerUnit, mapWidth, mapHeight) {
           var _this$getComponent, _this$getComponent2;
-          var width = 10 * pxPerUnit;
-          var height = 15 * pxPerUnit;
+          var width = mapWidth * pxPerUnit;
+          var height = mapHeight * pxPerUnit;
+          var pad = OUTSIDE_PAD * pxPerUnit;
           // addComponent returns null when the node cannot take the component (e.g. a conflicting one is present).
           var transform = (_this$getComponent = this.getComponent(UITransform)) != null ? _this$getComponent : this.addComponent(UITransform);
           if (!transform) {
@@ -339,18 +504,26 @@ System.register("chunks:///_virtual/CoreArenaView.ts", ['./rollupPluginModLoBabe
             return;
           }
           graphics.clear();
+          graphics.fillColor = OUTSIDE;
+          graphics.rect(-pad, -pad, width + 2 * pad, height + 2 * pad);
+          graphics.fill();
           graphics.fillColor = FILL;
           graphics.rect(0, 0, width, height);
           graphics.fill();
+          graphics.strokeColor = GRID;
+          graphics.lineWidth = 1;
+          for (var x = 1; x < mapWidth; x++) {
+            graphics.moveTo(x * pxPerUnit, 0);
+            graphics.lineTo(x * pxPerUnit, height);
+          }
+          for (var y = 1; y < mapHeight; y++) {
+            graphics.moveTo(0, y * pxPerUnit);
+            graphics.lineTo(width, y * pxPerUnit);
+          }
+          graphics.stroke();
           graphics.strokeColor = BORDER;
           graphics.lineWidth = 2;
           graphics.rect(0, 0, width, height);
-          graphics.stroke();
-          var lineY = 2 * pxPerUnit;
-          graphics.strokeColor = NO_SPAWN;
-          graphics.lineWidth = 2;
-          graphics.moveTo(0, lineY);
-          graphics.lineTo(width, lineY);
           graphics.stroke();
         };
         return CoreArenaView;
@@ -390,18 +563,46 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
       CoreDebugInput = module.CoreDebugInput;
     }],
     execute: function () {
-      var _dec, _class;
+      var _dec, _dec2, _class;
       cclegacy._RF.push({}, "da87c0RRPFDUI5WRfmR19hv", "CoreBootstrap", undefined);
-      var ccclass = _decorator.ccclass;
+      var ccclass = _decorator.ccclass,
+        executionOrder = _decorator.executionOrder;
       var HUD_TINT = new Color(90, 140, 200, 48);
       var THUMB_TINT = new Color(200, 170, 90, 36);
+      /** Greybox edge arrows (P0 §5 屏幕边缘指示): distance inside the view edge and size, in u. */
+      var ARROW_INSET = 0.4;
+      var ARROW_SIZE = 0.3;
+      var ARROW_STYLE = {
+        boss: {
+          color: new Color(255, 80, 72, 255),
+          scale: 1.5,
+          filled: true
+        },
+        elite: {
+          color: new Color(255, 170, 60, 255),
+          scale: 1.2,
+          filled: true
+        },
+        mainSword: {
+          color: new Color(225, 232, 240, 255),
+          scale: 1,
+          filled: false
+        },
+        forgeDoor: {
+          color: new Color(255, 214, 90, 255),
+          scale: 1.2,
+          filled: false
+        }
+      };
 
       /**
-       * Builds the layer tree, draws the 10×15 u arena, and runs the fixed step.
+       * Builds the layer tree, draws the bounded map around the follow camera,
+       * draws screen-edge arrows, and runs the fixed step.
        * Attach this to the Canvas of Main.scene. It does not load another scene.
        * Unsubscribe happens in onDisable and onDestroy.
+       * Runs before default-order components so every view reads the post-tick camera.
        */
-      var CoreBootstrap = exports('CoreBootstrap', (_dec = ccclass('CoreBootstrap'), _dec(_class = /*#__PURE__*/function (_Component) {
+      var CoreBootstrap = exports('CoreBootstrap', (_dec = ccclass('CoreBootstrap'), _dec2 = executionOrder(-1), _dec(_class = _dec2(_class = /*#__PURE__*/function (_Component) {
         _inheritsLoose(CoreBootstrap, _Component);
         function CoreBootstrap() {
           var _this;
@@ -409,16 +610,24 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
             args[_key] = arguments[_key];
           }
           _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          /** Optional seamless ground renderer; the greybox map is drawn when absent. */
+          _this.groundBlend = null;
           _this.app = null;
           _this.started = false;
           _this.world = null;
           _this.arenaView = null;
+          _this.arrows = null;
           _this.hudGuide = null;
           _this.thumbGuide = null;
           _this.layerNodes = new Map();
           _this.baseX = 0;
           _this.baseY = 0;
           _this.pixelsPerUnit = 72;
+          _this.drawnMap = {
+            width: -1,
+            height: -1,
+            ppu: -1
+          };
           return _this;
         }
         var _proto = CoreBootstrap.prototype;
@@ -468,11 +677,14 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
           this.app = null;
         };
         _proto.update = function update(dt) {
-          var _this$app5;
-          (_this$app5 = this.app) == null || _this$app5.tick(dt);
+          var app = this.app;
+          if (!app) return;
+          app.tick(dt);
+          this.syncMap(app);
+          this.drawArrows(app);
         };
         _proto.onResize = function onResize() {
-          var _this$world, _this$arenaView;
+          var _this$world, _this$arrows;
           var visible = view.getVisibleSize();
           var layout = layoutScreen(visible.width, visible.height, readSafeArea(visible.width, visible.height));
           this.pixelsPerUnit = layout.pxPerUnit;
@@ -480,9 +692,59 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
           this.baseX = origin.x;
           this.baseY = origin.y;
           (_this$world = this.world) == null || _this$world.setPosition(this.baseX, this.baseY, 0);
-          (_this$arenaView = this.arenaView) == null || _this$arenaView.redraw(layout.pxPerUnit);
+          (_this$arrows = this.arrows) == null || _this$arrows.node.setPosition(this.baseX, this.baseY, 0);
+          if (this.app) this.syncMap(this.app);
           paintGuide(this.hudGuide, layout.hud, HUD_TINT, visible.width, visible.height);
           paintGuide(this.thumbGuide, layout.thumb, THUMB_TINT, visible.width, visible.height);
+        }
+
+        /** Keep the map under the camera; redraw only when the map size or scale changes. */;
+        _proto.syncMap = function syncMap(app) {
+          var _this$arenaView2, _this$groundBlend2;
+          var _app$ctx = app.ctx,
+            arena = _app$ctx.arena,
+            camera = _app$ctx.camera;
+          var drawn = this.drawnMap;
+          if (drawn.width !== arena.width || drawn.height !== arena.height || drawn.ppu !== this.pixelsPerUnit) {
+            var _this$arenaView, _this$groundBlend;
+            drawn.width = arena.width;
+            drawn.height = arena.height;
+            drawn.ppu = this.pixelsPerUnit;
+            (_this$arenaView = this.arenaView) == null || _this$arenaView.redraw(this.pixelsPerUnit, arena.width, arena.height);
+            (_this$groundBlend = this.groundBlend) == null || _this$groundBlend.setMap(arena.width, arena.height);
+          }
+          (_this$arenaView2 = this.arenaView) == null || _this$arenaView2.node.setPosition(app.ctx.toPx({
+            x: 0,
+            y: 0
+          }));
+          (_this$groundBlend2 = this.groundBlend) == null || _this$groundBlend2.setView(camera.center, camera.viewW, camera.viewH);
+        };
+        _proto.drawArrows = function drawArrows(app) {
+          var g = this.arrows;
+          if (!g) return;
+          g.clear();
+          var ppu = this.pixelsPerUnit;
+          for (var _iterator = _createForOfIteratorHelperLoose(app.camera.arrows(ARROW_INSET)), _step; !(_step = _iterator()).done;) {
+            var arrow = _step.value;
+            var style = ARROW_STYLE[arrow.kind];
+            var size = ARROW_SIZE * style.scale * ppu;
+            var cx = arrow.x * ppu;
+            var cy = arrow.y * ppu;
+            var dx = Math.cos(arrow.angle);
+            var dy = Math.sin(arrow.angle);
+            g.moveTo(cx + dx * size, cy + dy * size);
+            g.lineTo(cx - dx * size * 0.6 - dy * size * 0.7, cy - dy * size * 0.6 + dx * size * 0.7);
+            g.lineTo(cx - dx * size * 0.6 + dy * size * 0.7, cy - dy * size * 0.6 - dx * size * 0.7);
+            g.close();
+            if (style.filled) {
+              g.fillColor = style.color;
+              g.fill();
+            } else {
+              g.strokeColor = style.color;
+              g.lineWidth = 3;
+              g.stroke();
+            }
+          }
         };
         _proto.applyShake = function applyShake(offset) {
           var _this$world2;
@@ -491,17 +753,18 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
         _proto.buildTree = function buildTree() {
           var world = this.makeChild(this.node, 'World');
           this.world = world;
-          for (var _iterator = _createForOfIteratorHelperLoose(LAYER_NAMES), _step; !(_step = _iterator()).done;) {
-            var name = _step.value;
+          for (var _iterator2 = _createForOfIteratorHelperLoose(LAYER_NAMES), _step2; !(_step2 = _iterator2()).done;) {
+            var name = _step2.value;
             var parent = name === 'hud' || name === 'debug' ? this.node : world;
             var node = this.makeChild(parent, name);
             this.layerNodes.set(name, node);
           }
           var arena = this.layerNodes.get('arena');
-          if (arena) this.arenaView = arena.addComponent(CoreArenaView);
+          if (arena) this.arenaView = this.makeChild(arena, 'Map').addComponent(CoreArenaView);
           var hud = this.layerNodes.get('hud');
           var debug = this.layerNodes.get('debug');
           if (hud) this.hudGuide = addGuide(hud, 'HudGuide');
+          if (hud) this.arrows = addGuide(hud, 'EdgeIndicators');
           if (debug) this.thumbGuide = addGuide(debug, 'ThumbGuide');
         };
         _proto.mountDebugInput = function mountDebugInput(app) {
@@ -524,7 +787,7 @@ System.register("chunks:///_virtual/CoreBootstrap.ts", ['./rollupPluginModLoBabe
           };
         };
         return CoreBootstrap;
-      }(Component)) || _class));
+      }(Component)) || _class) || _class));
       function addGuide(parent, name) {
         var node = new Node(name);
         node.layer = parent.layer;
@@ -671,6 +934,71 @@ System.register("chunks:///_virtual/CoreDebugInput.ts", ['./rollupPluginModLoBab
       function touchId(event) {
         return event.touch ? event.touch.getID() : 0;
       }
+      cclegacy._RF.pop();
+    }
+  };
+});
+
+System.register("chunks:///_virtual/CoreParams.ts", ['cc'], function (exports) {
+  var cclegacy;
+  return {
+    setters: [function (module) {
+      cclegacy = module.cclegacy;
+    }],
+    execute: function () {
+      cclegacy._RF.push({}, "717c5b/j4NCoJpgF3HKl2jW", "CoreParams", undefined);
+      /** P0 §8 调参表 (2026-10-19 12:05 product: 60u × 90u; later product update: minimum 20u × 30u). */
+      var MAP_DEFAULT_WIDTH = exports('MAP_DEFAULT_WIDTH', 60);
+      var MAP_DEFAULT_HEIGHT = exports('MAP_DEFAULT_HEIGHT', 90);
+
+      /**
+       * Map and camera rows. Core owns these because `ctx.arena` / `ctx.camera` are
+       * core objects (P0 §12 T1 地图与镜头). Map size applies on the next session.
+       */
+      var CORE_PARAMS = exports('CORE_PARAMS', [{
+        key: 'map.width',
+        group: '地图/镜头',
+        label: '地图宽(u)',
+        kind: 'number',
+        "default": MAP_DEFAULT_WIDTH,
+        min: 20,
+        max: 120,
+        step: 1,
+        restart: true
+      }, {
+        key: 'map.height',
+        group: '地图/镜头',
+        label: '地图高(u)',
+        kind: 'number',
+        "default": MAP_DEFAULT_HEIGHT,
+        min: 30,
+        max: 180,
+        step: 1,
+        restart: true
+      },
+      // P0 未定义，自选范围: registered only, nothing reads it yet.
+      {
+        key: 'map.borderDecorWidth',
+        group: '地图/镜头',
+        label: '边界装饰宽度(u)',
+        kind: 'number',
+        "default": 2,
+        min: 0,
+        max: 10,
+        step: 0.5,
+        restart: true
+      },
+      // P0 §8: 0 = hard lock. P0 未定义，自选: read as a smoothing time constant in seconds.
+      {
+        key: 'camera.lerp',
+        group: '地图/镜头',
+        label: '镜头平滑(s, 0=硬锁)',
+        kind: 'number',
+        "default": 0,
+        min: 0,
+        max: 0.5,
+        step: 0.01
+      }]);
       cclegacy._RF.pop();
     }
   };
@@ -980,7 +1308,14 @@ System.register("chunks:///_virtual/DirectorParams.ts", ['./rollupPluginModLoBab
       cclegacy._RF.push({}, "1fddaXc3FtEVJVg1ZVLPdJs", "DirectorParams", undefined);
 
       // P0 §8 overrides GDD §8.4 (budgetBase 1.5, not 2).
-      var DIRECTOR_PARAMS = exports('DIRECTOR_PARAMS', [numberParam('diff.tA', '难度', '时间一次系数', 0.10, 0, 1), numberParam('diff.tB', '难度', '时间二次系数', 0.012, 0, 0.1, 0.001), numberParam('diff.dmgK', '难度', '伤害随难度系数', 0.5, 0, 2), numberParam('diff.budgetBase', '难度', '基础刷怪点数(点/s)', 1.5, 0, 10), numberParam('diff.budgetExp', '难度', '预算指数', 0.6, 0, 2), numberParam('spawn.edgeInset', '刷怪', '边缘内缩(u)', 0.3, 0, 2), numberParam('spawn.bottomExclude', '刷怪', '底部禁刷高度(u)', 2, 0, 5), numberParam('spawn.minDistFromPet', '刷怪', '距宠物最小距离(u)', 3, 0, 8), numberParam('session.length', '局', '时长(s)', 180, 30, 900, 1), {
+      var DIRECTOR_PARAMS = exports('DIRECTOR_PARAMS', [numberParam('diff.tA', '难度', '时间一次系数', 0.10, 0, 1), numberParam('diff.tB', '难度', '时间二次系数', 0.012, 0, 0.1, 0.001), numberParam('diff.dmgK', '难度', '伤害随难度系数', 0.5, 0, 2), numberParam('diff.budgetBase', '难度', '基础刷怪点数(点/s)', 1.5, 0, 10), numberParam('diff.budgetExp', '难度', '预算指数', 0.6, 0, 2), numberParam('spawn.edgeInset', '刷怪', '边缘内缩(u)', 0.3, 0, 2),
+      // P0 §8 (2026-10-19): ring = view rect grown by this margin; replaces spawn.bottomExclude.
+      numberParam('spawn.offscreenMargin', '刷怪', '视野外扩(u)', 1, 0, 4), numberParam('spawn.minDistFromPet', '刷怪', '距宠物最小距离(u)', 3, 0, 8),
+      // Product 2026-10-19 【提案】: re-roll cap before the in-map fallback. P0 未定义，自选范围.
+      numberParam('spawn.maxTries', '刷怪', '刷新点重取次数', 8, 1, 32, 1), numberParam('enemy.recycleDist', '刷怪', '回收距离(u)', 25, 10, 60),
+      // GDD §5.4 / 2026-10-19 补充决策: forge door 8–12 u from the pet, off-view.
+      // P0 未定义，自选范围 for both distances, and the wall margin default/range.
+      numberParam('forge.doorMinDist', '炉门', '离宠物最近(u)', 8, 0, 40), numberParam('forge.doorMaxDist', '炉门', '离宠物最远(u)', 12, 0, 40), numberParam('forge.doorWallMargin', '炉门', '离墙最小距离(u)', 1, 0, 5), numberParam('session.length', '局', '时长(s)', 180, 30, 900, 1), {
         key: 'session.endless',
         group: '局',
         label: '无尽模式',
@@ -1064,7 +1399,10 @@ System.register("chunks:///_virtual/EnemyModule.ts", ['./rollupPluginModLoBabelH
               if (!_this.attached || !_this.running) return;
               var start = now();
               _this.world.resolveDeaths();
-              if (_this.running) _this.director.update(dt);
+              if (_this.running) {
+                _this.director.recycle();
+                _this.director.update(dt);
+              }
               var ms = _this.aiMs + now() - start;
               _this.timing.steps += 1;
               _this.timing.lastMs = ms;
@@ -1291,7 +1629,7 @@ System.register("chunks:///_virtual/EnemyView.ts", ['./rollupPluginModLoBabelHel
             g.stroke();
           }
           if (this.hud) {
-            this.hud.string = "t " + module.director.elapsed.toFixed(3) + "   D " + module.director.danger.toFixed(3) + "   \u654C " + module.director.alive;
+            this.hud.string = "t " + module.director.elapsed.toFixed(3) + "   D " + module.director.danger.toFixed(3) + "   \u654C " + module.director.alive + "   \u89C6\u91CE\u5185\u5237\u51FA " + module.director.inViewSpawns;
             var size = view.getVisibleSize();
             var rect = layoutScreen(size.width, size.height).hud;
             this.hud.node.setPosition(rect.x + rect.width / 2 - size.width / 2, rect.y + rect.height / 2 - size.height / 2, 0);
@@ -1438,14 +1776,15 @@ System.register("chunks:///_virtual/EnemyWorld.ts", ['./rollupPluginModLoBabelHe
         dealt: 0,
         killed: false
       };
+      var fixedTestPos = {
+        x: 0,
+        y: 0
+      };
 
-      /** P0 §12 T4 allows a fixed test pet; P0 未定义，自选默认值: arena centre.
+      /** P0 §12 T4 allows a fixed test pet; P0 未定义，自选默认值: map centre (set by `player()`).
        * Radius/HP use P0 §6.1; the fixture is immobile, takes no damage and registers no service. */
       var FIXED_TEST_PLAYER = exports('FIXED_TEST_PLAYER', {
-        pos: {
-          x: 5,
-          y: 7.5
-        },
+        pos: fixedTestPos,
         vel: {
           x: 0,
           y: 0
@@ -1481,7 +1820,20 @@ System.register("chunks:///_virtual/EnemyWorld.ts", ['./rollupPluginModLoBabelHe
           this.enabled = enabled;
         };
         _proto.player = function player() {
-          return this.ctx.services.has('player') ? this.ctx.services.get('player') : FIXED_TEST_PLAYER;
+          if (this.ctx.services.has('player')) return this.ctx.services.get('player');
+          fixedTestPos.x = this.ctx.arena.width / 2;
+          fixedTestPos.y = this.ctx.arena.height / 2;
+          return FIXED_TEST_PLAYER;
+        }
+
+        /** Teleport without a kill or spawn event (P0 §8 recycle). Pending knockback is dropped. */;
+        _proto.relocate = function relocate(e, pos) {
+          e.pos = this.ctx.arena.clamp(pos, e.radius);
+          e.knockbackLeft = 0;
+          e.knockbackRemaining = {
+            x: 0,
+            y: 0
+          };
         };
         _proto.clear = function clear() {
           this.generation += 1;
@@ -2420,6 +2772,9 @@ System.register("chunks:///_virtual/GameContext.ts", ['cc'], function () {
     }],
     execute: function () {
       cclegacy._RF.push({}, "1f93fZZEK5LSpwY0V2tc0g8", "GameContext", undefined);
+      /** The bounded map (P0 §3 地图, §4.2). Size comes from `map.width` / `map.height` at session start. */
+      /** Off-view targets that get a screen-edge arrow (GDD §4.4 屏幕边缘指示, UI R7). */
+      /** Follow camera (P0 §4.2). The view stays 10u × 15u whatever the map size. */
       /**
        * Shared handle passed to every module's `install`.
        * Modules talk only through `services` and `events`.
@@ -2851,6 +3206,11 @@ System.register("chunks:///_virtual/index.ts", ['cc', './SystemOrder.ts', './Thr
             draw == null || draw();
           }
         });
+        // GDD §4.4 屏幕边缘指示: the main sword lying on the ground gets an edge arrow while off-view.
+        ctx.camera.addIndicator('mainSword', function () {
+          var snapshot = controller.snapshot;
+          return snapshot.phase === 'grounded' ? snapshot.pos : null;
+        });
         ctx.events.on('session:start', function () {
           return controller.reset();
         });
@@ -3035,7 +3395,7 @@ System.register("chunks:///_virtual/index6.ts", ['cc', './SystemOrder.ts', './Sw
   };
 });
 
-System.register("chunks:///_virtual/index7.ts", ['cc', './Vec2.ts', './Geom2.ts', './SpatialHash.ts', './events.ts', './TypedEventBus.ts', './Tunables.ts', './Rng.ts', './SystemOrder.ts', './FixedLoop.ts', './StepProbe.ts', './Session.ts', './SessionWatch.ts', './Arena.ts', './ScreenLayout.ts', './Layers.ts', './ServiceRegistry.ts', './FxDriver.ts', './DebugInputSource.ts', './Modules.ts', './App.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts'], function (exports) {
+System.register("chunks:///_virtual/index7.ts", ['cc', './Vec2.ts', './Geom2.ts', './SpatialHash.ts', './events.ts', './TypedEventBus.ts', './Tunables.ts', './Rng.ts', './SystemOrder.ts', './FixedLoop.ts', './StepProbe.ts', './Session.ts', './SessionWatch.ts', './Arena.ts', './Camera.ts', './CoreParams.ts', './ScreenLayout.ts', './Layers.ts', './ServiceRegistry.ts', './FxDriver.ts', './DebugInputSource.ts', './Modules.ts', './App.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts'], function (exports) {
   var cclegacy;
   return {
     setters: [function (module) {
@@ -3100,10 +3460,22 @@ System.register("chunks:///_virtual/index7.ts", ['cc', './Vec2.ts', './Geom2.ts'
       exports('createSessionWatch', module.createSessionWatch);
     }, function (module) {
       var _setter = {};
-      _setter.ARENA_HEIGHT = module.ARENA_HEIGHT;
-      _setter.ARENA_WIDTH = module.ARENA_WIDTH;
       _setter.arenaClamp = module.arenaClamp;
       _setter.arenaContains = module.arenaContains;
+      _setter.createArena = module.createArena;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.Camera = module.Camera;
+      _setter.VIEW_HEIGHT = module.VIEW_HEIGHT;
+      _setter.VIEW_WIDTH = module.VIEW_WIDTH;
+      _setter.edgeArrow = module.edgeArrow;
+      exports(_setter);
+    }, function (module) {
+      var _setter = {};
+      _setter.CORE_PARAMS = module.CORE_PARAMS;
+      _setter.MAP_DEFAULT_HEIGHT = module.MAP_DEFAULT_HEIGHT;
+      _setter.MAP_DEFAULT_WIDTH = module.MAP_DEFAULT_WIDTH;
       exports(_setter);
     }, function (module) {
       var _setter = {};
@@ -4232,23 +4604,32 @@ System.register("chunks:///_virtual/LoopView.ts", ['./rollupPluginModLoBabelHelp
             g.stroke();
           }
           if (c.phase === 'warning') {
+            // Screen-edge glow covers the current view only (GDD 2026-10-19 补充决策 全屏类效果).
+            var _c$ctx$camera = c.ctx.camera,
+              center = _c$ctx$camera.center,
+              viewW = _c$ctx$camera.viewW,
+              viewH = _c$ctx$camera.viewH;
+            var x0 = center.x - viewW / 2,
+              x1 = center.x + viewW / 2;
+            var y0 = center.y - viewH / 2,
+              y1 = center.y + viewH / 2;
             g.strokeColor = FLASH;
             g.lineWidth = STYLE.edgePx;
             this.outline(g, [{
-              x: 0,
-              y: 0
+              x: x0,
+              y: y0
             }, {
-              x: 10,
-              y: 0
+              x: x1,
+              y: y0
             }, {
-              x: 10,
-              y: 15
+              x: x1,
+              y: y1
             }, {
-              x: 0,
-              y: 15
+              x: x0,
+              y: y1
             }, {
-              x: 0,
-              y: 0
+              x: x0,
+              y: y0
             }]);
           }
           if (c.flashLeft > 0 && c.flashPolygon.length > 0) {
@@ -4262,7 +4643,7 @@ System.register("chunks:///_virtual/LoopView.ts", ['./rollupPluginModLoBabelHelp
               x += p.x;
               y += p.y;
             }
-            var center = {
+            var _center = {
               x: x / c.flashPolygon.length,
               y: y / c.flashPolygon.length
             };
@@ -4270,20 +4651,20 @@ System.register("chunks:///_virtual/LoopView.ts", ['./rollupPluginModLoBabelHelp
             for (var _iterator2 = _createForOfIteratorHelperLoose(c.flashPolygon), _step2; !(_step2 = _iterator2()).done;) {
               var _p = _step2.value;
               this.blade(g, {
-                x: _p.x + (center.x - _p.x) * progress,
-                y: _p.y + (center.y - _p.y) * progress
+                x: _p.x + (_center.x - _p.x) * progress,
+                y: _p.y + (_center.y - _p.y) * progress
               }, scale);
             }
             if (this.caption) {
               this.caption.string = "\xD7" + c.flashCount + " \u4E00\u5708\u65A9\uFF01" + (c.flashCount >= 20 ? ' 大满贯' : ''); // GDD §6.5.
-              var pos = px(center);
+              var pos = px(_center);
               this.caption.node.setPosition(pos.x, pos.y, 0);
             }
           }
           if (this.caption) this.caption.node.active = c.flashLeft > 0;
           if (this.hud) {
             // Bottom of the HUD bar, above the arena and below the existing sword HUD.
-            this.hud.node.setPosition(0, 15 * scale / 2 + STYLE.hudHeight / 2, 0);
+            this.hud.node.setPosition(0, c.ctx.camera.viewH * scale / 2 + STYLE.hudHeight / 2, 0);
             this.hud.string = c.phase === 'drawing' ? "\u58A8\u91CF " + c.length.toFixed(1) + "/" + c.ink.toFixed(1) + "u  \u5269\u4F59 " + c.remaining.toFixed(1) + "s" : c.phase === 'warning' ? '剑意已满 · 剑阵将至' : c.phase === 'returning' ? '剑阵回收中' : "\u5251\u610F " + c.jianyi.toFixed(0) + "/" + c.ctx.tunables.get('jianyi.max');
           }
         };
@@ -4345,9 +4726,9 @@ System.register("chunks:///_virtual/LoopView.ts", ['./rollupPluginModLoBabelHelp
   };
 });
 
-System.register("chunks:///_virtual/main", ['./App.ts', './Arena.ts', './DebugInputSource.ts', './FixedLoop.ts', './FxDriver.ts', './GameContext.ts', './Layers.ts', './Modules.ts', './Rng.ts', './ScreenLayout.ts', './ServiceRegistry.ts', './Session.ts', './SessionWatch.ts', './SpatialHash.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts', './contracts.ts', './events.ts', './index7.ts', './Geom2.ts', './Vec2.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts', './DirectorParams.ts', './EnemyModule.ts', './EnemyParams.ts', './EnemyWorld.ts', './SpawnDirector.ts', './index3.ts', './EnemyView.ts', './FloatingJoystick.ts', './InputHistory.ts', './InputParams.ts', './InputSystem.ts', './index2.ts', './JoystickView.ts', './SwordParams.ts', './SwordChain.ts', './Damage.ts', './Whip.ts', './index6.ts', './LoopController.ts', './LoopParams.ts', './geom.ts', './index4.ts', './LoopView.ts', './Pet.ts', './SwordCombat.ts', './SwordRig.ts', './SwordRigHooks.ts', './VerletRope.ts', './ThrowController.ts', './ThrowFormulas.ts', './ThrowParams.ts', './index.ts', './ThrowView.ts', './SwordView.ts', './Hud.ts', './Presets.ts', './Storage.ts', './Telemetry.ts', './TuningController.ts', './TuningParams.ts', './index5.ts', './TuningView.ts', './Widgets.ts'], function () {
+System.register("chunks:///_virtual/main", ['./App.ts', './Arena.ts', './Camera.ts', './CoreParams.ts', './DebugInputSource.ts', './FixedLoop.ts', './FxDriver.ts', './GameContext.ts', './Layers.ts', './Modules.ts', './Rng.ts', './ScreenLayout.ts', './ServiceRegistry.ts', './Session.ts', './SessionWatch.ts', './SpatialHash.ts', './StepProbe.ts', './SystemOrder.ts', './Tunables.ts', './TypedEventBus.ts', './contracts.ts', './events.ts', './index7.ts', './Geom2.ts', './Vec2.ts', './CoreArenaView.ts', './CoreBootstrap.ts', './CoreDebugInput.ts', './DirectorParams.ts', './EnemyModule.ts', './EnemyParams.ts', './EnemyWorld.ts', './SpawnDirector.ts', './index3.ts', './EnemyView.ts', './FloatingJoystick.ts', './InputHistory.ts', './InputParams.ts', './InputSystem.ts', './index2.ts', './JoystickView.ts', './SwordParams.ts', './SwordChain.ts', './Damage.ts', './Whip.ts', './index6.ts', './LoopController.ts', './LoopParams.ts', './geom.ts', './index4.ts', './LoopView.ts', './Pet.ts', './SwordCombat.ts', './SwordRig.ts', './SwordRigHooks.ts', './VerletRope.ts', './ThrowController.ts', './ThrowFormulas.ts', './ThrowParams.ts', './index.ts', './ThrowView.ts', './SwordView.ts', './Hud.ts', './Presets.ts', './Storage.ts', './Telemetry.ts', './TuningController.ts', './TuningParams.ts', './index5.ts', './TuningView.ts', './Widgets.ts'], function () {
   return {
-    setters: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    setters: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
     execute: function () {}
   };
 });
@@ -4721,14 +5102,14 @@ System.register("chunks:///_virtual/Rng.ts", ['cc'], function (exports) {
   };
 });
 
-System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Arena.ts'], function (exports) {
-  var cclegacy, ARENA_WIDTH, ARENA_HEIGHT;
+System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Camera.ts'], function (exports) {
+  var cclegacy, VIEW_WIDTH, VIEW_HEIGHT;
   return {
     setters: [function (module) {
       cclegacy = module.cclegacy;
     }, function (module) {
-      ARENA_WIDTH = module.ARENA_WIDTH;
-      ARENA_HEIGHT = module.ARENA_HEIGHT;
+      VIEW_WIDTH = module.VIEW_WIDTH;
+      VIEW_HEIGHT = module.VIEW_HEIGHT;
     }],
     execute: function () {
       exports({
@@ -4746,7 +5127,7 @@ System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Arena.ts'], func
       var DESIGN_TALLNESS = DESIGN_HEIGHT / DESIGN_WIDTH;
 
       /**
-       * Place the 10×15 u arena inside a visible rect.
+       * Place the 10×15 u view (GDD §4.4: "arena" now means the visible range) inside a visible rect.
        * Tall screens (16:9, 20:9) fit the arena to the width and give leftover
        * height to the HUD and the thumb strip. The arena is not scaled up.
        * Wider screens letterbox on the left and right so the 15 u height still fits
@@ -4764,9 +5145,9 @@ System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Arena.ts'], func
         };
         var tallEnough = width <= 0 || height / width >= DESIGN_TALLNESS - 1e-6;
         var fit = tallEnough ? 'width' : 'height';
-        var pxPerUnit = tallEnough ? width / ARENA_WIDTH : height / (DESIGN_HEIGHT / UNIT_PX);
-        var arenaWidthPx = ARENA_WIDTH * pxPerUnit;
-        var arenaHeightPx = ARENA_HEIGHT * pxPerUnit;
+        var pxPerUnit = tallEnough ? width / VIEW_WIDTH : height / (DESIGN_HEIGHT / UNIT_PX);
+        var arenaWidthPx = VIEW_WIDTH * pxPerUnit;
+        var arenaHeightPx = VIEW_HEIGHT * pxPerUnit;
         var sideMargin = Math.max(0, (width - arenaWidthPx) / 2);
         var verticalRemainder = Math.max(0, height - arenaHeightPx);
         var arenaOriginX = sideMargin;
@@ -4796,7 +5177,7 @@ System.register("chunks:///_virtual/ScreenLayout.ts", ['cc', './Arena.ts'], func
         };
       }
 
-      /** Arena units to visible pixels (origin bottom-left of the visible rect). */
+      /** View-local units (origin at the view's bottom-left) to visible pixels (origin bottom-left of the visible rect). */
       function arenaToPx(layout, p) {
         return {
           x: layout.arenaOriginX + p.x * layout.pxPerUnit,
@@ -5145,6 +5526,8 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
     execute: function () {
       cclegacy._RF.push({}, "d7c2cYUMg9D5ZsHLarNGjxy", "SpawnDirector", undefined);
       var KINDS = ['blob', 'sheep', 'boar'];
+      // P0 未定义，自选: re-roll cap for forge door points; on failure the caller gets null.
+      var FORGE_DOOR_TRIES = 32;
       var SpawnDirector = exports('SpawnDirector', /*#__PURE__*/function () {
         function SpawnDirector(ctx, world) {
           this.time = 0;
@@ -5153,6 +5536,8 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
           this.budget = 0;
           this.pending = null;
           this.generation = 0;
+          /** P0 §8 验收: spawns whose center landed inside the view. 0 unless the in-map fallback had no off-view candidate. */
+          this.inView = 0;
           this.ctx = void 0;
           this.world = void 0;
           this.ctx = ctx;
@@ -5165,6 +5550,7 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
           this.budget = 0;
           this.pending = null;
           this.previousPurchase = 0;
+          this.inView = 0;
           this.nextPurchase = this.ctx.tunables.get('spawn.purchaseInterval');
         };
         _proto.stop = function stop() {
@@ -5212,6 +5598,7 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
             var _pos;
             var point = (_pos = pos) != null ? _pos : this.position(kind);
             if (!point) return;
+            if (!pos) this.countInView(point);
             this.world.spawn(kind, point, this.danger);
             if (generation !== this.generation) return;
           }
@@ -5230,11 +5617,12 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
             // Sheep groups are atomic: do not silently truncate at the budget/cap.
             if (this.budget + 1e-9 < cost || this.alive + purchase.count > Math.floor(t.get('enemy.maxAlive'))) return;
             var anchor = this.position(purchase.kind);
-            if (!anchor) return; // No legal perimeter point: retain budget.
+            if (!anchor) return; // No candidate far enough from the pet: retain budget.
             this.budget = Math.max(0, this.budget - cost);
             this.pending = null;
             for (var i = 0; i < purchase.count; i++) {
               var pos = purchase.kind === 'sheep' ? this.groupPosition(anchor) : anchor;
+              this.countInView(pos);
               this.world.spawn(purchase.kind, pos, this.danger);
               if (generation !== this.generation) return;
             }
@@ -5263,66 +5651,136 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
             };
           }
           return null;
-        };
+        }
+
+        /**
+         * P0 §8 (2026-10-19): enemies farther than `enemy.recycleDist` from the pet
+         * teleport back onto the spawn ring. Stay put when no legal point is found.
+         */;
+        _proto.recycle = function recycle() {
+          var limit = this.ctx.tunables.get('enemy.recycleDist');
+          var pet = this.world.player().pos;
+          for (var _iterator2 = _createForOfIteratorHelperLoose(this.world.enemies.values()), _step2; !(_step2 = _iterator2()).done;) {
+            var e = _step2.value;
+            if (!e.alive || Math.hypot(e.pos.x - pet.x, e.pos.y - pet.y) <= limit) continue;
+            var point = this.position(e.kind);
+            if (point) this.world.relocate(e, point);
+          }
+        }
+
+        /**
+         * GDD §5.4 / 2026-10-19 补充决策: forge door 8–12 u from the pet, outside the
+         * view; re-roll when it lands in view, outside the map, or against a wall.
+         * P0 未定义，自选: uniform angle and uniform distance in [min, max].
+         */;
+        _proto.forgeDoorPoint = function forgeDoorPoint() {
+          var t = this.ctx.tunables;
+          var low = Math.min(t.get('forge.doorMinDist'), t.get('forge.doorMaxDist'));
+          var high = Math.max(t.get('forge.doorMinDist'), t.get('forge.doorMaxDist'));
+          var wall = t.get('forge.doorWallMargin');
+          var pet = this.world.player().pos;
+          var rng = this.ctx.rng.spawn;
+          for (var i = 0; i < FORGE_DOOR_TRIES; i++) {
+            var angle = rng.next() * Math.PI * 2;
+            var distance = low + rng.next() * (high - low);
+            var p = {
+              x: pet.x + Math.cos(angle) * distance,
+              y: pet.y + Math.sin(angle) * distance
+            };
+            if (this.ctx.camera.inView(p) || !this.insideMap(p, wall)) continue;
+            return p;
+          }
+          return null;
+        }
+
+        /**
+         * P0 §8 (2026-10-19): a random direction from the pet onto the view rect grown
+         * by `spawn.offscreenMargin`; re-roll when the point is outside the map (inset
+         * by `spawn.edgeInset`) or closer than `spawn.minDistFromPet`.
+         * Product 2026-10-19 【提案】: after `spawn.maxTries` re-rolls, fall back to the
+         * in-map candidate farthest from the pet, never closer than `spawn.minDistFromPet`.
+         * Candidates are each rejected ring point pulled inside the map plus one point
+         * sampled uniformly on the inset map edge (the old edge spawn); P0 未定义，自选:
+         * off-view candidates win over in-view ones. Null only when none is far enough.
+         */;
         _proto.position = function position(kind) {
           var t = this.ctx.tunables;
           var r = t.get(kind + ".radius");
           var inset = Math.max(r, t.get('spawn.edgeInset'));
-          var left = inset;
-          var right = this.ctx.arena.width - inset;
-          var bottom = Math.max(inset, t.get('spawn.bottomExclude') + r);
-          var top = this.ctx.arena.height - inset;
+          var camera = this.ctx.camera;
+          var margin = t.get('spawn.offscreenMargin');
+          var hw = camera.viewW / 2 + margin;
+          var hh = camera.viewH / 2 + margin;
+          var cx = camera.center.x;
+          var cy = camera.center.y;
           var pet = this.world.player().pos;
-          var distance = t.get('spawn.minDistFromPet');
-          var edges = [];
-          var add = function add(vertical, fixed, low, high) {
-            if (high < low) return;
-            var delta = fixed - (vertical ? pet.x : pet.y);
-            var center = vertical ? pet.y : pet.x;
-            if (Math.abs(delta) >= distance) edges.push({
-              vertical: vertical,
-              fixed: fixed,
-              low: low,
-              high: high
-            });else {
-              var half = Math.sqrt(distance * distance - delta * delta);
-              if (center - half >= low) edges.push({
-                vertical: vertical,
-                fixed: fixed,
-                low: low,
-                high: Math.min(high, center - half)
-              });
-              if (center + half <= high) edges.push({
-                vertical: vertical,
-                fixed: fixed,
-                low: Math.max(low, center + half),
-                high: high
-              });
-            }
+          // Cast from the pet; with camera.lerp > 0 it can trail the view center, so keep the origin on the ring's inside.
+          var ox = Math.max(cx - hw, Math.min(cx + hw, pet.x));
+          var oy = Math.max(cy - hh, Math.min(cy + hh, pet.y));
+          var minDist = t.get('spawn.minDistFromPet');
+          var tries = Math.max(1, Math.floor(t.get('spawn.maxTries')));
+          var best = null;
+          var bestDist = -1;
+          var bestOffView = false;
+          var consider = function consider(c) {
+            if (!c) return;
+            var d = Math.hypot(c.x - pet.x, c.y - pet.y);
+            if (d + 1e-9 < minDist) return;
+            var offView = !camera.inView(c);
+            if (best && (bestOffView && !offView || bestOffView === offView && d <= bestDist)) return;
+            best = c;
+            bestDist = d;
+            bestOffView = offView;
           };
-          // Uniform legal arc length, no unbounded rejection loop or retry parameter.
-          add(true, left, bottom, top);
-          add(false, top, left, right);
-          add(true, right, bottom, top);
-          if (t.get('spawn.bottomExclude') <= inset - r) add(false, inset, left, right);
-          var total = edges.reduce(function (sum, edge) {
-            return sum + edge.high - edge.low;
-          }, 0);
-          if (total <= 0) return null;
-          var roll = this.ctx.rng.spawn.next() * total;
-          for (var _i = 0, _edges = edges; _i < _edges.length; _i++) {
-            var edge = _edges[_i];
-            var length = edge.high - edge.low;
-            if (roll <= length) return edge.vertical ? {
-              x: edge.fixed,
-              y: edge.low + roll
-            } : {
-              x: edge.low + roll,
-              y: edge.fixed
+          for (var i = 0; i < tries; i++) {
+            var angle = this.ctx.rng.spawn.next() * Math.PI * 2;
+            var dx = Math.cos(angle);
+            var dy = Math.sin(angle);
+            var sx = dx > 1e-12 ? (cx + hw - ox) / dx : dx < -1e-12 ? (cx - hw - ox) / dx : Infinity;
+            var sy = dy > 1e-12 ? (cy + hh - oy) / dy : dy < -1e-12 ? (cy - hh - oy) / dy : Infinity;
+            var s = Math.min(sx, sy);
+            var p = {
+              x: ox + dx * s,
+              y: oy + dy * s
             };
-            roll -= length;
+            if (this.insideMap(p, inset) && Math.hypot(p.x - pet.x, p.y - pet.y) + 1e-9 >= minDist) return p;
+            consider(this.pullInside(p, inset));
+            consider(this.edgePoint(inset));
           }
-          return null;
+          return best;
+        };
+        _proto.pullInside = function pullInside(p, inset) {
+          var w = this.ctx.arena.width;
+          var h = this.ctx.arena.height;
+          if (w < inset * 2 || h < inset * 2) return null;
+          return {
+            x: Math.max(inset, Math.min(w - inset, p.x)),
+            y: Math.max(inset, Math.min(h - inset, p.y))
+          };
+        };
+        _proto.edgePoint = function edgePoint(inset) {
+          var w = this.ctx.arena.width - inset * 2;
+          var h = this.ctx.arena.height - inset * 2;
+          if (w < 0 || h < 0) return null;
+          var u = this.ctx.rng.spawn.next() * 2 * (w + h);
+          if (u < w) return {
+            x: inset + u,
+            y: inset
+          };
+          u -= w;
+          if (u < h) return {
+            x: inset + w,
+            y: inset + u
+          };
+          u -= h;
+          if (u < w) return {
+            x: inset + w - u,
+            y: inset + h
+          };
+          return {
+            x: inset,
+            y: inset + h - (u - w)
+          };
         };
         _proto.groupPosition = function groupPosition(anchor) {
           var t = this.ctx.tunables;
@@ -5331,10 +5789,17 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
           var r = t.get('sheep.radius');
           var pos = this.ctx.arena.clamp({
             x: anchor.x + Math.cos(angle) * radius,
-            y: Math.max(t.get('spawn.bottomExclude') + r, anchor.y + Math.sin(angle) * radius)
+            y: anchor.y + Math.sin(angle) * radius
           }, r);
           var pet = this.world.player().pos;
-          return Math.hypot(pos.x - pet.x, pos.y - pet.y) + 1e-9 >= t.get('spawn.minDistFromPet') ? pos : _extends({}, anchor);
+          var legal = !this.ctx.camera.inView(pos) && Math.hypot(pos.x - pet.x, pos.y - pet.y) + 1e-9 >= t.get('spawn.minDistFromPet');
+          return legal ? pos : _extends({}, anchor);
+        };
+        _proto.insideMap = function insideMap(p, inset) {
+          return p.x >= inset && p.x <= this.ctx.arena.width - inset && p.y >= inset && p.y <= this.ctx.arena.height - inset;
+        };
+        _proto.countInView = function countInView(p) {
+          if (this.ctx.camera.inView(p)) this.inView += 1;
         };
         _createClass(SpawnDirector, [{
           key: "elapsed",
@@ -5351,6 +5816,11 @@ System.register("chunks:///_virtual/SpawnDirector.ts", ['./rollupPluginModLoBabe
           key: "alive",
           get: function get() {
             return this.world.aliveCount();
+          }
+        }, {
+          key: "inViewSpawns",
+          get: function get() {
+            return this.inView;
           }
         }]);
         return SpawnDirector;
@@ -6635,7 +7105,10 @@ System.register("chunks:///_virtual/SwordView.ts", ['./rollupPluginModLoBabelHel
             this.link(g, slot.pos, params.get('chain.linkRadius') * scale);
             label.string = "\xD7" + slot.grades.length;
             var _p = px(slot.pos);
-            label.node.setPosition(Math.min(10 * scale - 70, Math.max(0, _p.x + 12)), Math.min(15 * scale - 12, Math.max(12, _p.y + 12)), 0);
+            var _rig$ctx$camera = rig.ctx.camera,
+              viewW = _rig$ctx$camera.viewW,
+              viewH = _rig$ctx$camera.viewH;
+            label.node.setPosition(Math.min(viewW * scale - 70, Math.max(0, _p.x + 12)), Math.min(viewH * scale - 12, Math.max(12, _p.y + 12)), 0);
           }
           for (var _iterator = _createForOfIteratorHelperLoose(rig.chain.loose), _step; !(_step = _iterator()).done;) {
             var sword = _step.value;
@@ -6746,6 +7219,8 @@ System.register("chunks:///_virtual/SystemOrder.ts", ['cc'], function (exports) 
         Input: 100,
         /** Pet movement. */
         Pet: 200,
+        /** Core: camera follows the pet before anything reads the view. */
+        Camera: 250,
         /** Enemy AI, movement (times enemyTimeScale), contact damage. */
         Enemy: 300,
         /** Rope, drag, whip, chain, throw, sword array. */
