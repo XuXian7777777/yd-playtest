@@ -3,68 +3,10 @@
     "nativeBase": "native",
     "name": "main",
     "deps": [],
-    "uuids": [
-        "005338e0-7e1d-446d-960e-daf4b6e5d565",
-        "005338e0-7e1d-446d-960e-daf4b6e5d565@6c48a",
-        "08eb9dcd6",
-        "0fee645f5",
-        "1ccfc5c2-9ac1-4ad8-9f19-c99331f6c516",
-        "1ccfc5c2-9ac1-4ad8-9f19-c99331f6c516@6c48a",
-        "1fa77f86-9562-405b-baaf-166fac7ff728",
-        "1fa77f86-9562-405b-baaf-166fac7ff728@6c48a",
-        "2ac900b5-a9fe-44d5-82ce-4c67ae0f7548",
-        "2ac900b5-a9fe-44d5-82ce-4c67ae0f7548@6c48a",
-        "2c0aa40d-1b12-4545-88a7-c1f14175b41e",
-        "34de8536-e794-4ab6-9829-9778dc2b0bd0",
-        "34de8536-e794-4ab6-9829-9778dc2b0bd0@6c48a",
-        "477618c7-8e6f-4141-b1fd-0a73827155af",
-        "85245b2d-e35e-451d-bc74-24fa7e38b605",
-        "85245b2d-e35e-451d-bc74-24fa7e38b605@6c48a",
-        "a14c0f34-2de7-4f16-8840-8e1c33c72a09",
-        "a14c0f34-2de7-4f16-8840-8e1c33c72a09@6c48a",
-        "a97e722e-04ec-4ae5-bd42-2a2701d0160c",
-        "ba21476f-2866-4f81-9c4d-6e359316e448",
-        "d84e813e-af01-478c-a168-3fee9c38acb1",
-        "d84e813e-af01-478c-a168-3fee9c38acb1@6c48a",
-        "fd8ec536-a354-4a17-9c74-4f3883c378c8"
-    ],
-    "paths": {
-        "2c0aa40d-1b12-4545-88a7-c1f14175b41e": [
-            "db:/assets/scenes/Main",
-            "cc.SceneAsset",
-            1
-        ],
-        "fd8ec536-a354-4a17-9c74-4f3883c378c8": [
-            "db:/internal/default_renderpipeline/builtin-forward",
-            "cc.RenderPipeline",
-            1
-        ],
-        "ba21476f-2866-4f81-9c4d-6e359316e448": [
-            "db:/internal/physics/default-physics-material",
-            "cc.PhysicsMaterial",
-            1
-        ]
-    },
-    "scenes": {
-        "db://assets/scenes/Main.scene": "2c0aa40d-1b12-4545-88a7-c1f14175b41e"
-    },
-    "packs": {
-        "0fee645f5": [
-            "1ccfc5c2-9ac1-4ad8-9f19-c99331f6c516@6c48a",
-            "1fa77f86-9562-405b-baaf-166fac7ff728@6c48a",
-            "2ac900b5-a9fe-44d5-82ce-4c67ae0f7548@6c48a",
-            "34de8536-e794-4ab6-9829-9778dc2b0bd0@6c48a",
-            "005338e0-7e1d-446d-960e-daf4b6e5d565@6c48a",
-            "85245b2d-e35e-451d-bc74-24fa7e38b605@6c48a",
-            "a14c0f34-2de7-4f16-8840-8e1c33c72a09@6c48a",
-            "d84e813e-af01-478c-a168-3fee9c38acb1@6c48a"
-        ],
-        "08eb9dcd6": [
-            "2c0aa40d-1b12-4545-88a7-c1f14175b41e",
-            "477618c7-8e6f-4141-b1fd-0a73827155af",
-            "a97e722e-04ec-4ae5-bd42-2a2701d0160c"
-        ]
-    },
+    "uuids": [],
+    "paths": {},
+    "scenes": {},
+    "packs": {},
     "versions": {
         "import": [],
         "native": []
