@@ -6810,12 +6810,11 @@ System.register("chunks:///_virtual/ForgeModule.ts", ['./rollupPluginModLoBabelH
        * `loot` (coins for the hammer) and `swordRig` (link grades for 提拔); never the
        * ad layer (P1-04 红线, checked by scripts/check-forge-imports.mjs).
        *
-       * The lots page opens when run enters the `forge` phase. MVP has no blacksmith
-       * screen yet (P1-05), so the page itself offers 去下一波. Without a run module
-       * (P0 sandbox) `debug:command` `forge` toggles the page and pauses the loop.
-       *
-       * PR3 (#108) hammer shell: `debug:command` `hammer` / Key H toggles a separate
-       * color-block forge room (does not replace LotsView). See view/HammerView.ts.
+       * The hammer shell (`ForgeHammerShell`) opens when run enters the `forge`
+       * phase. MVP has no blacksmith screen yet (P1-05), so the shell itself offers
+       * 去下一波. LotsView stays mounted as a debug sandbox only: `debug:command`
+       * `forge` / Key F, ignored inside a run. Key H / `debug:command` `hammer`
+       * toggles the same shell outside run-driven forge; the main path never needs H.
        */
       var ForgeModule = exports('ForgeModule', /*#__PURE__*/function () {
         function ForgeModule(ctx, store) {
@@ -6863,12 +6862,13 @@ System.register("chunks:///_virtual/ForgeModule.ts", ['./rollupPluginModLoBabelH
           this.unsubs.push(ctx.events.on('session:start', function (p) {
             _this2.anvil.reset(p.seed, _this2.tutorialRun());
             _this2.setOpen(false);
+            _this2.setHammerOpen(false);
           }));
           this.unsubs.push(ctx.events.on('run:start', function (p) {
             return _this2.anvil.reset(ctx.session.seed, p.mode === 'tutorial');
           }));
           this.unsubs.push(ctx.events.on('run:phase', function (p) {
-            if (p.to === 'forge') _this2.setOpen(true);else if (p.from === 'forge') _this2.setOpen(false);
+            if (p.to === 'forge') _this2.setHammerOpen(true);else if (p.from === 'forge') _this2.setHammerOpen(false);
           }));
           this.unsubs.push(ctx.events.on('forge:shatter', function (p) {
             return _this2.record.add(p.level);
@@ -6915,7 +6915,7 @@ System.register("chunks:///_virtual/ForgeModule.ts", ['./rollupPluginModLoBabelH
         _proto.toggleSandbox = function toggleSandbox() {
           if (!this.inRun) this.setOpen(!this.opened);
         };
-        /** PR3 hammer shell open listeners (LotsView stays on forge phase). */
+        /** Hammer-shell open listeners. Run phase `forge` drives these. */
         _proto.onHammerOpenChange = function onHammerOpenChange(cb) {
           var _this4 = this;
           this.hammerOpenListeners.add(cb);
@@ -6925,11 +6925,12 @@ System.register("chunks:///_virtual/ForgeModule.ts", ['./rollupPluginModLoBabelH
         }
 
         /**
-         * Sandbox / debug entry for the PR3 hammer shell. Safe during a run: it only
-         * toggles the prototype overlay (the view pauses simulation) without changing
-         * LotsView or run phase.
+         * Debug-only hammer toggle (Key H / `debug:command` `hammer`). Ignored while
+         * run already owns the shell, so a phone with no H key cannot get stuck and
+         * a desktop H cannot dismiss the post-wave room.
          */;
         _proto.toggleHammerSandbox = function toggleHammerSandbox() {
+          if (this.inRunForge) return;
           this.setHammerOpen(!this.hammerOpened);
         };
         _proto.setHammerOpen = function setHammerOpen(open) {
@@ -6974,6 +6975,13 @@ System.register("chunks:///_virtual/ForgeModule.ts", ['./rollupPluginModLoBabelH
           key: "inRun",
           get: function get() {
             return this.ctx.services.has('run');
+          }
+
+          /** True while a run is sitting on the post-wave hammer shell. */
+        }, {
+          key: "inRunForge",
+          get: function get() {
+            return this.inRun && this.ctx.services.get('run').phase === 'forge';
           }
         }, {
           key: "isHammerOpen",
@@ -8410,8 +8418,10 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
       exports('mountHammerView', mountHammerView);
       cclegacy._RF.push({}, "198abD0kdVHqrzEp5H3ls1y", "HammerView", undefined);
 
-      /** PR3 hammer feel on the existing code-only shell. H / debug:command hammer opens it.
-       * LotsView/run integration stays separate; all swords and wear here last only for this session.
+      /** PR3 hammer feel on the code-only `ForgeHammerShell`.
+       * Run phase `forge` opens it after a wave; Key H / `debug:command` `hammer` is
+       * debug-only and cannot dismiss the run-driven room. LotsView stays off the
+       * main path. Session swords and wear last only for this visit.
        * Real-clock scheduling/draws live in HammerFeel, independent of Cocos render dt/time scaling.
        */
 
@@ -8564,6 +8574,9 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
           this.resultLabel = void 0;
           this.resultOpacity = void 0;
           this.swordLabel = void 0;
+          this.hintLabel = void 0;
+          this.nextWaveBtn = void 0;
+          this.closeBtn = void 0;
           this.debugRoot = void 0;
           this.debugLabel = void 0;
           this.lowEndLabel = void 0;
@@ -8596,8 +8609,8 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
           this.stage = box(this.root, 'Stage', 0, 0, 720, 1280);
           var scale = Math.min(size.width / 720, size.height / 1280);
           this.stage.setScale(scale, scale, 1);
-          text(this.stage, '铁匠铺 · PR3', 0, HAMMER_LAYOUT.titleY, 640, 36, 26, TITLE_COLOR);
-          text(this.stage, '按下即落锤 · 按住连敲 · H 关闭', 0, HAMMER_LAYOUT.titleY - 38, 640, 28, 18, MUTED);
+          text(this.stage, '铁匠铺 · 落锤', 0, HAMMER_LAYOUT.titleY, 640, 36, 26, TITLE_COLOR);
+          this.hintLabel = text(this.stage, '按下即落锤 · 按住连敲', 0, HAMMER_LAYOUT.titleY - 38, 640, 28, 18, MUTED);
           this.anvil = spriteOrBlock(this.stage, 'Anvil', HAMMER_LAYOUT.strikeX, HAMMER_LAYOUT.anvilY, 'anvil', ANVIL_FALLBACK);
           this.sword = box(this.stage, 'Blade', -144, HAMMER_LAYOUT.swordY, 360, 72);
           this.swordArt = spriteOrBlock(this.sword, 'Sword', 0, 0, 'sword', SWORD_FALLBACK);
@@ -8668,9 +8681,13 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
             _this2.lowEndLabel.string = _this2.lowEnd ? '低端模式 开' : '低端模式 关';
           });
           this.lowEndLabel = text(low, this.lowEnd ? '低端模式 开' : '低端模式 关', 0, 0, 176, 54, 18, BONE);
-          button(this.stage, '关闭原型', 200, -550, 180, 62, function () {
+          this.nextWaveBtn = button(this.stage, '去下一波', 200, -550, 180, 62, function () {
+            return _this2.module.leave();
+          }, true, 20);
+          this.closeBtn = button(this.stage, '关闭原型', 200, -550, 180, 62, function () {
             return _this2.module.toggleHammerSandbox();
           }, true, 20);
+          this.nextWaveBtn.active = false;
           text(this.stage, '试打剑仅在本局有效 · 白剑为保底，不可上砧', 0, -610, 660, 28, 16, MUTED);
           this.debugRoot = box(this.stage, 'DebugOdds', HAMMER_LAYOUT.debugPanelX, HAMMER_LAYOUT.debugPanelY, 680, 190);
           this.debugRoot.active = false;
@@ -8724,6 +8741,15 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
           this.lastClockMs = Math.max(this.lastClockMs, clock);
           return this.lastClockMs;
         };
+        _proto2.isRunForge = function isRunForge() {
+          return this.module.inRunForge;
+        };
+        _proto2.refreshChrome = function refreshChrome() {
+          var runForge = this.isRunForge();
+          this.hintLabel.string = runForge ? '按下即落锤 · 按住连敲' : '按下即落锤 · 按住连敲 · H 关闭';
+          this.nextWaveBtn.active = runForge;
+          this.closeBtn.active = !runForge;
+        };
         _proto2.onKey = function onKey(e) {
           if (e.keyCode === KeyCode.KEY_H) this.module.toggleHammerSandbox();
         };
@@ -8769,7 +8795,9 @@ System.register("chunks:///_virtual/HammerView.ts", ['./rollupPluginModLoBabelHe
             return;
           }
           this.root.setSiblingIndex(this.root.parent === null ? 0 : this.root.parent.children.length - 1);
-          if (!this.ctx.loop.paused) {
+          this.refreshChrome();
+          // Run already gates combat off in `forge`; only the H sandbox pauses the loop.
+          if (!this.isRunForge() && !this.ctx.loop.paused) {
             this.ctx.loop.pause();
             this.pausedByHammer = true;
           }
@@ -10098,10 +10126,12 @@ System.register("chunks:///_virtual/index4.ts", ['cc', './ForgeModule.ts', './Ha
       cclegacy._RF.push({}, "2d53eJ1jPJHC7ZBvmFYRwPd", "index", undefined);
 
       /**
-       * Lottery tube, the S11 help page and the blacksmith: anvil, sword rack, shelf
-       * (docs/design/P1-tasks.md P1-04 / P1-05). Provides `anvil` (`IAnvilInfo`) and
-       * emits the forge events. Tube draws use `createForgeRng(ctx.session.seed, k)`
-       * only; shelf candidates come from `upgrade.drawShelf`.
+       * Hammer forge room, the debug lots page, and the blacksmith: anvil, sword
+       * rack, shelf (docs/design/P1-tasks.md P1-04 / P1-05). Provides `anvil`
+       * (`IAnvilInfo`) and emits the forge events. Tube draws use
+       * `createForgeRng(ctx.session.seed, k)` only; shelf candidates come from
+       * `upgrade.drawShelf`. Run phase `forge` mounts the hammer shell; LotsView
+       * is debug-only.
        *
        * Must not import the platform module or read its service, directly or
        * indirectly (P1-tasks P1-04 红线; scripts/check-forge-imports.mjs and
@@ -12607,6 +12637,7 @@ System.register("chunks:///_virtual/LotsView.ts", ['./rollupPluginModLoBabelHelp
       /**
        * Gray-box S10 签筒 + S11 规则帮助页 + S12 碎裂二选一 (docs/design/UI-requirements.md §3,
        * §6.1–§6.2; docs/ui/batch5/README.md B layout; docs/design/P1-tasks.md P1-04).
+       * Debug sandbox only: run phase `forge` opens `ForgeHammerShell`, not this page.
        * No wheel, reels, lever or rolling numbers; the drawn lot shows its real result
        * at once. No ad entry and no bag entry on these pages.
        */
